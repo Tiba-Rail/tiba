@@ -185,10 +185,18 @@ export async function POST(request: NextRequest) {
     }
   ];
 
-  const [artifactRun, payerRun] = await Promise.allSettled([
-    runGonka({ channel: "artifact", messages: artifactMessages, schema: artifactDecisionSchema }),
+  const artifactRun = await Promise.resolve(
+    runGonka({ channel: "artifact", messages: artifactMessages, schema: artifactDecisionSchema })
+  ).then(
+    (value) => ({ status: "fulfilled" as const, value }),
+    () => ({ status: "rejected" as const })
+  );
+  const payerRun = await Promise.resolve(
     runGonka({ channel: "payer_record", messages: payerMessages, schema: payerRecordDecisionSchema })
-  ]);
+  ).then(
+    (value) => ({ status: "fulfilled" as const, value }),
+    () => ({ status: "rejected" as const })
+  );
   const artifactResult = artifactRun.status === "fulfilled" ? artifactRun.value : unavailable("moonshotai/Kimi-K2.6");
   const payerResult = payerRun.status === "fulfilled" ? payerRun.value : unavailable("deepseek-ai/DeepSeek-V4-Flash-0731");
 
@@ -322,7 +330,7 @@ export async function POST(request: NextRequest) {
           ...pricing
         }
       });
-    });
+    }, { timeout: 120_000 });
     return response(updated);
   } catch {
     const pricing = await pricingData();

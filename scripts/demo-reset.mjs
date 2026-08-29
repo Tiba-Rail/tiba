@@ -1,7 +1,14 @@
-import { spawnSync } from "node:child_process";
 import "dotenv/config";
 
-const result = process.platform === "win32"
-  ? spawnSync("npm run seed", { stdio: "inherit", shell: true })
-  : spawnSync("npm", ["run", "seed"], { stdio: "inherit" });
+import { spawnSync } from "node:child_process";
+
+const result = spawnSync(process.execPath, ["scripts/seed.mjs"], {
+  stdio: "inherit",
+  shell: false
+});
+
+if (result.error) {
+  console.error(result.error.message);
+}
+
 process.exit(result.status ?? 1);

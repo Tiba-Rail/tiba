@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 const API_URL = "https://api.gonkarouter.io/v1/chat/completions";
-const TIMEOUT_MS = 8_000;
+const TIMEOUT_MS = 60_000;
 const PRIMARY: Record<GonkaChannel, string> = {
   artifact: "moonshotai/Kimi-K2.6",
   payer_record: "deepseek-ai/DeepSeek-V4-Flash-0731"
@@ -87,7 +87,7 @@ async function requestOnce(
         model,
         messages,
         temperature: 0,
-        max_tokens: 1024,
+        max_tokens: 256,
         response_format: { type: "json_schema", json_schema: schema }
       })
     });

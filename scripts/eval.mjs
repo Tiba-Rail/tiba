@@ -9,7 +9,6 @@ const { prisma } = await import("../src/lib/db.ts");
 
 const AGENT_KEY = process.env.SEED_AGENT_KEY ?? "tiba_testnet_demo_key";
 const API_KEY_HASH = createHash("sha256").update(AGENT_KEY).digest("hex");
-const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const nextBin = path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next");
 const seededAt = new Date("2026-08-29T00:00:00.000Z");
 const expiresAt = new Date("2026-09-30T00:00:00.000Z");
@@ -19,8 +18,13 @@ const recipientAddress = process.env.SEED_RECIPIENT_SUI_ADDRESS ?? process.env.S
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { stdio: "inherit", shell: false, ...options });
   if (result.status !== 0) {
-    throw new Error(`${command} ${args.join(" ")} failed with exit ${result.status}`);
+    const cause = result.error ? ` (${result.error.message})` : "";
+    throw new Error(`${command} ${args.join(" ")} failed with exit ${result.status}${cause}`);
   }
+}
+
+function seed(env = process.env) {
+  run(process.execPath, ["scripts/seed.mjs"], { env });
 }
 
 async function canListen(port) {
@@ -310,7 +314,7 @@ async function main() {
     console.log(markdown);
   } finally {
     await prisma.$disconnect();
-    run(npmCommand, ["run", "seed"], { env: { ...process.env, SEED_AGENT_RAIL: "sui" } });
+    seed({ ...process.env, SEED_AGENT_RAIL: "sui" });
   }
 }
 
