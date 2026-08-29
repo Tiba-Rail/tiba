@@ -2,14 +2,24 @@ import { createHash } from "node:crypto";
 
 const API_URL = "https://api.gonkarouter.io/v1/chat/completions";
 const TIMEOUT_MS = 60_000;
+// Measured 30 Aug 2026 on the live router, same ~250-token prompt:
+//   DeepSeek 41.5s with json_schema / 26.8s without
+//   Kimi      9.6s /  8.9s
+//   MiniMax  23.9s /  6.0s
+// MiniMax without the schema constraint is the fastest payer-record reader by
+// a wide margin; DeepSeek is slow on Gonka's nodes either way, so it is the
+// failover. The two channels must stay on two different models.
 const PRIMARY: Record<GonkaChannel, string> = {
   artifact: "moonshotai/Kimi-K2.6",
-  payer_record: "deepseek-ai/DeepSeek-V4-Flash-0731"
+  payer_record: "MiniMaxAI/MiniMax-M2.7"
 };
 const FAILOVER: Record<GonkaChannel, string> = {
   artifact: "deepseek-ai/DeepSeek-V4-Flash-0731",
-  payer_record: "moonshotai/Kimi-K2.6"
+  payer_record: "deepseek-ai/DeepSeek-V4-Flash-0731"
 };
+// Models for which constrained decoding is the dominant cost. They get the
+// schema as a prompt instruction instead; the validator below still enforces it.
+const SCHEMA_FREE = new Set(["MiniMaxAI/MiniMax-M2.7"]);
 
 export type GonkaChannel = "artifact" | "payer_record";
 export type JsonSchema = { name: string; strict: boolean; schema: object };
@@ -85,10 +95,20 @@ async function requestOnce(
       headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
-        messages,
+        messages: SCHEMA_FREE.has(model)
+          ? [
+              ...messages,
+              {
+                role: "system",
+                content: `Respond with exactly one JSON object and nothing else. Required keys: ${Object.keys(
+                  (schema as { schema?: { properties?: Record<string, unknown> } }).schema?.properties ?? {}
+                ).join(", ")}. No prose, no markdown fences.`
+              }
+            ]
+          : messages,
         temperature: 0,
         max_tokens: 256,
-        response_format: { type: "json_schema", json_schema: schema }
+        ...(SCHEMA_FREE.has(model) ? {} : { response_format: { type: "json_schema", json_schema: schema } })
       })
     });
     const latencyMs = Date.now() - started;
