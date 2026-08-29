@@ -299,8 +299,17 @@ async function main() {
   const results = [];
   try {
     await withServer(async (baseUrl) => {
-      for (let index = 0; index < evalCases.length; index += 1) {
-        results.push(await postIntent(baseUrl, evalCases[index], index + 1));
+      // Cases are independent (own recipient + work order each), so run them in
+      // concurrent batches. Sequential is ~45s x 30 = ~22 min, which no
+      // foreground run survives on this machine; batches of 6 finish in ~5.
+      const concurrency = Math.max(1, Number(process.env.EVAL_CONCURRENCY ?? 6));
+      for (let start = 0; start < evalCases.length; start += concurrency) {
+        const batch = evalCases.slice(start, start + concurrency);
+        const settled = await Promise.all(
+          batch.map((testCase, offset) => postIntent(baseUrl, testCase, start + offset + 1))
+        );
+        results.push(...settled);
+        console.error(`eval: ${results.length}/${evalCases.length} done`);
       }
     });
 
