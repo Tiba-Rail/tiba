@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Agent {
+  id                String   @id @default(uuid())
+  name              String
+  apiKeyHash        String   @unique @map("api_key_hash")
+  apiKeyPrefix      String   @map("api_key_prefix")
+  ceilingMicros     BigInt   @map("ceiling_micros")
+  hourCapMicros     BigInt   @map("hour_cap_micros")
+  dayCapMicros      BigInt   @map("day_cap_micros")
+  hourCountCap      Int      @map("hour_count_cap")
+  dayCountCap       Int      @map("day_count_cap")
+  spentMicrosDay    BigInt   @default(0) @map("spent_micros_day")
+  spentMicrosHour   BigInt   @default(0) @map("spent_micros_hour")
+  windowStartedAt   DateTime @default(now()) @map("window_started_at")
+  dayStartedAt      DateTime @default(now()) @map("day_started_at")
+  countDay          Int      @default(0) @map("count_day")
+  countHour         Int      @default(0) @map("count_hour")
+  killSwitch        Boolean  @default(false) @map("kill_switch")
+  rail              String   @default("mock")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  intents           PayoutIntent[]
+
+  @@map("agents")
+}
+
+model Recipient {
+  id          String   @id @default(uuid())
+  ref         String   @unique
+  displayName String   @map("display_name")
+  suiAddress  String   @map("sui_address")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workOrders  WorkOrder[]
+  intents     PayoutIntent[]
+
+  @@map("recipients")
+}
+
+model WorkOrder {
+  id                    String   @id @default(uuid())
+  recipientId           String   @map("recipient_id")
+  ref                   String   @unique
+  ceilingMicros         BigInt   @map("ceiling_micros")
+  briefText             String   @map("brief_text")
+  payerRecord           Json     @map("payer_record")
+  requiredChannels      String   @default("both") @map("required_channels")
+  expiresAt             DateTime @map("expires_at")
+  status                String   @default("open")
+  dischargedByIntentId  String?  @unique @map("discharged_by_intent_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  recipient             Recipient    @relation(fields: [recipientId], references: [id])
+  intents               PayoutIntent[]
+
+  @@index([recipientId, status, expiresAt])
+  @@map("work_orders")
+}
+
+model PayoutIntent {
+  id               String   @id @default(uuid())
+  agentId          String   @map("agent_id")
+  workOrderId      String?  @map("work_order_id")
+  recipientId      String   @map("recipient_id")
+  amountMicros     BigInt   @default(0) @map("amount_micros")
+  status           String
+  reasonCode       String?  @map("reason_code")
+  decisionClass    String   @map("decision_class")
+  idempotencyKey   String   @unique @map("idempotency_key")
+  digest           String?
+  explorerUrl      String?  @map("explorer_url")
+  gnkUsd           String?  @map("gnk_usd")
+  pricingUpdatedAt DateTime? @map("pricing_updated_at")
+  publicToken      String   @unique @map("public_token")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  agent            Agent       @relation(fields: [agentId], references: [id])
+  workOrder        WorkOrder?  @relation(fields: [workOrderId], references: [id])
+  recipient        Recipient   @relation(fields: [recipientId], references: [id])
+  adjudications    Adjudication[]
+  artifact         Artifact?
+
+  @@index([agentId, createdAt])
+  @@map("payout_intents")
+}
+
+model Adjudication {
+  id           String   @id @default(uuid())
+  intentId     String   @map("intent_id")
+  channel      String
+  model        String
+  requestId    String?  @map("request_id")
+  promptSha    String   @map("prompt_sha")
+  responseSha  String?  @map("response_sha")
+  inputTokens  Int?     @map("input_tokens")
+  outputTokens Int?     @map("output_tokens")
+  latencyMs    Int      @map("latency_ms")
+  tupleJson    Json?    @map("tuple_json")
+  ok           Boolean
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  intent       PayoutIntent @relation(fields: [intentId], references: [id], onDelete: Cascade)
+
+  @@index([intentId])
+  @@map("adjudications")
+}
+
+model Artifact {
+  id         String   @id @default(uuid())
+  intentId   String   @unique @map("intent_id")
+  rawText    String   @map("raw_text")
+  sha256     String
+  untrusted  Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  intent     PayoutIntent @relation(fields: [intentId], references: [id], onDelete: Cascade)
+
+  @@map("artifacts")
+}
