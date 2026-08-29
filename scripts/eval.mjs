@@ -319,7 +319,14 @@ async function main() {
       .map((result) => `| ${result.testCase.type} | ${result.testCase.ref} | ${result.body.decision_class} | ${result.body.reason_code ?? "PAID"} |`)
       .join("\n");
     const markdown = `# Eval\n\nRun date: ${new Date().toISOString()}\n\n${table}\n\nThe artifacts are self-authored and intentionally small: 20 clean delivery notes, 10 adversarial notes covering prompt injection, wrong work-order id, inflated amount, missing evidence, and expired-order claims. Eval settlement uses the mock rail so this run does not spend Sui gas or principal.\n\n## Adversarial Outcomes\n\n| Type | Work order | Decision | Reason |\n|---|---|---|---|\n${adversarialBreakdown}\n`;
-    await fs.writeFile("docs/EVAL.md", markdown);
+    // Keep the hand-written interpretation section across regenerations.
+    let preserved = "";
+    try {
+      const existing = await fs.readFile("docs/EVAL.md", "utf8");
+      const at = existing.indexOf("## How to read this honestly");
+      if (at !== -1) preserved = String.fromCharCode(10) + existing.slice(at).trimEnd() + String.fromCharCode(10);
+    } catch {}
+    await fs.writeFile("docs/EVAL.md", markdown + preserved);
     console.log(markdown);
   } finally {
     await prisma.$disconnect();
