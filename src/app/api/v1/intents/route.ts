@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
     runGonka({ channel: "payer_record", messages: payerMessages, schema: payerRecordDecisionSchema })
   ]);
   const artifactResult = artifactRun.status === "fulfilled" ? artifactRun.value : unavailable("moonshotai/Kimi-K2.6");
-  const payerResult = payerRun.status === "fulfilled" ? payerRun.value : unavailable("MiniMaxAI/MiniMax-M2.7");
+  const payerResult = payerRun.status === "fulfilled" ? payerRun.value : unavailable("deepseek-ai/DeepSeek-V4-Flash-0731");
 
   await prisma.adjudication.createMany({
     data: [

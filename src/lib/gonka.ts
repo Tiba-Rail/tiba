@@ -2,24 +2,21 @@ import { createHash } from "node:crypto";
 
 const API_URL = "https://api.gonkarouter.io/v1/chat/completions";
 const TIMEOUT_MS = 60_000;
-// Measured 30 Aug 2026 on the live router, same ~250-token prompt:
-//   DeepSeek 41.5s with json_schema / 26.8s without
-//   Kimi      9.6s /  8.9s
-//   MiniMax  23.9s /  6.0s
-// MiniMax without the schema constraint is the fastest payer-record reader by
-// a wide margin; DeepSeek is slow on Gonka's nodes either way, so it is the
-// failover. The two channels must stay on two different models.
-const PRIMARY: Record<GonkaChannel, string> = {
-  artifact: "moonshotai/Kimi-K2.6",
-  payer_record: "MiniMaxAI/MiniMax-M2.7"
+// Measured 30 Aug 2026 on the live router with the real prompts:
+//   DeepSeek + json_schema: clean 47-token JSON; 18.8s cold, 0.4s on a
+//     cached identical request. The only reliably valid reader.
+//   Kimi + json_schema: sometimes clean, sometimes whitespace-padded; without
+//     the schema it reasons in prose and overruns max_tokens.
+//   MiniMax: emits <think>... before any JSON and overruns. Not usable here.
+// Per-request latency on Gonka nodes swings 10x for the same model, so each
+// channel HEDGES: both candidates are fired together and the first
+// schema-valid answer wins (see runGonka). Tokens are free for the event.
+const CANDIDATES: Record<GonkaChannel, [string, string]> = {
+  artifact: ["moonshotai/Kimi-K2.6", "deepseek-ai/DeepSeek-V4-Flash-0731"],
+  payer_record: ["deepseek-ai/DeepSeek-V4-Flash-0731", "moonshotai/Kimi-K2.6"]
 };
-const FAILOVER: Record<GonkaChannel, string> = {
-  artifact: "deepseek-ai/DeepSeek-V4-Flash-0731",
-  payer_record: "deepseek-ai/DeepSeek-V4-Flash-0731"
-};
-// Models for which constrained decoding is the dominant cost. They get the
-// schema as a prompt instruction instead; the validator below still enforces it.
-const SCHEMA_FREE = new Set(["MiniMaxAI/MiniMax-M2.7"]);
+const PRIMARY: Record<GonkaChannel, string> = { artifact: CANDIDATES.artifact[0], payer_record: CANDIDATES.payer_record[0] };
+const SCHEMA_FREE = new Set<string>();
 
 export type GonkaChannel = "artifact" | "payer_record";
 export type JsonSchema = { name: string; strict: boolean; schema: object };
@@ -141,33 +138,44 @@ export interface GonkaRequest {
 }
 
 /**
- * Retry policy is intentionally narrow: one schema repair, one retry for a
- * transient 429 on the same model, failover for other host failures, and
- * 400/401 stop.
+ * Hedged dispatch. Both candidate models for the channel are fired at once and
+ * the first schema-valid result wins; the other call is left to finish (it only
+ * updates `health`). If neither validates, one repair prompt is sent to the
+ * primary; if that fails too, the channel is unavailable / schema-invalid and
+ * the caller treats it as AMBER. 400/401 are never retried.
  */
 export async function runGonka(request: GonkaRequest): Promise<GonkaResult> {
   const apiKey = process.env.GONKA_API_KEY;
-  const model = PRIMARY[request.channel];
-  if (!apiKey) return { ok: false, model, latencyMs: 0, errorCode: "INFERENCE_UNAVAILABLE" };
+  const [primary, secondary] = CANDIDATES[request.channel];
+  if (!apiKey) return { ok: false, model: primary, latencyMs: 0, errorCode: "INFERENCE_UNAVAILABLE" };
   const fetcher = request.fetcher ?? fetch;
-  const sleep = request.sleep ?? ((ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-  const first = await requestOnce(model, request.messages, request.schema, fetcher, apiKey);
-  if (first.result?.ok) return first.result;
-  if (first.status === 400 || first.status === 401) return first.result!;
-  if (first.status === 429) {
-    await sleep(30_000);
-    const retried = await requestOnce(model, request.messages, request.schema, fetcher, apiKey);
-    return retried.result ?? { ok: false, model, latencyMs: 0, errorCode: "INFERENCE_UNAVAILABLE" };
-  }
-  if (first.schemaInvalid) {
-    const repairMessages = [...request.messages, { role: "user" as const, content: "Return only valid JSON that exactly matches the schema. Do not add commentary." }];
-    const repaired = await requestOnce(model, repairMessages, request.schema, fetcher, apiKey);
-    if (repaired.result?.ok) return repaired.result;
-    const failedOver = await requestOnce(FAILOVER[request.channel], repairMessages, request.schema, fetcher, apiKey);
-    return failedOver.result?.ok ? failedOver.result : { ...(failedOver.result ?? { model: FAILOVER[request.channel], latencyMs: 0 }), ok: false, errorCode: "SCHEMA_INVALID" };
-  }
-  const failedOver = await requestOnce(FAILOVER[request.channel], request.messages, request.schema, fetcher, apiKey);
-  return failedOver.result?.ok ? failedOver.result : { ...(failedOver.result ?? { model: FAILOVER[request.channel], latencyMs: 0 }), ok: false, errorCode: "INFERENCE_UNAVAILABLE" };
+
+  const attempts = [primary, secondary].map((model) =>
+    requestOnce(model, request.messages, request.schema, fetcher, apiKey).then((r) => ({ model, ...r }))
+  );
+
+  const firstValid = await new Promise<(Awaited<(typeof attempts)[number]>) | null>((resolve) => {
+    let pending = attempts.length;
+    for (const attempt of attempts) {
+      attempt.then((r) => {
+        if (r.result?.ok) resolve(r);
+        else if (--pending === 0) resolve(null);
+      }, () => { if (--pending === 0) resolve(null); });
+    }
+  });
+  if (firstValid?.result?.ok) return firstValid.result;
+
+  const settled = await Promise.all(attempts.map((a) => a.catch(() => null)));
+  const hardStop = settled.find((r) => r && (r.status === 400 || r.status === 401));
+  if (hardStop?.result) return { ...hardStop.result, ok: false };
+
+  const repairMessages = [...request.messages, { role: "user" as const, content: "Return only valid JSON that exactly matches the schema. Do not add commentary." }];
+  const repaired = await requestOnce(primary, repairMessages, request.schema, fetcher, apiKey);
+  if (repaired.result?.ok) return repaired.result;
+
+  const anySchemaInvalid = settled.some((r) => r?.schemaInvalid) || repaired.schemaInvalid;
+  const fallback = repaired.result ?? { model: primary, latencyMs: 0 };
+  return { ...fallback, ok: false, errorCode: anySchemaInvalid ? "SCHEMA_INVALID" : "INFERENCE_UNAVAILABLE" };
 }
 
 export function fingerprintPrompt(messages: GonkaMessage[]): string {
