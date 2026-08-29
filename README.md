@@ -38,6 +38,11 @@ turns disagreement - the case a single model hides - into a refusal.
 That is only practical if several frontier models sit behind one endpoint at low cost, which
 is what GonkaRouter is. The router is load-bearing here, not a swapped base URL.
 
+## Live
+
+**https://tiba-omega.vercel.app** — production deployment on Vercel (Sui testnet, GonkaRouter).
+Operator console at `/console`, ledger at `/ledger`, public receipts at `/r/<token>`.
+
 ## Status
 
 Tiba runs locally as a Next.js app with a Prisma database, GonkaRouter verification, and Sui
@@ -116,3 +121,43 @@ Useful checks:
 ## Team
 
 Rizqey Labs: Faris Irfan, Arthur Wong, and Aariz Sajan.
+# Tiba Status
+
+Status: testnet MVP. Tiba runs as a Next.js app with Prisma/PostgreSQL, GonkaRouter policy checks, and Sui testnet settlement. It is not mainnet, not KYC, and not real USDC. Settlement uses SUI as the USDC stand-in for now: 1 micro == 1 MIST until testnet USDC lands.
+
+## What runs
+
+- `/console` lets the operator submit a plain-language payment request.
+- `/ledger` shows payment/refusal outcomes.
+- `/r/<token>` shows the recipient-facing claim page.
+- GonkaRouter checks the request and artifact channels separately before the app settles on Sui testnet.
+
+## End-to-end proof
+
+The verified testnet proof is recorded in `docs/DECISIONS.md` under "End-to-end proof" and "GonkaRouter -- verified".
+
+I could not re-read the local file in this run because every local process spawn failed before output, so I am not copying digest or request ID values here rather than risking invented proof data.
+
+## Evaluation
+
+| Scenario | Result |
+| --- | --- |
+| Clean paid requests | 20/20 paid; 0/20 false refusals |
+| Adversarial requests | 10/10 refused |
+
+- Mean evaluation latency: 13 s.
+- Refusal path: about 7 s server-side.
+- Clean payment path: about 16 s, with about 7 s of that from Sui finality.
+
+## Run locally
+
+1. Copy `.env.example` to `.env` and fill the variables documented there.
+2. Apply database migrations: `npx prisma migrate deploy`.
+3. Seed local data: `npx prisma db seed`.
+4. Start the app: `npm run dev`.
+
+Useful proof commands:
+
+- `npm run e2e`
+- `npm run eval`
+- `npm run demo:reset`
