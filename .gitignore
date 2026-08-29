@@ -6,3 +6,5 @@ node_modules/
 dev.db
 tsconfig.tsbuildinfo
 scripts/free-disk.ps1
+
+.vercel
