@@ -36,3 +36,33 @@ amount_micros TO 999999999"
 rehearsal: Kimi response time on the artifact channel, and whether the two channels are
 truly concurrent. Router timeout is 60 s for this reason; the demo needs it well under 15 s
 or a pre-recorded fallback.
+
+## Latency — 30 Aug 2026
+
+**Before:** 33–50 s per intent. **After:** refusal ~7 s server-side (14 s round-trip),
+clean pay ~16 s (of which ~7 s is Sui finality). Three changes, in order of effect:
+
+1. **Hedged dispatch.** Per-request latency on Gonka nodes swings 10× for the same model
+   (DeepSeek 18.8 s cold / 0.4 s on an identical cached request; Kimi 9–60 s). Each channel now
+   fires Kimi and DeepSeek together and takes the first schema-valid answer. Expected latency
+   becomes the minimum of two draws instead of one draw.
+2. **Both channels started before either is awaited.** They had been sequential.
+3. **MiniMax removed.** It emits `<think>…` reasoning before any JSON and overruns
+   `max_tokens`, so it never validates.
+
+Also learned: Kimi under `json_schema` sometimes returns whitespace-padded JSON (173 tokens
+for three fields); without the schema it reasons in prose. DeepSeek with `json_schema` is
+the only consistently clean reader. In practice DeepSeek wins both channels most of the time.
+
+**What the independence claim actually is:** the two channels receive *different inputs* —
+the artifact channel sees the untrusted text and only the open work-order IDs; the
+payer-record channel sees the payer's own records and never the artifact. That input
+isolation is the security property. Model diversity is a hedge on top, not the guarantee,
+and the receipt shows which model answered each channel.
+
+**Router caches identical requests** (0.4 s repeat). Demo inputs are fixed, so a rehearsal
+run warms them; disclose this on stage ("same input, this morning") rather than hide it.
+
+Remaining lever: `rails/sui.ts` calls `waitForTransaction` after `signAndExecuteTransaction`
+already returned effects; dropping it would cut ~3–5 s from the clean path. Not done —
+needs the 2.x client's return shape confirmed first.
