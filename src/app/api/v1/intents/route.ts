@@ -185,18 +185,13 @@ export async function POST(request: NextRequest) {
     }
   ];
 
-  const artifactRun = await Promise.resolve(
-    runGonka({ channel: "artifact", messages: artifactMessages, schema: artifactDecisionSchema })
-  ).then(
-    (value) => ({ status: "fulfilled" as const, value }),
-    () => ({ status: "rejected" as const })
-  );
-  const payerRun = await Promise.resolve(
+  // Both channels are started before either is awaited. The previous form
+  // awaited the artifact channel before starting the payer-record channel, so
+  // every intent paid the two model latencies in series (~45 s observed).
+  const [artifactRun, payerRun] = await Promise.allSettled([
+    runGonka({ channel: "artifact", messages: artifactMessages, schema: artifactDecisionSchema }),
     runGonka({ channel: "payer_record", messages: payerMessages, schema: payerRecordDecisionSchema })
-  ).then(
-    (value) => ({ status: "fulfilled" as const, value }),
-    () => ({ status: "rejected" as const })
-  );
+  ]);
   const artifactResult = artifactRun.status === "fulfilled" ? artifactRun.value : unavailable("moonshotai/Kimi-K2.6");
   const payerResult = payerRun.status === "fulfilled" ? payerRun.value : unavailable("deepseek-ai/DeepSeek-V4-Flash-0731");
 
