@@ -12,7 +12,7 @@ import {
 } from "@/lib/prompts";
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
 import { reconcile, requiredChannelsForAmount, type DecisionTuple } from "@/lib/reconcile";
-import { payoutRail } from "@/lib/rails";
+import { PayoutRailError, payoutRail } from "@/lib/rails";
 
 export const runtime = "nodejs";
 
@@ -298,6 +298,9 @@ export async function POST(request: NextRequest) {
         amountMicros: reconciled.tuple.amountMicros,
         intentId: intent.id
       });
+      if (!receipt.digest || !receipt.explorerUrl) {
+        throw new PayoutRailError("SUI_EXECUTION_FAILED", "Settlement did not return a digest.");
+      }
 
       return tx.payoutIntent.update({
         where: { id: intent.id },
@@ -317,7 +320,16 @@ export async function POST(request: NextRequest) {
     const pricing = await pricingData();
     const updated = await prisma.payoutIntent.update({
       where: { id: intent.id },
-      data: { status: "refused", decisionClass: "RED", reasonCode: "WORK_ORDER_NOT_OPEN", ...pricing }
+      data: {
+        workOrderId: selected.id,
+        amountMicros: reconciled.tuple.amountMicros,
+        status: "refused",
+        decisionClass: "RED",
+        reasonCode: "SETTLEMENT_FAILED",
+        digest: null,
+        explorerUrl: null,
+        ...pricing
+      }
     });
     return response(updated);
   }

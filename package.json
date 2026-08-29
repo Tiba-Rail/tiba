@@ -13,9 +13,11 @@
     "test": "node --test",
     "db:push": "prisma db push",
     "seed": "node scripts/seed.mjs",
-    "demo:reset": "node scripts/demo-reset.mjs"
+    "demo:reset": "node scripts/demo-reset.mjs",
+    "sui:smoke": "node scripts/sui-smoke.mjs"
   },
   "dependencies": {
+    "@mysten/sui": "2.27.1",
     "@prisma/adapter-better-sqlite3": "^7.3.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.3.0",

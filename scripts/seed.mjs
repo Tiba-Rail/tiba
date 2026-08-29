@@ -8,6 +8,8 @@ const apiKeySource = process.env.SEED_AGENT_KEY ? "SEED_AGENT_KEY" : "default_de
 const apiKeyHash = createHash("sha256").update(apiKey).digest("hex");
 const seededAt = new Date("2026-08-29T00:00:00.000Z");
 const expiresAt = new Date("2026-09-30T00:00:00.000Z");
+const defaultRecipientAddress = "0xb91e5bd8be3c828e329c2e4368f6f8abb9ec6e1ba53d9f8966b8369027224bef";
+const demoRecipientAddress = process.env.SEED_RECIPIENT_SUI_ADDRESS ?? process.env.SUI_ADDRESS ?? defaultRecipientAddress;
 
 await prisma.adjudication.deleteMany();
 await prisma.artifact.deleteMany();
@@ -27,7 +29,7 @@ const agent = await prisma.agent.create({
     dayCapMicros: 1_000_000_000n,
     hourCountCap: 5,
     dayCountCap: 20,
-    rail: "mock",
+    rail: "sui",
     windowStartedAt: seededAt,
     dayStartedAt: seededAt,
     createdAt: seededAt,
@@ -40,7 +42,7 @@ const creator = await prisma.recipient.create({
     id: "recipient-creator-lagos",
     ref: "creator-lagos",
     displayName: "Demo Creator",
-    suiAddress: "0xtestnetrecipient000000000000000000000000000000000000000000000001",
+    suiAddress: demoRecipientAddress,
     active: true,
     createdAt: seededAt,
     updatedAt: seededAt
@@ -52,7 +54,7 @@ const translator = await prisma.recipient.create({
     id: "recipient-translator-kl",
     ref: "translator-kl",
     displayName: "KL Translator",
-    suiAddress: "0xtestnetrecipient000000000000000000000000000000000000000000000002",
+    suiAddress: demoRecipientAddress,
     active: true,
     createdAt: seededAt,
     updatedAt: seededAt

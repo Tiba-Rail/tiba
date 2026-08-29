@@ -6,6 +6,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Rail {
+  mock
+  sui
+}
+
 model Agent {
   id                String   @id @default(uuid())
   name              String
@@ -23,7 +28,7 @@ model Agent {
   countDay          Int      @default(0) @map("count_day")
   countHour         Int      @default(0) @map("count_hour")
   killSwitch        Boolean  @default(false) @map("kill_switch")
-  rail              String   @default("mock")
+  rail              Rail     @default(mock)
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 

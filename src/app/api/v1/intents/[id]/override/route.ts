@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getGnkUsdRate } from "@/lib/gonka-pricing";
 import { isOperatorRequest } from "@/lib/operator-auth";
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
-import { payoutRail } from "@/lib/rails";
+import { PayoutRailError, payoutRail } from "@/lib/rails";
 
 export const runtime = "nodejs";
 
@@ -89,62 +89,82 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     return NextResponse.json({ id: updated.id, decision_class: updated.decisionClass, reason_code: updated.reasonCode });
   }
 
-  const updated = await prisma.$transaction(async (tx) => {
-    const debit = await debitAtomically(tx as unknown as SqlExecutor, intent.agent as AgentLimits, tuple.amountMicros, now);
-    if (!debit.ok) {
+  let updated;
+  try {
+    updated = await prisma.$transaction(async (tx) => {
+      const debit = await debitAtomically(tx as unknown as SqlExecutor, intent.agent as AgentLimits, tuple.amountMicros, now);
+      if (!debit.ok) {
+        return tx.payoutIntent.update({
+          where: { id: intent.id },
+          data: {
+            status: "refused",
+            decisionClass: "RED",
+            reasonCode: debit.reasonCode as PolicyReason,
+            amountMicros: tuple.amountMicros,
+            workOrderId: workOrder?.id,
+            ...pricing
+          }
+        });
+      }
+      const claimed = await tx.workOrder.updateMany({
+        where: {
+          id: workOrder!.id,
+          status: "open",
+          dischargedByIntentId: null,
+          expiresAt: { gt: now }
+        },
+        data: { status: "discharged", dischargedByIntentId: intent.id }
+      });
+      if (claimed.count !== 1) {
+        return tx.payoutIntent.update({
+          where: { id: intent.id },
+          data: {
+            status: "refused",
+            decisionClass: "RED",
+            reasonCode: "WORK_ORDER_NOT_OPEN",
+            amountMicros: tuple.amountMicros,
+            workOrderId: workOrder?.id,
+            ...pricing
+          }
+        });
+      }
+      const receipt = await payoutRail(intent.agent.rail).send({
+        recipientAddress: intent.recipient.suiAddress,
+        amountMicros: tuple.amountMicros,
+        intentId: intent.id
+      });
+      if (!receipt.digest || !receipt.explorerUrl) {
+        throw new PayoutRailError("SUI_EXECUTION_FAILED", "Settlement did not return a digest.");
+      }
       return tx.payoutIntent.update({
         where: { id: intent.id },
         data: {
-          status: "refused",
-          decisionClass: "RED",
-          reasonCode: debit.reasonCode as PolicyReason,
+          status: "settled",
+          decisionClass: "PAID",
+          reasonCode: "OWNER_OVERRIDE",
           amountMicros: tuple.amountMicros,
-          workOrderId: workOrder?.id,
+          workOrderId: workOrder!.id,
+          digest: receipt.digest,
+          explorerUrl: receipt.explorerUrl,
           ...pricing
         }
       });
-    }
-    const claimed = await tx.workOrder.updateMany({
-      where: {
-        id: workOrder!.id,
-        status: "open",
-        dischargedByIntentId: null,
-        expiresAt: { gt: now }
-      },
-      data: { status: "discharged", dischargedByIntentId: intent.id }
     });
-    if (claimed.count !== 1) {
-      return tx.payoutIntent.update({
-        where: { id: intent.id },
-        data: {
-          status: "refused",
-          decisionClass: "RED",
-          reasonCode: "WORK_ORDER_NOT_OPEN",
-          amountMicros: tuple.amountMicros,
-          workOrderId: workOrder?.id,
-          ...pricing
-        }
-      });
-    }
-    const receipt = await payoutRail(intent.agent.rail).send({
-      recipientAddress: intent.recipient.suiAddress,
-      amountMicros: tuple.amountMicros,
-      intentId: intent.id
-    });
-    return tx.payoutIntent.update({
+  } catch {
+    updated = await prisma.payoutIntent.update({
       where: { id: intent.id },
       data: {
-        status: "settled",
-        decisionClass: "PAID",
-        reasonCode: "OWNER_OVERRIDE",
+        status: "refused",
+        decisionClass: "RED",
+        reasonCode: "SETTLEMENT_FAILED",
         amountMicros: tuple.amountMicros,
-        workOrderId: workOrder!.id,
-        digest: receipt.digest,
-        explorerUrl: receipt.explorerUrl,
+        workOrderId: workOrder?.id,
+        digest: null,
+        explorerUrl: null,
         ...pricing
       }
     });
-  });
+  }
 
   return NextResponse.json({
     id: updated.id,
