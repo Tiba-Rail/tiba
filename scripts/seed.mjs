@@ -1,14 +1,10 @@
-import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-
-const pushed = process.platform === "win32"
-  ? spawnSync("npx prisma db push", { stdio: "inherit", shell: true })
-  : spawnSync("npx", ["prisma", "db", "push"], { stdio: "inherit" });
-if (pushed.status !== 0) process.exit(pushed.status ?? 1);
+import "dotenv/config";
 
 const { prisma } = await import("../src/lib/db.ts");
 
 const apiKey = process.env.SEED_AGENT_KEY ?? "tiba_testnet_demo_key";
+const apiKeySource = process.env.SEED_AGENT_KEY ? "SEED_AGENT_KEY" : "default_demo_key";
 const apiKeyHash = createHash("sha256").update(apiKey).digest("hex");
 const seededAt = new Date("2026-08-29T00:00:00.000Z");
 const expiresAt = new Date("2026-09-30T00:00:00.000Z");
@@ -118,9 +114,9 @@ await prisma.workOrder.createMany({
   ]
 });
 
-console.log(`AGENT_KEY=${apiKey}`);
 console.log(JSON.stringify({
   agent_id: agent.id,
+  agent_key_source: apiKeySource,
   recipients: [creator.ref, translator.ref],
   open_work_orders: ["WO-3", "WO-7", "WO-11"]
 }, null, 2));
