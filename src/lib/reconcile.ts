@@ -32,7 +32,7 @@ export function reconcile(
     return payer ? { ok: true, tuple: payer } : { ok: false, decisionClass: "AMBER", reasonCode: "MISSING_PAYER_RECORD" };
   }
   if (requiredChannels === "human") {
-    return { ok: false, decisionClass: "RED", reasonCode: "HUMAN_REVIEW_REQUIRED" };
+    return { ok: false, decisionClass: "AMBER", reasonCode: "HUMAN_REVIEW_REQUIRED" };
   }
   if (!payer || !artifact) return { ok: false, decisionClass: "AMBER", reasonCode: "MISSING_REQUIRED_CHANNEL" };
   if (payer.workOrderId !== artifact.workOrderId) {

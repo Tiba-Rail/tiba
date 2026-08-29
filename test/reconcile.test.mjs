@@ -20,3 +20,9 @@ test("verification bands select one channel, two channels, then human review", (
   assert.equal(requiredChannelsForAmount(50_000_000n), "both");
   assert.equal(requiredChannelsForAmount(250_000_001n), "human");
 });
+
+test("human review band is an amber hold, not a refusal", () => {
+  assert.deepEqual(reconcile("human", {
+    payer_record: { workOrderId: "WO-7", amountMicros: 400_000_000n, deliveryTimestamp: "2026-08-29T00:00:00Z" }
+  }), { ok: false, decisionClass: "AMBER", reasonCode: "HUMAN_REVIEW_REQUIRED" });
+});
