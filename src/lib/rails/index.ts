@@ -68,6 +68,7 @@ export const rails: Record<RailName, PayoutRail> = {
 };
 
 export function payoutRail(name: string): PayoutRail {
+  if (process.env.MOCK_SETTLEMENT === "1") return mockRail;
   if (name !== "mock" && name !== "sui") {
     throw new PayoutRailError("UNSUPPORTED_RAIL", `Unsupported rail: ${name}`);
   }

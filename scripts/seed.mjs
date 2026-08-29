@@ -6,6 +6,7 @@ const { prisma } = await import("../src/lib/db.ts");
 const apiKey = process.env.SEED_AGENT_KEY ?? "tiba_testnet_demo_key";
 const apiKeySource = process.env.SEED_AGENT_KEY ? "SEED_AGENT_KEY" : "default_demo_key";
 const apiKeyHash = createHash("sha256").update(apiKey).digest("hex");
+const agentRail = process.env.SEED_AGENT_RAIL === "mock" ? "mock" : "sui";
 const seededAt = new Date("2026-08-29T00:00:00.000Z");
 const expiresAt = new Date("2026-09-30T00:00:00.000Z");
 const defaultRecipientAddress = "0xb91e5bd8be3c828e329c2e4368f6f8abb9ec6e1ba53d9f8966b8369027224bef";
@@ -29,7 +30,7 @@ const agent = await prisma.agent.create({
     dayCapMicros: 1_000_000_000n,
     hourCountCap: 5,
     dayCountCap: 20,
-    rail: "sui",
+    rail: agentRail,
     windowStartedAt: seededAt,
     dayStartedAt: seededAt,
     createdAt: seededAt,
@@ -54,6 +55,18 @@ const translator = await prisma.recipient.create({
     id: "recipient-translator-kl",
     ref: "translator-kl",
     displayName: "KL Translator",
+    suiAddress: demoRecipientAddress,
+    active: true,
+    createdAt: seededAt,
+    updatedAt: seededAt
+  }
+});
+
+const ali = await prisma.recipient.create({
+  data: {
+    id: "recipient-e2e-ali",
+    ref: "ali-sui",
+    displayName: "Ali",
     suiAddress: demoRecipientAddress,
     active: true,
     createdAt: seededAt,
@@ -112,6 +125,24 @@ await prisma.workOrder.createMany({
       expiresAt,
       createdAt: seededAt,
       updatedAt: seededAt
+    },
+    {
+      id: "work-order-wo-e2e-1",
+      recipientId: ali.id,
+      ref: "WO-E2E-1",
+      ceilingMicros: 2_000_000n,
+      briefText: "Pay Ali exactly 0.002 SUI when the delivery note says WO-E2E-1 was delivered.",
+      payerRecord: {
+        approved_amount_micros: "2000000",
+        delivery_timestamp: "2026-08-29T08:00:00.000Z",
+        delivery_status: "verified_complete",
+        payee_name: "Ali",
+        source: "seeded-e2e-record"
+      },
+      requiredChannels: "both",
+      expiresAt,
+      createdAt: seededAt,
+      updatedAt: seededAt
     }
   ]
 });
@@ -119,8 +150,9 @@ await prisma.workOrder.createMany({
 console.log(JSON.stringify({
   agent_id: agent.id,
   agent_key_source: apiKeySource,
-  recipients: [creator.ref, translator.ref],
-  open_work_orders: ["WO-3", "WO-7", "WO-11"]
+  agent_rail: agentRail,
+  recipients: [creator.ref, translator.ref, ali.ref],
+  open_work_orders: ["WO-3", "WO-7", "WO-11", "WO-E2E-1"]
 }, null, 2));
 
 await prisma.$disconnect();

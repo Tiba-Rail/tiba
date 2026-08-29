@@ -11,7 +11,7 @@ import {
   payerRecordSystemPrompt
 } from "@/lib/prompts";
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
-import { reconcile, requiredChannelsForAmount, type DecisionTuple } from "@/lib/reconcile";
+import { reconcile, type DecisionTuple, type RequiredChannels } from "@/lib/reconcile";
 import { PayoutRailError, payoutRail } from "@/lib/rails";
 
 export const runtime = "nodejs";
@@ -84,6 +84,10 @@ function tupleJson(result: GonkaResult): Prisma.InputJsonObject | undefined {
 
 function unavailable(model: string): GonkaResult {
   return { ok: false, model, latencyMs: 0, errorCode: "INFERENCE_UNAVAILABLE" };
+}
+
+function requiredChannelsFrom(value: string): RequiredChannels {
+  return value === "payer_record" || value === "human" ? value : "both";
 }
 
 export async function POST(request: NextRequest) {
@@ -160,6 +164,7 @@ export async function POST(request: NextRequest) {
       role: "user",
       content: JSON.stringify({
         open_work_order_ids: openWorkOrders.map((workOrder) => workOrder.ref),
+        delivery_event_metadata: { received_at: now.toISOString(), recipient_ref: recipient.ref },
         artifact_text_and_links: body.artifact
       })
     }
@@ -175,7 +180,7 @@ export async function POST(request: NextRequest) {
           brief_text: workOrder.briefText,
           payer_record: workOrder.payerRecord
         })),
-        delivery_event_metadata: { recipient_ref: recipient.ref }
+        delivery_event_metadata: { received_at: now.toISOString(), recipient_ref: recipient.ref }
       })
     }
   ];
@@ -220,7 +225,10 @@ export async function POST(request: NextRequest) {
 
   const payerTuple = tuple(payerResult);
   const artifactTuple = tuple(artifactResult);
-  const requiredChannels = payerTuple ? requiredChannelsForAmount(payerTuple.amountMicros) : "both";
+  const channelPolicyWorkOrder = payerTuple
+    ? openWorkOrders.find((workOrder) => workOrder.ref === payerTuple.workOrderId)
+    : null;
+  const requiredChannels = channelPolicyWorkOrder ? requiredChannelsFrom(channelPolicyWorkOrder.requiredChannels) : "both";
   const reconciled = reconcile(requiredChannels, {
     artifact: artifactTuple ?? undefined,
     payer_record: payerTuple ?? undefined
