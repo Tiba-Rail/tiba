@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getGnkUsdRate } from "@/lib/gonka-pricing";
 import { runGonka, fingerprintPrompt, fingerprintResponse, type GonkaMessage, type GonkaResult } from "@/lib/gonka";
 import {
   artifactDecisionSchema,
@@ -44,6 +45,14 @@ function response(intent: PublicIntent) {
     explorer_url: intent.explorerUrl,
     public_token: intent.publicToken
   });
+}
+
+async function pricingData() {
+  const rate = await getGnkUsdRate();
+  return {
+    gnkUsd: rate?.value ?? null,
+    pricingUpdatedAt: rate?.updatedAt ?? null
+  };
 }
 
 function tuple(result: GonkaResult): DecisionTuple | null {
@@ -137,9 +146,10 @@ export async function POST(request: NextRequest) {
   });
 
   if (openWorkOrders.length === 0) {
+    const pricing = await pricingData();
     const denied = await prisma.payoutIntent.update({
       where: { id: intent.id },
-      data: { status: "refused", decisionClass: "RED", reasonCode: "NO_OPEN_OBLIGATION" }
+      data: { status: "refused", decisionClass: "RED", reasonCode: "NO_OPEN_OBLIGATION", ...pricing }
     });
     return response(denied);
   }
@@ -217,12 +227,14 @@ export async function POST(request: NextRequest) {
   });
 
   if (!reconciled.ok) {
+    const pricing = await pricingData();
     const updated = await prisma.payoutIntent.update({
       where: { id: intent.id },
       data: {
         status: reconciled.decisionClass === "AMBER" ? "held" : "refused",
         decisionClass: reconciled.decisionClass,
-        reasonCode: reconciled.reasonCode
+        reasonCode: reconciled.reasonCode,
+        ...pricing
       }
     });
     return response(updated);
@@ -230,9 +242,10 @@ export async function POST(request: NextRequest) {
 
   const selected = openWorkOrders.find((workOrder) => workOrder.ref === reconciled.tuple.workOrderId) ?? null;
   if (!selected) {
+    const pricing = await pricingData();
     const updated = await prisma.payoutIntent.update({
       where: { id: intent.id },
-      data: { status: "refused", decisionClass: "RED", reasonCode: "NO_OPEN_OBLIGATION" }
+      data: { status: "refused", decisionClass: "RED", reasonCode: "NO_OPEN_OBLIGATION", ...pricing }
     });
     return response(updated);
   }
@@ -245,20 +258,22 @@ export async function POST(request: NextRequest) {
     now
   });
   if (!before.ok) {
+    const pricing = await pricingData();
     const updated = await prisma.payoutIntent.update({
       where: { id: intent.id },
-      data: { status: "refused", decisionClass: "RED", reasonCode: before.reasonCode }
+      data: { status: "refused", decisionClass: "RED", reasonCode: before.reasonCode, ...pricing }
     });
     return response(updated);
   }
 
   try {
+    const pricing = await pricingData();
     const updated = await prisma.$transaction(async (tx) => {
       const debit = await debitAtomically(tx as unknown as SqlExecutor, agent as AgentLimits, reconciled.tuple.amountMicros, now);
       if (!debit.ok) {
         return tx.payoutIntent.update({
           where: { id: intent.id },
-          data: { status: "refused", decisionClass: "RED", reasonCode: debit.reasonCode as PolicyReason }
+          data: { status: "refused", decisionClass: "RED", reasonCode: debit.reasonCode as PolicyReason, ...pricing }
         });
       }
 
@@ -274,7 +289,7 @@ export async function POST(request: NextRequest) {
       if (claimed.count !== 1) {
         return tx.payoutIntent.update({
           where: { id: intent.id },
-          data: { status: "refused", decisionClass: "RED", reasonCode: "WORK_ORDER_NOT_OPEN" }
+          data: { status: "refused", decisionClass: "RED", reasonCode: "WORK_ORDER_NOT_OPEN", ...pricing }
         });
       }
 
@@ -292,15 +307,17 @@ export async function POST(request: NextRequest) {
           status: "settled",
           decisionClass: "PAID",
           digest: receipt.digest,
-          explorerUrl: receipt.explorerUrl
+          explorerUrl: receipt.explorerUrl,
+          ...pricing
         }
       });
     });
     return response(updated);
   } catch {
+    const pricing = await pricingData();
     const updated = await prisma.payoutIntent.update({
       where: { id: intent.id },
-      data: { status: "refused", decisionClass: "RED", reasonCode: "WORK_ORDER_NOT_OPEN" }
+      data: { status: "refused", decisionClass: "RED", reasonCode: "WORK_ORDER_NOT_OPEN", ...pricing }
     });
     return response(updated);
   }
