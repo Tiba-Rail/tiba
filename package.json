@@ -1,4 +1,5 @@
 {
+  "license": "MIT",
   "name": "tiba",
   "private": true,
   "version": "0.1.0",
@@ -15,6 +16,7 @@
     "db:push": "prisma db push",
     "seed": "node scripts/seed.mjs",
     "demo:reset": "node scripts/demo-reset.mjs",
+    "demo:record": "node scripts/record-demo.mjs",
     "e2e": "node scripts/e2e.mjs",
     "eval": "node scripts/eval.mjs",
     "sui:smoke": "node scripts/sui-smoke.mjs",
@@ -38,6 +40,7 @@
     "@types/node": "^25.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "playwright": "^1.62.1",
     "postcss": "^8.5.26",
     "prisma": "^7.3.0",
     "tailwindcss": "^4.2.1",
