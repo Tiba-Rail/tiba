@@ -47,6 +47,14 @@ type TestIntentResponse = {
   publicToken?: string;
 };
 
+// The internal enum (RED/AMBER) is not what a person should read; a refusal is the
+// product working, so it says so.
+function decisionWord(decisionClass: string): string {
+  if (decisionClass === "AMBER") return "HELD";
+  if (decisionClass === "RED") return "REFUSED";
+  return decisionClass;
+}
+
 export function ConsoleClient({
   budget,
   recipients,
@@ -453,7 +461,7 @@ export function ConsoleClient({
               <div>
                 <p className="font-mono text-sm text-muted">{intent.id}</p>
                 <p className="mt-1 text-lg font-bold">{intent.recipientName} | {intent.amount}</p>
-                <p className="mt-1 text-sm text-muted">{intent.decisionClass} | {intent.reasonCode ?? "UNKNOWN"} | {intent.createdAt}</p>
+                <p className="mt-1 text-sm text-muted">{decisionWord(intent.decisionClass)} | {intent.reasonCode ?? "UNKNOWN"} | {intent.createdAt}</p>
               </div>
               <button
                 type="button"
