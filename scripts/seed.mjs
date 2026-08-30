@@ -118,7 +118,7 @@ await prisma.workOrder.createMany({
       payerRecord: {
         approved_amount_micros: "40000000",
         delivery_timestamp: "2026-08-29T06:00:00.000Z",
-        delivery_status: "verified_complete",
+        delivery_status: "pending",
         source: "operator-upload"
       },
       requiredChannels: "payer_record",
