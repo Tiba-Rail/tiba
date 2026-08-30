@@ -19,19 +19,19 @@ export async function RouterHealthStrip() {
   const latest = Array.from(latestByModel.values()).slice(0, 4);
   if (latest.length === 0) {
     return (
-      <div className="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/95 px-4 py-3 text-sm font-semibold text-zinc-300 backdrop-blur">
-        ROUTER <span className="text-zinc-500">-</span> no calls yet
+      <div className="sticky top-0 z-20 border-b border-line bg-surface/95 px-4 py-3 text-sm font-semibold text-muted backdrop-blur">
+        ROUTER <span className="text-muted">-</span> no calls yet
       </div>
     );
   }
   return (
-    <div className="sticky top-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-zinc-800 bg-zinc-950/95 px-4 py-3 text-sm font-semibold text-zinc-100 backdrop-blur">
+    <div className="sticky top-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-surface/95 px-4 py-3 text-sm font-semibold backdrop-blur">
       <span className="inline-flex items-center gap-2">
         ROUTER <StatusDot ok /> live
       </span>
       {latest.map((row) => (
-        <span key={row.id} className="inline-flex items-center gap-2 text-zinc-300">
-          <span className="text-zinc-600">|</span>
+        <span key={row.id} className="inline-flex items-center gap-2 text-muted">
+          <span className="text-muted">|</span>
           {labelFor(row.model)} <StatusDot ok={row.ok} />
           {formatLatency(row.latencyMs)}
         </span>
@@ -44,7 +44,7 @@ function StatusDot({ ok }: { ok: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={ok ? "inline-block size-2 rounded-full bg-emerald-400" : "inline-block size-2 rounded-full bg-red-500"}
+      className={ok ? "inline-block size-2 rounded-full bg-paid" : "inline-block size-2 rounded-full bg-red-ink"}
     />
   );
 }

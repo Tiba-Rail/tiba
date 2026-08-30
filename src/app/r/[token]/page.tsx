@@ -52,18 +52,18 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   const paid = intent.decisionClass === "PAID";
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
+    <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 md:px-6 lg:px-8">
-        <header className="flex flex-col gap-4 border-b border-zinc-800 pb-6 md:flex-row md:items-end md:justify-between">
+        <header className="flex flex-col gap-4 border-b border-line pb-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-widest text-cyan-300">Public receipt</p>
-            <h1 className="mt-2 text-3xl font-black tracking-normal text-zinc-50 md:text-5xl">
+            <p className="eyebrow">Public receipt</p>
+            <h1 className="display mt-2 text-4xl md:text-5xl">
               {decisionLabel(intent.decisionClass)}
             </h1>
           </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 md:min-w-72">
-            <p className="text-sm text-zinc-400">Amount</p>
-            <p className="mt-1 text-2xl font-black text-zinc-50">{microsToUsdc(intent.amountMicros)}</p>
+          <div className="card p-4 md:min-w-72">
+            <p className="text-sm text-muted">Amount</p>
+            <p className="mt-1 text-2xl font-semibold">{microsToUsdc(intent.amountMicros)}</p>
           </div>
         </header>
 
@@ -75,29 +75,29 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
           <Fact label="Remaining day budget" value={remainingBudget(intent.agent.dayCapMicros, intent.agent.spentMicrosDay)} />
         </section>
 
-        <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-          <h2 className="text-xl font-bold text-zinc-50">Model adjudications</h2>
+        <section className="card p-5">
+          <h2 className="text-xl font-bold">Model adjudications</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {adjudications.map(({ channel, row }) => (
-              <div key={channel} className="rounded-md border border-zinc-800 bg-zinc-950 p-4">
-                <p className="text-sm font-semibold uppercase tracking-widest text-zinc-400">{channelTitle(channel)}</p>
+              <div key={channel} className="card p-4">
+                <p className="eyebrow">{channelTitle(channel)}</p>
                 {row ? (
                   <dl className="mt-3 space-y-2 text-sm">
                     <div>
-                      <dt className="text-zinc-500">Model</dt>
-                      <dd className="break-words font-mono text-zinc-100">{row.model}</dd>
+                      <dt className="text-muted">Model</dt>
+                      <dd className="break-words font-mono">{row.model}</dd>
                     </div>
                     <div>
-                      <dt className="text-zinc-500">x-request-id</dt>
-                      <dd className="break-words font-mono text-zinc-100">{row.requestId ?? "missing"}</dd>
+                      <dt className="text-muted">x-request-id</dt>
+                      <dd className="break-words font-mono">{row.requestId ?? "missing"}</dd>
                     </div>
                     <div>
-                      <dt className="text-zinc-500">Latency</dt>
-                      <dd className="font-mono text-zinc-100">{formatLatency(row.latencyMs)}</dd>
+                      <dt className="text-muted">Latency</dt>
+                      <dd className="font-mono">{formatLatency(row.latencyMs)}</dd>
                     </div>
                   </dl>
                 ) : (
-                  <p className="mt-3 text-sm text-zinc-400">No adjudication recorded for this channel.</p>
+                  <p className="mt-3 text-sm text-muted">No adjudication recorded for this channel.</p>
                 )}
               </div>
             ))}
@@ -105,37 +105,37 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
         </section>
 
         <section className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-            <h2 className="text-xl font-bold text-zinc-50">Settlement</h2>
+          <div className="card p-5">
+            <h2 className="text-xl font-bold">Settlement</h2>
             {paid && intent.explorerUrl ? (
               <a
-                className="mt-3 block break-all font-mono text-sm text-cyan-300 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                className="mt-3 block break-all font-mono text-sm text-primary underline-offset-4 hover:underline"
                 href={intent.explorerUrl}
               >
                 {intent.digest ?? intent.explorerUrl}
               </a>
             ) : (
-              <p className="mt-3 text-sm text-zinc-400">No settlement digest for this decision.</p>
+              <p className="mt-3 text-sm text-muted">No settlement digest for this decision.</p>
             )}
           </div>
 
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-            <h2 className="text-xl font-bold text-zinc-50">GNK/USD</h2>
+          <div className="card p-5">
+            <h2 className="text-xl font-bold">GNK/USD</h2>
             {intent.gnkUsd ? (
-              <p className="mt-3 text-2xl font-black text-zinc-50">
+              <p className="mt-3 text-2xl font-semibold">
                 ${intent.gnkUsd}
-                <span className="ml-2 align-middle text-sm font-medium text-zinc-400">
+                <span className="ml-2 align-middle text-sm font-medium text-muted">
                   at {formatTime(intent.pricingUpdatedAt)}
                 </span>
               </p>
             ) : (
-              <p className="mt-3 text-sm text-zinc-400">rate unavailable</p>
+              <p className="mt-3 text-sm text-muted">rate unavailable</p>
             )}
           </div>
         </section>
 
         <Link
-          className="inline-flex min-h-10 w-fit items-center rounded-md border border-zinc-700 px-3 py-2 text-sm font-semibold text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+          className="btn btn-secondary w-fit"
           href="/ledger"
         >
           View ledger
@@ -147,10 +147,10 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
 
 function Fact({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-      <p className="text-sm text-zinc-400">{label}</p>
-      <p className="mt-2 break-words text-xl font-black text-zinc-50">{value}</p>
-      {detail ? <p className="mt-1 break-words font-mono text-xs text-zinc-500">{detail}</p> : null}
+    <div className="card p-5">
+      <p className="text-sm text-muted">{label}</p>
+      <p className="mt-2 break-words text-xl font-semibold">{value}</p>
+      {detail ? <p className="mt-1 break-words font-mono text-xs text-muted">{detail}</p> : null}
     </div>
   );
 }

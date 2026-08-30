@@ -38,18 +38,18 @@ export default async function ConsolePage() {
 
   if (!agent) {
     return (
-      <main className="min-h-screen bg-zinc-950 text-zinc-100">
+      <main className="min-h-screen bg-background text-foreground">
         <RouterHealthStrip />
         <div className="mx-auto max-w-7xl px-4 py-8">
-          <h1 className="text-3xl font-black">No seeded agent</h1>
-          <p className="mt-2 text-zinc-300">Run npm run seed before opening the console.</p>
+          <h1 className="display text-4xl md:text-5xl">No seeded agent</h1>
+          <p className="mt-2 text-muted">Run npm run seed before opening the console.</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
+    <main className="min-h-screen bg-background text-foreground">
       <RouterHealthStrip />
       <ConsoleClient
         budget={{

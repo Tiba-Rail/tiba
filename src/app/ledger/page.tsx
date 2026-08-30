@@ -34,20 +34,20 @@ export default async function LedgerPage() {
   });
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
+    <main className="min-h-screen bg-background text-foreground">
       <RouterHealthStrip />
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:px-8">
         <header className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-widest text-cyan-300">Ledger</p>
-          <h1 className="mt-2 text-3xl font-black tracking-normal text-zinc-50 md:text-5xl">
+          <p className="eyebrow">Ledger</p>
+          <h1 className="display mt-2 text-4xl md:text-5xl">
             Payments and refusals
           </h1>
         </header>
 
-        <section className="rounded-lg border border-zinc-800 bg-zinc-900">
+        <section className="card">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left text-sm">
-              <thead className="border-b border-zinc-800 text-xs uppercase tracking-widest text-zinc-400">
+              <thead className="border-b border-line eyebrow">
                 <tr>
                   <th className="px-4 py-3">Time</th>
                   <th className="px-4 py-3">Recipient</th>
@@ -58,47 +58,47 @@ export default async function LedgerPage() {
                   <th className="px-4 py-3">Digest</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800">
+              <tbody className="divide-y divide-line">
                 {intents.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-zinc-400">
+                    <td colSpan={7} className="px-4 py-12 text-center text-muted">
                       No ledger rows yet. Submit an intent to create either a payment or a refusal.
                     </td>
                   </tr>
                 ) : intents.map((intent) => (
-                  <tr key={intent.id} className="align-top text-zinc-100">
-                    <td className="px-4 py-4">{formatTime(intent.createdAt)}</td>
-                    <td className="px-4 py-4">
+                  <tr key={intent.id} className="align-top">
+                    <td className="px-4 py-5">{formatTime(intent.createdAt)}</td>
+                    <td className="px-4 py-5">
                       <p className="font-semibold">{intent.recipient.displayName}</p>
-                      <p className="font-mono text-xs text-zinc-400">{intent.recipient.ref}</p>
+                      <p className="font-mono text-xs text-muted">{intent.recipient.ref}</p>
                     </td>
-                    <td className="px-4 py-4 font-semibold">{microsToUsdc(intent.amountMicros)}</td>
-                    <td className="px-4 py-4">
-                      <span className={intent.decisionClass === "PAID" ? "rounded-md bg-emerald-400 px-2 py-1 font-black text-zinc-950" : intent.decisionClass === "AMBER" ? "rounded-md bg-amber-300 px-2 py-1 font-black text-zinc-950" : "rounded-md bg-red-500 px-2 py-1 font-black text-white"}>
+                    <td className="px-4 py-5 font-semibold">{microsToUsdc(intent.amountMicros)}</td>
+                    <td className="px-4 py-5">
+                      <span className={intent.decisionClass === "PAID" ? "pill pill-paid" : intent.decisionClass === "AMBER" ? "pill pill-amber" : "pill pill-red"}>
                         {decisionFor(intent.decisionClass)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 font-mono text-xs">{intent.decisionClass === "PAID" ? "PAID" : intent.reasonCode ?? "UNKNOWN"}</td>
-                    <td className="px-4 py-4 font-mono text-xs text-zinc-300">
+                    <td className="px-4 py-5 font-mono text-xs">{intent.decisionClass === "PAID" ? "PAID" : intent.reasonCode ?? "UNKNOWN"}</td>
+                    <td className="px-4 py-5 font-mono text-xs text-muted">
                       <p>A: {requestIdFor(intent.adjudications, "artifact")}</p>
                       <p>B: {requestIdFor(intent.adjudications, "payer_record")}</p>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-5">
                       {intent.explorerUrl ? (
-                        <a className="font-mono text-xs text-cyan-300 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400" href={intent.explorerUrl}>
+                        <a className="font-mono text-xs text-primary underline-offset-4 hover:underline" href={intent.explorerUrl}>
                           {intent.digest ?? "digest"}
                         </a>
                       ) : (
-                        <span className="font-mono text-xs text-zinc-400">none</span>
+                        <span className="font-mono text-xs text-muted">none</span>
                       )}
                       <details className="mt-3">
-                        <summary className="min-h-10 cursor-pointer rounded-md px-2 py-2 text-sm font-semibold text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
+                        <summary className="min-h-10 cursor-pointer px-2 py-2 text-sm font-semibold text-primary">
                           Inspect row
                         </summary>
                         <div className="mt-3 space-y-3">
                           <DenialBanner decisionClass={intent.decisionClass} reasonCode={intent.reasonCode} />
                           <Link
-                            className="inline-flex min-h-10 items-center rounded-md border border-zinc-700 px-3 py-2 text-sm font-semibold text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                            className="btn btn-secondary"
                             href={`/r/${intent.publicToken}`}
                           >
                             Public receipt
