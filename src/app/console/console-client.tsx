@@ -2,58 +2,9 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-
-type Recipient = {
-  ref: string;
-  displayName: string;
-  suiAddress: string;
-  active: boolean;
-};
-
-type WorkOrder = {
-  ref: string;
-  recipientRef: string;
-  recipientName: string;
-  ceiling: string;
-  expiresAt: string;
-  status: string;
-};
-
-type HeldIntent = {
-  id: string;
-  createdAt: string;
-  recipientName: string;
-  amount: string;
-  decisionClass: string;
-  reasonCode: string | null;
-};
-
-type Budget = {
-  agentName: string;
-  spentDay: string;
-  capDay: string;
-  spentHour: string;
-  capHour: string;
-  dayPercent: number;
-  hourPercent: number;
-  killSwitch: boolean;
-};
-
-type TestIntentResponse = {
-  decision: string;
-  reasonCode?: string;
-  digest?: string;
-  explorerUrl?: string;
-  publicToken?: string;
-};
-
-// The internal enum (RED/AMBER) is not what a person should read; a refusal is the
-// product working, so it says so.
-function decisionWord(decisionClass: string): string {
-  if (decisionClass === "AMBER") return "HELD";
-  if (decisionClass === "RED") return "REFUSED";
-  return decisionClass;
-}
+import { useAgentTools } from "./use-agent-tools";
+import type { Recipient, WorkOrder, HeldIntent, Budget, TestIntentResponse } from "./types";
+import { explainDecision, decisionWord } from "./types";
 
 export function ConsoleClient({
   budget,
@@ -110,6 +61,30 @@ export function ConsoleClient({
     }
   }
 
+  async function submitPayment(recipientRef: string, artifact: string): Promise<TestIntentResponse> {
+    const response = await fetch("/api/console/test-intent", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        artifact,
+        recipient_ref: recipientRef
+      })
+    });
+    
+    const payload = await response.json().catch(() => ({})) as { error?: string } & TestIntentResponse;
+    
+    if (!response.ok) throw new Error(payload.error ?? "REQUEST_FAILED");
+    
+    setTestResponse(payload);
+    setMessage("Test payment submitted");
+    router.refresh();
+    
+    return payload;
+  }
+
   async function submitTestIntent() {
     if (!token) return;
     
@@ -119,25 +94,7 @@ export function ConsoleClient({
     setTestResponse(null);
     
     try {
-      const response = await fetch("/api/console/test-intent", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          artifact,
-          recipient_ref: selectedRecipient
-        })
-      });
-      
-      const payload = await response.json().catch(() => ({})) as { error?: string } & TestIntentResponse;
-      
-      if (!response.ok) throw new Error(payload.error ?? "REQUEST_FAILED");
-      
-      setTestResponse(payload);
-      setMessage("Test payment submitted");
-      router.refresh();
+      await submitPayment(selectedRecipient, artifact);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Request failed");
     } finally {
@@ -195,26 +152,15 @@ export function ConsoleClient({
     }
   ];
 
-  // Helper function to get explanation text based on reason code
-  function getExplanationText(decision: string, reasonCode?: string) {
-    if (decision === "PAID" && !reasonCode) {
-      return "Both channels agreed and the payment settled on Sui testnet.";
-    }
-    
-    if (reasonCode === "QUORUM_SPLIT") {
-      return "The two channels disagreed about the work order or the amount, so Tiba refused. It never guesses which one is right.";
-    }
-    
-    if (reasonCode && reasonCode.includes("CAP")) {
-      return "This would have pushed the agent past its spending cap, so it was refused.";
-    }
-    
-    if (reasonCode && (reasonCode.includes("WORK_ORDER") || reasonCode.includes("NOT_FOUND"))) {
-      return "There is no open work order that matches this artifact, so there was nothing to pay against.";
-    }
-    
-    return "Refused by policy before any money moved.";
-  }
+  // Use the agent tools hook
+  const { supported, registered, calls } = useAgentTools({ 
+    token, 
+    recipients, 
+    workOrders, 
+    budget,
+    lastDecision: testResponse, 
+    submitPayment 
+  });
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 lg:px-8">
@@ -313,7 +259,7 @@ export function ConsoleClient({
                 )}
               </div>
               
-              <p className="text-sm">{getExplanationText(testResponse.decision, testResponse.reasonCode)}</p>
+              <p className="text-sm">{explainDecision(testResponse.decision, testResponse.reasonCode ?? null)}</p>
               
               {testResponse.explorerUrl && (
                 <div className="flex flex-wrap gap-2">
@@ -343,6 +289,48 @@ export function ConsoleClient({
               )}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Agent Tools Card */}
+      <section className="card p-5">
+        <p className="eyebrow">Agent tools (WebMCP)</p>
+        
+        <div className="mt-4 space-y-3">
+          <p className="text-sm text-muted">
+            {supported === null ? "Checking browser..." : 
+             supported ? `This browser exposes ${registered.length} tools to AI agents.` :
+             "This browser does not support WebMCP. Agents cannot act here; the console still works for humans."}
+          </p>
+          
+          {supported && registered.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {registered.map((tool) => (
+                <span key={tool} className="pill font-mono border border-line">
+                  {tool}
+                </span>
+              ))}
+            </div>
+          )}
+          
+          <p className="text-sm text-muted">
+            Not on the menu: override a refusal / change a cap / kill switch.
+          </p>
+          
+          <div>
+            <p className="eyebrow">Recent agent calls</p>
+            {calls.length === 0 ? (
+              <p className="text-sm text-muted">No agent calls yet.</p>
+            ) : (
+              <div className="mt-2 space-y-1">
+                {calls.map((call, index) => (
+                  <p key={index} className="text-sm">
+                    {new Date(call.at).toLocaleTimeString()} - {call.tool} - {call.summary}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
