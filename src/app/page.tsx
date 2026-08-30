@@ -76,7 +76,7 @@ export default async function Home() {
             <div className="mt-3 grid gap-3 text-sm md:grid-cols-4">
               <div>
                 <p className="text-xs uppercase tracking-widest text-zinc-500">Amount</p>
-                <p className="mt-1 font-semibold text-zinc-100">{microsToUsdc(paidIntent.amountMicros)}</p>
+                <p className="mt-1 font-semibold text-zinc-100">{microsToUsdc(paidIntent.amountMicros)} <span className="text-xs font-normal text-zinc-500">settled as SUI, testnet stand-in</span></p>
               </div>
               <div className="md:col-span-2">
                 <p className="text-xs uppercase tracking-widest text-zinc-500">Digest</p>
