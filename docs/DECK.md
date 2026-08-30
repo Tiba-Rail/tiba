@@ -30,23 +30,23 @@ The bottleneck is not moving money; it is trusting software with a bounded right
 Slide text:
 Every payable amount starts as a registered work order.
 Models can only match a delivery to that obligation.
-Policy code enforces caps, allowlists, idempotency, and kill switch.
+Policy enforces caps, who can be paid, retries, and the kill switch.
 
 On screen:
-Slide, then live app at `/console`.
+Slide, then the operator console.
 
 Speaker line:
-This is the rule: match, don't mint; no model output can create a payable amount.
+This is the rule: match, don't mint. The AI can match a delivery to work we already approved; it cannot invent a new amount to pay.
 
 ## Slide 4 -- Live Demo: Clean Pay
 
 Slide text:
-Clean artifact.
-Two channels reconcile.
-Sui testnet digest appears.
+Clean evidence.
+Two checks agree.
+Sui testnet receipt appears.
 
 On screen:
-Live app at `/console`, then `/ledger`.
+Operator console, then ledger.
 
 Speaker line:
 The clean path is about sixteen seconds, including roughly seven seconds of Sui testnet finality.
@@ -54,24 +54,24 @@ The clean path is about sixteen seconds, including roughly seven seconds of Sui 
 ## Slide 5 -- Live Demo: Refusal
 
 Slide text:
-Adversarial artifact asks for more money.
-Artifact channel and payer-record channel disagree.
-RED: `QUORUM_SPLIT:amount_micros`
+Tampered evidence asks for more money.
+The evidence check and payer-record check disagree.
+Red refusal: the amount does not match.
 
 On screen:
-Live app at `/console`, then `/ledger`.
+Operator console, then ledger.
 
 Speaker line:
-The model reading the artifact can be fooled; the isolated payer-record channel never sees that attack.
+The model reading the evidence can be fooled; the separate payer-record check never sees that attack.
 
 ## Slide 6 -- Public Receipt
 
 Slide text:
 Paid and refused outcomes are both records.
-Receipt shows rule fired, request IDs, latency, remaining budget, digest when paid.
+Receipt shows the rule that fired, AI call receipts, latency, remaining budget, and blockchain digest when paid.
 
 On screen:
-Live app at `/r/<token>`.
+Public receipt page.
 
 Speaker line:
 The recipient does not need to trust my database; the receipt exposes the decision trail.
@@ -95,9 +95,9 @@ Small, self-authored eval, but direct: clean paid, adversarial refused, and no c
 ## Slide 8 -- What We Cut
 
 Slide text:
-Cut: cross-border orchestration, KYC, mainnet, real USDC, image payloads.
+Cut: cross-border orchestration, KYC, mainnet, real USDC, image evidence.
 Testnet only.
-Settlement uses SUI as the USDC stand-in: `1` micro == `1` MIST.
+Settlement uses SUI as the USDC stand-in: 1 payout micro-unit maps to 1 MIST.
 
 On screen:
 Slide.
@@ -113,7 +113,7 @@ Judge us on whether GonkaRouter is load-bearing.
 Faris Irfan, Arthur Wong, Aariz Sajan -- Rizqey Labs.
 
 On screen:
-Slide, with `/console`, `/ledger`, and `/r/<token>` ready.
+Slide, with the operator console, ledger, and public receipt ready.
 
 Speaker line:
-Jack and Rain, hit the API after the pitch; it stays testnet and keeps calling GonkaRouter.
+Jack and Rain, try the payment flow after the pitch; it stays testnet and keeps calling GonkaRouter.
