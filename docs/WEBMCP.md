@@ -89,7 +89,8 @@ both channels' numbers; a clean note settles on Sui testnet with a public digest
    "Send test payment".
 
 A work order can be paid once. Use "Register work order" on the same page to create
-another (recipient `translator-kl`, ceiling `5`, required channels `both`, payer record
+another — but only after the current one is paid; two open verified orders on one
+recipient make channel B guess and every intent refuses (recipient `translator-kl`, ceiling `5`, required channels `both`, payer record
 `{"approved_amount_micros":"5000000","delivery_status":"verified_complete"}`).
 Do not put an ISO timestamp in the note; see Known limitations.
 
