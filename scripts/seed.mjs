@@ -121,6 +121,11 @@ await prisma.workOrder.createMany({
         delivery_status: "verified_complete",
         source: "operator-upload"
       },
+      requiredChannels: "payer_record",
+      expiresAt,
+      createdAt: seededAt,
+      updatedAt: seededAt
+    },
     {
       id: "work-order-wo-12",
       recipientId: translator.id,
@@ -133,7 +138,7 @@ await prisma.workOrder.createMany({
         delivery_status: "verified_complete",
         source: "operator-upload"
       },
-      requiredChannels: "payer_record",
+      requiredChannels: "both",
       expiresAt,
       createdAt: seededAt,
       updatedAt: seededAt
