@@ -108,14 +108,61 @@ BODY = f"""
 <li><b>Team on Devfolio:</b> Faris Irfan, Arthur Wong, Aariz Sajan.</li>
 </ul>
 
-<h2>To do — in order</h2>
+<h2>What is left — four steps, in order</h2>
 <ul>
-<li><b>1. Discord intro</b> in the Gonka mentor channel — copy below.</li>
-<li><b>2. Demo video</b>, 3–5 min, YouTube/Loom unlisted. Before recording: <code>npm run demo:reset</code> then <code>E2E_BASE_URL=https://tiba-omega.vercel.app npm run e2e</code> so the live ledger has rows. Script beats in <code>docs/DECK.md</code>.</li>
-<li><b>3. Submit on Devfolio</b> before 5 Sep 11:59 PM. Add the video link first. No submission = disqualified.</li>
-<li><b>4. Rehearse</b> from <code>docs/DECK.md</code>, <code>docs/QA.md</code>, <code>docs/GLOSSARY.md</code>. 5 min pitch + 5 min Q&amp;A. Both of you in the room — solo pitchers were warned they lose the Q&amp;A.</li>
-<li><b>5. Pitch day</b> 6 Sep at APU. Registration 8:00 AM, rooms from 9–10 AM, first-come-first-served per track. Charger, terminal 20pt, browser 150%.</li>
-<li><b>Optional:</b> Circle USDC (SUI stand-in already works) · a design pass on the UI.</li>
+<li><b>Step 1.</b> Record the demo video. Script on the next page. 3 to 5 minutes.</li>
+<li><b>Step 2.</b> Submit on Devfolio. Before Friday 5 Sep, 11:59 PM. Steps below.</li>
+<li><b>Step 3.</b> Rehearse the pitch out loud, five times, with Aariz at least twice.</li>
+<li><b>Step 4.</b> Saturday 6 Sep at APU. Logistics below.</li>
+</ul>
+<p>Discord intro: done, posted in the GonkaRouter chatroom. If they reply, the three likely questions and answers are on the Discord page of this pack.</p>
+
+<h2>Step 1 — Demo video: exact script</h2>
+<p><b>Set up before you press record</b></p>
+<ul>
+<li>Open Loom. Choose screen + microphone.</li>
+<li>Chrome window on <a href="https://tiba-omega.vercel.app">https://tiba-omega.vercel.app</a>, zoomed to 150% so text is readable in the video.</li>
+<li>A terminal window in <code>C:\\Users\\diony\\dev\\tiba</code>, font size 18 or bigger.</li>
+<li>In the terminal, run <code>npm run demo:reset</code> and wait for it to finish. This clears old rows so the ledger starts empty.</li>
+<li>Have this command ready to paste: <code>E2E_BASE_URL=https://tiba-omega.vercel.app npm run e2e</code></li>
+</ul>
+<p><b>Recording — what is on screen, what you do, what you say</b></p>
+<ul>
+<li><b>0:00 — Chrome, landing page.</b> Do nothing yet. Say: "This is Tiba. Software pays a person. No human approves each payment. Policy holds the line. I'm going to show you one real payment and one fake one."</li>
+<li><b>0:20 — Click "Open console".</b> Move the mouse over Daily cap, then Hour cap, then the kill switch. Say: "These are the limits I set once. How much per day, how much per hour, who can be paid, and a kill switch. The software cannot go past them, no matter what it is told."</li>
+<li><b>0:50 — Switch to the terminal.</b> Paste the command, press Enter. Say: "I'm sending two payment requests. One is a real delivery note from a contractor. The other is the same note with a line added that tells the system to pay a much bigger amount."</li>
+<li><b>1:15 — While it runs, about 30 seconds.</b> Say: "Each request is checked two separate ways through GonkaRouter. One check reads the note. The other check reads our own records and never sees the note. Both have to name the same person and the same amount. If they disagree, nothing moves."</li>
+<li><b>1:50 — Back to Chrome, click "Open ledger".</b> Two rows appear. Point at the RED one. Say: "The fake one: refused. The two checks disagreed on the amount." Point at the PAID one. Say: "The real one: paid."</li>
+<li><b>2:20 — Click "Inspect row" on the RED row.</b> Say: "The receipt says exactly why. Two checks, two different amounts, so it stopped."</li>
+<li><b>2:40 — Click "Inspect row" on the PAID row, then click the digest link.</b> The Sui explorer opens. Say: "And this is the actual transaction on the Sui test network. Not a mock."</li>
+<li><b>3:10 — Back to the ledger tab.</b> Say: "Every outcome gets a public receipt like this. The person being paid can see why they were paid or refused, and which checks decided it."</li>
+<li><b>3:30 — Stay on the ledger.</b> Say: "Test network only. Built in a week for MUBA by Rizqey Labs. That's Tiba." Stop recording.</li>
+</ul>
+<p><b>After recording:</b> in Loom, copy the share link. Keep it for Step 2. If the terminal step took longer than 45 seconds, record again — the models are slow sometimes and a second take is usually faster because the router remembers the request.</p>
+
+<h2>Step 2 — Submit on Devfolio</h2>
+<ul>
+<li>Open <a href="https://devfolio.co/projects/tiba-f440/update">https://devfolio.co/projects/tiba-f440/update</a></li>
+<li><b>Project media</b> has a red star. It is required. Click the +, upload the landing-page screenshot: <code>C:\\Users\\diony\\AppData\\Local\\Temp\\claude-chrome-screenshots-wB0oHV\\screenshot-1788071652881-1.jpg</code> (or take a fresh one of the live landing page).</li>
+<li><b>Project links</b> → click the pencil → "+ Add link" → paste the Loom link → Save.</li>
+<li>Click <b>Publish project</b> (blue button, top right). Confirm.</li>
+<li>Open <a href="https://muba-hackathon.devfolio.co/dashboard">https://muba-hackathon.devfolio.co/dashboard</a> and check it shows the project as submitted. If it does not, you are not in.</li>
+</ul>
+
+<h2>Step 3 — Rehearse</h2>
+<ul>
+<li>Open three files in <code>C:\\Users\\diony\\dev\\tiba\\docs</code>: <b>DECK.md</b> (what to say, slide by slide), <b>QA.md</b> (the six questions judges will ask, with answers), <b>GLOSSARY.md</b> (one sentence per word).</li>
+<li>Do the pitch out loud with a timer. Stop at 4:45. Five times.</li>
+<li>Aariz does it with you at least twice. Two people in the room — solo pitchers were told they lose the Q&amp;A.</li>
+<li>Read the glossary until you can say every line without looking.</li>
+</ul>
+
+<h2>Step 4 — Saturday 6 Sep, APU</h2>
+<ul>
+<li>Leave Shah Alam by 7:15. Registration opens 8:00. Pitch rooms open 9 to 10, first come first served, one room per track. Go to the <b>Gonka room first</b>, then both Sui rooms.</li>
+<li>Bring: laptop, charger, phone hotspot in case the wifi dies.</li>
+<li>Before your slot, in the terminal: <code>npm run demo:reset</code>, then the same e2e command from Step 1, so the ledger has fresh rows.</li>
+<li>Pitch is 5 minutes, then 5 minutes of questions. Judges: Jack (engineer) and Rain (product) for Gonka; Raphael for Sui.</li>
 </ul>
 
 <h2>Discord intro — paste as is</h2>
