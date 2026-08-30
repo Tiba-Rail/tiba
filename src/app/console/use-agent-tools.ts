@@ -166,12 +166,10 @@ export function useAgentTools(deps: {
                               response.decision;
               
               // Get explanation
-              const explanation = depsRef.current.lastDecision ? 
-                explainDecision(response.decision, response.reasonCode || null) : 
-                "Payment processed";
+              const explanation = explainDecision(response.decision, response.reasonCode || null);
               
               const result = {
-                id: response.digest || "unknown",
+                id: response.id ?? "unknown",
                 decision,
                 reason_code: response.reasonCode,
                 digest: response.digest,
@@ -238,7 +236,7 @@ export function useAgentTools(deps: {
             const explanation = explainDecision(lastDecision.decision, lastDecision.reasonCode || null);
             
             const result = {
-              id: lastDecision.digest || "unknown",
+              id: lastDecision.id ?? "unknown",
               decision,
               reason_code: lastDecision.reasonCode,
               digest: lastDecision.digest,

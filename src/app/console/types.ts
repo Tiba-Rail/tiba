@@ -35,6 +35,7 @@ export type Budget = {
 };
 
 export type TestIntentResponse = {
+  id?: string;
   decision: string;
   reasonCode?: string;
   digest?: string;
