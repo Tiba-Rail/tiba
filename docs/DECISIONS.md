@@ -66,3 +66,25 @@ run warms them; disclose this on stage ("same input, this morning") rather than 
 Remaining lever: `rails/sui.ts` calls `waitForTransaction` after `signAndExecuteTransaction`
 already returned effects; dropping it would cut ~3–5 s from the clean path. Not done —
 needs the 2.x client's return shape confirmed first.
+
+
+## WebMCP (30 Aug)
+
+Six tools registered on `document.modelContext` from the console (see docs/WEBMCP.md).
+Proven in Chrome 152 with `--enable-features=WebMCP` against the live site: `getTools()`
+lists all six; `submit_payment` without an operator token returns OPERATOR_TOKEN_NOT_SET;
+an inflated note (50.00 vs approved 5.00) is REFUSED `QUORUM_SPLIT:amount_micros`; a clean
+note is PAID (digest 4Qq2cswTHVU35d9Qw2hMPf87bvfouMrUmr4YtA1ZCa4U). Chrome's
+`executeTool(tool, input)` takes the RegisteredTool object and a JSON *string*.
+
+Two findings from that testing, both design limits rather than bugs:
+
+1. Channel B never sees the artifact, so with two verified-complete orders on one
+   recipient it guesses which obligation the intent is for. It picked WO-11
+   (payer-record-only), so the pipeline trusted B alone and paid WO-11's approved 40.00
+   while the artifact claimed 50.00 for WO-12. Demo seed now leaves one payable order per
+   recipient (WO-11 pending). Proposed hardening, NOT done (would change eval numbers):
+   in payer-record-only mode, still refuse when the artifact channel names a different
+   work order.
+2. A valid ISO timestamp in the artifact is copied by channel A while B uses received_at,
+   so the channels split on delivery_timestamp. Presets now avoid ISO stamps.

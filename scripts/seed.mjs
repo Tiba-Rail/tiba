@@ -144,6 +144,23 @@ await prisma.workOrder.createMany({
       updatedAt: seededAt
     },
     {
+      id: "work-order-wo-13",
+      recipientId: translator.id,
+      ref: "WO-13",
+      ceilingMicros: 5_000_000n,
+      briefText: "Translate four product documents; pay exactly 5.00 USDC on an accepted delivery note.",
+      payerRecord: {
+        approved_amount_micros: "5000000",
+        delivery_timestamp: "2026-08-29T06:00:00.000Z",
+        delivery_status: "verified_complete",
+        source: "operator-upload"
+      },
+      requiredChannels: "both",
+      expiresAt,
+      createdAt: seededAt,
+      updatedAt: seededAt
+    },
+    {
       id: "work-order-wo-e2e-1",
       recipientId: ali.id,
       ref: "WO-E2E-1",
@@ -169,7 +186,7 @@ console.log(JSON.stringify({
   agent_key_source: apiKeySource,
   agent_rail: agentRail,
   recipients: [creator.ref, translator.ref, ali.ref],
-  open_work_orders: ["WO-3", "WO-7", "WO-11", "WO-12", "WO-E2E-1"]
+  open_work_orders: ["WO-3", "WO-7", "WO-11", "WO-12", "WO-13", "WO-E2E-1"]
 }, null, 2));
 
 await prisma.$disconnect();
