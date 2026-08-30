@@ -50,12 +50,21 @@ for l in glo.splitlines():
         glossary_items.append(item)
 
 DISCORD = (
-    "Hi Jack, Rain — Rizqey Labs here (Faris + Aariz + Arthur). We're building Tiba on the GonkaRouter track: "
-    "software pays a person with no human approving each transfer, with policy caps as the boundary. Two isolated "
-    "channels through the router (one reads the untrusted invoice, one reads the payer's own records) have to agree "
-    "before money moves. Quick technical question: we hit ~10× per-node latency variance on the same model, so we "
-    "hedge — fire two models per channel and take the first schema-valid answer. Is there a router-side option for "
-    "this, and would a small failover wrapper be useful upstream? Happy to open-source it."
+    "Hi Jack, Rain — Faris here from Rizqey Labs, with Aariz and Arthur. We're building Tiba on your track. "
+    "In plain terms: it lets a piece of software pay a person without a human approving each payment, and stays "
+    "safe by checking every request two separate ways through GonkaRouter before any money moves. If the two "
+    "checks disagree, it refuses.\n\n"
+    "One question from building on the router: the same model sometimes answers in under a second and sometimes "
+    "takes 30–40 seconds, depending on which node picks up the request. We worked around it by sending each check "
+    "to two models at once and taking whichever answers first. Is there a setting on your side for this, or is our "
+    "workaround the right approach? Happy to share what we built."
+)
+
+FOLLOWUPS = (
+    "- \"Which models?\" — Kimi and DeepSeek. Both through your router.\n"
+    "- \"How do you know an answer is good?\" — We asked for a fixed format. If the answer doesn't match it exactly, "
+    "we ignore it and use the other one.\n"
+    "- \"Why not just one model?\" — Because one slow node stalls the whole payment. Two at once means the fast one wins."
 )
 
 CSS = """
@@ -111,6 +120,7 @@ BODY = f"""
 
 <h2>Discord intro — paste as is</h2>
 {copyblock("Gonka mentor channel", DISCORD)}
+{copyblock("If they reply — the three likely questions and what you say", FOLLOWUPS)}
 
 <h2>Devfolio copy — already entered, kept for reference</h2>
 {copyblock("Tagline", section(dev, "Tagline"))}

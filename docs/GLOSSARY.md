@@ -8,6 +8,8 @@
 - **Policy caps** — limits the operator sets once: max per payment, max per hour and day, who can be paid, and a kill switch.
 - **Atomic** — the limit check and the spend happen as one step, so two payments can't both squeeze under the cap at the same moment.
 - **Idempotency** — sending the same request twice pays once. A retry can never double-pay.
+- **Node** — one of the many computers in Gonka's network that actually runs the AI model. Which one answers your request is luck of the draw, and some are slow.
+- **Model** — the AI itself (Kimi, DeepSeek). The router picks a node to run it on.
 - **Hedging** — each check goes to two AI models at the same time; the first valid answer wins. It's how we stay fast when one model is slow.
 - **Request ID** — the router's receipt number for each AI call. It's on every public receipt so anyone can audit which call decided what.
 - **Digest** — the blockchain's receipt number for a payment. Click it and you see the transaction.
