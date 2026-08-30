@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { DenialBanner } from "@/components/denial-banner";
 import { RouterHealthStrip } from "@/components/router-health-strip";
@@ -24,6 +25,46 @@ function decisionFor(decisionClass: string): string {
   return decisionClass === "PAID" ? "PAID" : decisionClass;
 }
 
+type ChannelTuple = { workOrderId: string; amount: string } | null;
+
+// Each adjudication stores the raw model JSON it produced in tupleJson:
+// { work_order_id, amount_micros, delivery_timestamp }. That IS the channel's
+// conclusion, so a disagreement can be shown in plain numbers instead of a code.
+function channelTuple(value: unknown): ChannelTuple {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const workOrderId = row.work_order_id;
+  const amountMicros = row.amount_micros;
+  if (typeof workOrderId !== "string") return null;
+  if (typeof amountMicros !== "string" || !/^\d+$/.test(amountMicros)) return null;
+  return { workOrderId, amount: microsToUsdc(amountMicros) };
+}
+
+function renderAdjudicationDetails(
+  adjudications: Array<{ channel: string; tupleJson: unknown }>,
+  reasonCode: string | null
+): ReactNode {
+  if (!reasonCode?.startsWith("QUORUM_SPLIT")) return null;
+
+  const a = channelTuple(adjudications.find((row) => row.channel === "artifact")?.tupleJson);
+  const b = channelTuple(adjudications.find((row) => row.channel === "payer_record")?.tupleJson);
+
+  if (!a || !b) {
+    return (
+      <p className="mt-2 font-sans text-sm text-muted">
+        Two isolated channels disagreed. Tiba refused rather than guess.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2 font-sans text-sm text-muted">
+      <p>Channel A read {a.workOrderId} · {a.amount}</p>
+      <p>Channel B read {b.workOrderId} · {b.amount}</p>
+      <p className="mt-1">They disagreed, so Tiba refused rather than guess.</p>
+    </div>
+  );
+}
 export default async function LedgerPage() {
   const intents = await prisma.payoutIntent.findMany({
     include: {
@@ -49,10 +90,10 @@ export default async function LedgerPage() {
             <table className="w-full min-w-[980px] text-left text-sm">
               <thead className="border-b border-line eyebrow">
                 <tr>
+                  <th className="px-4 py-3">Decision</th>
                   <th className="px-4 py-3">Time</th>
                   <th className="px-4 py-3">Recipient</th>
                   <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Decision</th>
                   <th className="px-4 py-3">Reason code</th>
                   <th className="px-4 py-3">Request IDs</th>
                   <th className="px-4 py-3">Digest</th>
@@ -67,18 +108,21 @@ export default async function LedgerPage() {
                   </tr>
                 ) : intents.map((intent) => (
                   <tr key={intent.id} className="align-top">
+                    <td className="px-4 py-5">
+                      <span className={intent.decisionClass === "PAID" ? "pill pill-paid" : intent.decisionClass === "AMBER" ? "pill pill-amber" : "pill pill-red"}>
+                        {decisionFor(intent.decisionClass)}
+                      </span>
+                    </td>
                     <td className="px-4 py-5">{formatTime(intent.createdAt)}</td>
                     <td className="px-4 py-5">
                       <p className="font-semibold">{intent.recipient.displayName}</p>
                       <p className="font-mono text-xs text-muted">{intent.recipient.ref}</p>
                     </td>
                     <td className="px-4 py-5 font-semibold">{microsToUsdc(intent.amountMicros)}</td>
-                    <td className="px-4 py-5">
-                      <span className={intent.decisionClass === "PAID" ? "pill pill-paid" : intent.decisionClass === "AMBER" ? "pill pill-amber" : "pill pill-red"}>
-                        {decisionFor(intent.decisionClass)}
-                      </span>
+                    <td className="px-4 py-5 font-mono text-xs">
+                      {intent.decisionClass === "PAID" ? "PAID" : intent.reasonCode ?? "UNKNOWN"}
+                      {intent.decisionClass !== "PAID" && renderAdjudicationDetails(intent.adjudications, intent.reasonCode)}
                     </td>
-                    <td className="px-4 py-5 font-mono text-xs">{intent.decisionClass === "PAID" ? "PAID" : intent.reasonCode ?? "UNKNOWN"}</td>
                     <td className="px-4 py-5 font-mono text-xs text-muted">
                       <p>A: {requestIdFor(intent.adjudications, "artifact")}</p>
                       <p>B: {requestIdFor(intent.adjudications, "payer_record")}</p>
