@@ -22,7 +22,10 @@ function requestIdFor(adjudications: Array<{ channel: string; requestId: string 
 }
 
 function decisionFor(decisionClass: string): string {
-  return decisionClass === "PAID" ? "PAID" : decisionClass;
+  if (decisionClass === "PAID") return "PAID";
+  if (decisionClass === "AMBER") return "HELD";
+  if (decisionClass === "RED") return "REFUSED";
+  return decisionClass;
 }
 
 type ChannelTuple = { workOrderId: string; amount: string } | null;

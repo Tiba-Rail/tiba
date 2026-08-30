@@ -9,9 +9,27 @@ function requestIdFor(adjudications: Array<{ channel: string; requestId: string 
   return adjudications.find((row) => row.channel === channel)?.requestId ?? "missing";
 }
 
+function channelTuple(value: unknown): { work_order_id: string; amount_micros: string } | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  const workOrderId = row.work_order_id;
+  const amountMicros = row.amount_micros;
+  if (typeof workOrderId !== "string") return null;
+  if (typeof amountMicros !== "string" || !/^\d+$/.test(amountMicros)) return null;
+  return { work_order_id: workOrderId, amount_micros: amountMicros };
+}
+
 export default async function Home() {
   const paidIntent = await prisma.payoutIntent.findFirst({
     where: { decisionClass: "PAID" },
+    include: {
+      adjudications: { orderBy: { createdAt: "asc" } }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  const refusedIntent = await prisma.payoutIntent.findFirst({
+    where: { decisionClass: "RED" },
     include: {
       adjudications: { orderBy: { createdAt: "asc" } }
     },
@@ -46,32 +64,38 @@ export default async function Home() {
           </div>
         </header>
 
-        <section>
-          <p className="eyebrow">How a payment happens</p>
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            <div className="card p-4">
-              <p className="font-semibold">1 Verify</p>
-              <p className="mt-2 text-sm leading-6 text-muted">
-                An agent submits a payout intent with the untrusted artifact; two isolated channels through GonkaRouter must agree on {"{work_order_id, amount}"}; disagreement is a refusal, never a tie-break.
-              </p>
-            </div>
-            <div className="card p-4">
-              <p className="font-semibold">2 Bound</p>
-              <p className="mt-2 text-sm leading-6 text-muted">
-                Per-transfer ceiling, rolling caps, allowlist, kill switch, idempotency - one atomic debit that succeeds or refuses.
-              </p>
-            </div>
-            <div className="card p-4">
-              <p className="font-semibold">3 Settle</p>
-              <p className="mt-2 text-sm leading-6 text-muted">
-                USDC-stand-in (SUI) on Sui testnet; every outcome gets a public receipt with both Gonka request IDs.
-              </p>
-            </div>
-          </div>
-        </section>
-
         <section className="card p-4">
           <p className="eyebrow">Proof</p>
+          {refusedIntent ? (
+            <div className="mt-3 mb-4">
+              <p className="eyebrow">REFUSED</p>
+              <div className="mt-2 text-sm">
+                {(() => {
+                  const artifactTuple = channelTuple(refusedIntent.adjudications.find((row) => row.channel === "artifact")?.tupleJson);
+                  const payerRecordTuple = channelTuple(refusedIntent.adjudications.find((row) => row.channel === "payer_record")?.tupleJson);
+                  
+                  if (artifactTuple && payerRecordTuple) {
+                    return (
+                      <div>
+                        <p>Channel A read {artifactTuple.work_order_id} · {microsToUsdc(artifactTuple.amount_micros)}</p>
+                        <p>Channel B read {payerRecordTuple.work_order_id} · {microsToUsdc(payerRecordTuple.amount_micros)}</p>
+                        <p className="mt-1">They disagreed, so Tiba refused rather than guess.</p>
+                      </div>
+                    );
+                  } else {
+                    return <p>Two isolated channels disagreed. Tiba refused rather than guess.</p>;
+                  }
+                })()}
+                <p className="mt-2 font-mono text-xs">{refusedIntent.reasonCode}</p>
+                <Link
+                  className="btn btn-secondary mt-2"
+                  href={`/r/${refusedIntent.publicToken}`}
+                >
+                  Public receipt
+                </Link>
+              </div>
+            </div>
+          ) : null}
           {paidIntent ? (
             <div className="mt-3 grid gap-3 text-sm md:grid-cols-4">
               <div>
