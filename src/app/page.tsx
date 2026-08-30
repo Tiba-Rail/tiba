@@ -114,7 +114,7 @@ export default async function Home() {
 
         <footer className="text-sm text-zinc-400">
           Testnet only. MUBA Blockchain Hackathon 2026 · Rizqey Labs - Faris Irfan, Arthur Wong, Aariz Sajan.{" "}
-          <a className="text-cyan-300 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400" href="#">
+          <a className="text-cyan-300 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400" href="https://github.com/Tiba-Rail/tiba">
             source
           </a>
         </footer>
