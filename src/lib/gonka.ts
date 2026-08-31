@@ -89,7 +89,7 @@ async function requestOnce(
     const response = await fetcher(API_URL, {
       method: "POST",
       signal: controller.signal,
-      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}`, "X-Gonka-No-Fallback": "true" },
       body: JSON.stringify({
         model,
         messages: SCHEMA_FREE.has(model)

@@ -138,7 +138,21 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                   {adjudicationsByChannel.get("artifact") ? (
                     <div className="text-sm">
                       <div>Model: {adjudicationsByChannel.get("artifact")?.model}</div>
-                      <div>x-request-id: {adjudicationsByChannel.get("artifact")?.requestId ?? "missing"}</div>
+                      <div>
+                        x-request-id:{" "}
+                        {adjudicationsByChannel.get("artifact")?.requestId ? (
+                          <a
+                            className="text-primary underline-offset-4 hover:underline"
+                            href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("artifact")?.requestId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {adjudicationsByChannel.get("artifact")?.requestId}
+                          </a>
+                        ) : (
+                          "missing"
+                        )}
+                      </div>
                       <div>Latency: {formatLatency(adjudicationsByChannel.get("artifact")?.latencyMs)}</div>
                     </div>
                   ) : (
@@ -153,7 +167,21 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                   {adjudicationsByChannel.get("payer_record") ? (
                     <div className="text-sm">
                       <div>Model: {adjudicationsByChannel.get("payer_record")?.model}</div>
-                      <div>x-request-id: {adjudicationsByChannel.get("payer_record")?.requestId ?? "missing"}</div>
+                      <div>
+                        x-request-id:{" "}
+                        {adjudicationsByChannel.get("payer_record")?.requestId ? (
+                          <a
+                            className="text-primary underline-offset-4 hover:underline"
+                            href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("payer_record")?.requestId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {adjudicationsByChannel.get("payer_record")?.requestId}
+                          </a>
+                        ) : (
+                          "missing"
+                        )}
+                      </div>
                       <div>Latency: {formatLatency(adjudicationsByChannel.get("payer_record")?.latencyMs)}</div>
                     </div>
                   ) : (
