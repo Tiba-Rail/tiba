@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAgentTools } from "./use-agent-tools";
 import type { Recipient, WorkOrder, HeldIntent, Budget, TestIntentResponse } from "./types";
 import { explainDecision, decisionWord } from "./types";
@@ -113,33 +114,6 @@ export function ConsoleClient({
     } finally {
       setBusy(null);
     }
-  }
-
-  async function registerRecipient(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    await post("/api/v1/recipients", {
-      ref: form.get("ref"),
-      display_name: form.get("display_name"),
-      sui_address: form.get("sui_address"),
-      active: true
-    }, "recipient");
-    event.currentTarget.reset();
-  }
-
-  async function registerWorkOrder(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    await post("/api/v1/work-orders", {
-      ref: form.get("ref"),
-      recipient_ref: form.get("recipient_ref"),
-      ceiling_usdc: form.get("ceiling_usdc"),
-      expires_at: form.get("expires_at"),
-      required_channels: form.get("required_channels"),
-      brief_text: form.get("brief_text"),
-      payer_record: form.get("payer_record")
-    }, "work-order");
-    event.currentTarget.reset();
   }
 
   const inputClass = "field mt-1";
@@ -415,81 +389,21 @@ export function ConsoleClient({
 
       <section className="grid gap-4 lg:grid-cols-2">
         <Panel title="Work orders">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[680px] text-left text-sm">
-              <thead className="eyebrow">
-                <tr><th className="py-2">Ref</th><th>Recipient</th><th>Ceiling</th><th>Expiry</th><th>Status</th></tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {workOrders.length === 0 ? (
-                  <tr><td colSpan={5} className="py-6 text-muted">No work orders registered.</td></tr>
-                ) : workOrders.map((workOrder) => (
-                  <tr key={workOrder.ref}>
-                    <td className="py-4 font-mono">{workOrder.ref}</td>
-                    <td className="py-4">{workOrder.recipientName}</td>
-                    <td className="py-4">{workOrder.ceiling}</td>
-                    <td className="py-4">{workOrder.expiresAt}</td>
-                    <td className="py-4">{workOrder.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <p className="text-sm text-muted">
+            {workOrders.length} open. Full list and the register form now live on their own page.
+          </p>
+          <Link href="/work-orders" className="btn btn-secondary mt-4 inline-flex">
+            Open work orders
+          </Link>
         </Panel>
         <Panel title="Recipients">
-          <div className="space-y-3">
-            {recipients.length === 0 ? <p className="py-6 text-sm text-muted">No recipients registered.</p> : recipients.map((recipient) => (
-              <div key={recipient.ref} className="card p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold">{recipient.displayName}</p>
-                  <span className={recipient.active ? "text-sm text-paid" : "text-sm text-red-ink"}>{recipient.active ? "active" : "inactive"}</span>
-                </div>
-                <p className="mt-1 font-mono text-xs text-muted">{recipient.ref}</p>
-                <p className="mt-2 break-all font-mono text-xs text-muted">{recipient.suiAddress}</p>
-              </div>
-            ))}
-          </div>
-        </Panel>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Register recipient">
-          <form onSubmit={registerRecipient} className="space-y-4">
-            <TextField id="recipient-ref" name="ref" label="Recipient ref" autoComplete="off" />
-            <TextField id="display-name" name="display_name" label="Display name" autoComplete="name" />
-            <TextField id="sui-address" name="sui_address" label="Sui testnet address" autoComplete="off" />
-            <button className={buttonClass} type="submit" disabled={busy === "recipient"} aria-busy={busy === "recipient"}>Register recipient</button>
-          </form>
-        </Panel>
-        <Panel title="Register work order">
-          <form onSubmit={registerWorkOrder} className="space-y-4">
-            <TextField id="wo-ref" name="ref" label="Work order ref" autoComplete="off" />
-            <label className="block text-sm font-medium">
-              Recipient
-              <select className={inputClass} name="recipient_ref" required>
-                {recipients.map((recipient) => <option key={recipient.ref} value={recipient.ref}>{recipient.displayName} ({recipient.ref})</option>)}
-              </select>
-            </label>
-            <TextField id="ceiling-usdc" name="ceiling_usdc" label="Ceiling in USDC" autoComplete="off" inputMode="decimal" />
-            <TextField id="expires-at" name="expires_at" label="Expiry" type="datetime-local" autoComplete="off" />
-            <label className="block text-sm font-medium">
-              Required channels
-              <select className={inputClass} name="required_channels" defaultValue="both" required>
-                <option value="payer_record">payer record</option>
-                <option value="both">both</option>
-                <option value="human">human</option>
-              </select>
-            </label>
-            <label className="block text-sm font-medium">
-              Brief text
-              <textarea className={inputClass} name="brief_text" rows={3} required />
-            </label>
-            <label className="block text-sm font-medium">
-              Payer record JSON
-              <textarea className={inputClass} name="payer_record" rows={4} defaultValue={'{"approved_amount_micros":"180000000","delivery_status":"verified_complete"}'} required />
-            </label>
-            <button className={buttonClass} type="submit" disabled={busy === "work-order"} aria-busy={busy === "work-order"}>Register work order</button>
-          </form>
+          <p className="text-sm text-muted">
+            {recipients.length} on the allowlist. Full list and the register form now live on
+            their own page.
+          </p>
+          <Link href="/recipients" className="btn btn-secondary mt-4 inline-flex">
+            Open recipients
+          </Link>
         </Panel>
       </section>
 
