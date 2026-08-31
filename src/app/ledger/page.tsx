@@ -5,6 +5,7 @@ import { RouterHealthStrip } from "@/components/router-health-strip";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 import { channelTuple, disagreementLine } from "@/lib/adjudication-display";
+import { SiteNav } from "@/components/site-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,7 @@ export default async function LedgerPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav current="ledger" />
       <RouterHealthStrip />
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:px-8">
         <header className="mb-8">

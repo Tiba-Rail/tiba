@@ -2,6 +2,7 @@ import { RouterHealthStrip } from "@/components/router-health-strip";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 import { ConsoleClient } from "./console-client";
+import { SiteNav } from "@/components/site-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export default async function ConsolePage() {
   if (!agent) {
     return (
       <main className="min-h-screen bg-background text-foreground">
+      <SiteNav current="console" />
         <RouterHealthStrip />
         <div className="mx-auto max-w-7xl px-4 py-8">
           <h1 className="display text-4xl md:text-5xl">No seeded agent</h1>
@@ -50,6 +52,7 @@ export default async function ConsolePage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav current="console" />
       <RouterHealthStrip />
       <ConsoleClient
         budget={{

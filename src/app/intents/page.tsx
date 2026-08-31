@@ -3,6 +3,7 @@ import { RouterHealthStrip } from "@/components/router-health-strip";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 import { explainDecision } from "@/app/console/types";
+import { SiteNav } from "@/components/site-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export default async function IntentsPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav current="intents" />
       <RouterHealthStrip />
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:px-8">
         <header className="mb-8">
