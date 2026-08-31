@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { DenialBanner } from "@/components/denial-banner";
 import { formatLatency, microsToUsdc } from "@/lib/money";
 import { prisma } from "@/lib/db";
-import { channelTuple, disagreementLine } from "@/lib/adjudication-display";
+import { channelTuple, disagreementLine, type ChannelTuple } from "@/lib/adjudication-display";
 import { SiteNav } from "@/components/site-nav";
 import { explainDecision } from "@/app/console/types";
 
@@ -60,20 +60,19 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   const disagreement = disagreementLine(intent.reasonCode, channelATuple, channelBTuple);
 
   // Determine channel match status
-  function getChannelMatchStatus(channelA: any, channelB: any): string {
-    const tupleA = channelTuple(channelA?.tupleJson);
-    const tupleB = channelTuple(channelB?.tupleJson);
-    
+  function getChannelMatchStatus(tupleA: ChannelTuple, tupleB: ChannelTuple): string {
     if (!tupleA || !tupleB) return "Unavailable";
     if (tupleA.workOrderId === tupleB.workOrderId && tupleA.amount === tupleB.amount) return "Match";
     return "Mismatch";
   }
 
-  // Determine agreement status
-  function getAgreementStatus(decisionClass: string, reasonCode: string | null): string {
-    if (decisionClass === "PAID") return "Agreed";
-    if (reasonCode?.startsWith("QUORUM_SPLIT")) return "Refused";
-    return "Agreed";
+  // Determine agreement status -- must mirror the channel-level comparison above it,
+  // not guess from the reason code (a kill-switch/policy refusal can still show a real
+  // channel mismatch underneath it, and the two rows must not contradict each other).
+  function getAgreementStatus(tupleA: ChannelTuple, tupleB: ChannelTuple): string {
+    if (!tupleA || !tupleB) return "Unavailable";
+    if (tupleA.workOrderId === tupleB.workOrderId && tupleA.amount === tupleB.amount) return "Agreed";
+    return "Refused";
   }
 
   // Determine policy status
@@ -134,7 +133,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
             <tbody>
               <tr className="border-b border-line">
                 <td className="py-3 px-3">Channel A — artifact</td>
-                <td className="py-3 px-3">{getChannelMatchStatus(adjudicationsByChannel.get("artifact"), adjudicationsByChannel.get("payer_record"))}</td>
+                <td className="py-3 px-3">{getChannelMatchStatus(channelATuple, channelBTuple)}</td>
                 <td className="py-3 px-3">
                   {adjudicationsByChannel.get("artifact") ? (
                     <div className="text-sm">
@@ -149,7 +148,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
               </tr>
               <tr className="border-b border-line">
                 <td className="py-3 px-3">Channel B — payer record</td>
-                <td className="py-3 px-3">{getChannelMatchStatus(adjudicationsByChannel.get("payer_record"), adjudicationsByChannel.get("artifact"))}</td>
+                <td className="py-3 px-3">{getChannelMatchStatus(channelBTuple, channelATuple)}</td>
                 <td className="py-3 px-3">
                   {adjudicationsByChannel.get("payer_record") ? (
                     <div className="text-sm">
@@ -164,7 +163,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
               </tr>
               <tr className="border-b border-line">
                 <td className="py-3 px-3">Agreement</td>
-                <td className="py-3 px-3">{getAgreementStatus(intent.decisionClass, intent.reasonCode)}</td>
+                <td className="py-3 px-3">{getAgreementStatus(channelATuple, channelBTuple)}</td>
                 <td className="py-3 px-3">{disagreement || "—"}</td>
               </tr>
               <tr className="border-b border-line">
