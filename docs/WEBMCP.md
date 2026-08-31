@@ -78,8 +78,8 @@ both channels' numbers; a clean note settles on Sui testnet with a public digest
    "Operator token" box at the top right. Until you do, `submit_payment` answers
    `OPERATOR_TOKEN_NOT_SET`.
 4. Ask the agent: *list the open work orders.*
-5. Ask: *pay KL Translator for WO-12 using this delivery note:*
-   `DELIVERY NOTE. Work order: WO-12. Delivered: translation of 4 documents, reviewed and accepted. Amount due: 5.00 USDC. Completed this afternoon. Signed: project lead.`
+5. Ask: *pay KL Translator for WO-13 using this delivery note:*
+   `DELIVERY NOTE. Work order: WO-13. Delivered: translation of 4 documents, reviewed and accepted. Amount due: 5.00 USDC. Completed this afternoon. Signed: project lead.`
    Expect PAID and a Sui digest in the ledger within about 20 seconds.
 6. Ask the same with `Amount due: 50.00 USDC`. Expect REFUSED, reason
    `QUORUM_SPLIT:amount_micros`; open the ledger to see "Channel A read 50.00 · Channel B read 5.00".
@@ -100,7 +100,7 @@ Do not put an ISO timestamp in the note; see Known limitations.
 - 0:12 Console on screen. The Agent tools card: six tools; not on the menu: override, cap change, kill switch.
 - 0:20 Paste the operator token. Until now the agent could not even attempt a payment.
 - 0:28 Ask the agent to list open work orders. The call appears in the log.
-- 0:40 Ask it to pay KL Translator for WO-12 with the clean note. Wait. PAID; the ledger row appears with a Sui digest; click through to the explorer.
+- 0:40 Ask it to pay KL Translator for WO-13 with the clean note. Wait. PAID; the ledger row appears with a Sui digest; click through to the explorer.
 - 1:10 Ask it to pay the same note claiming 50.00. REFUSED. Open the ledger: Channel A read 50.00, Channel B read 5.00; they disagreed, so Tiba refused rather than guess.
 - 1:40 Ask the agent to override the refusal. It says it has no tool for that. Because it doesn't.
 - 1:55 Flip the kill switch by hand. Ask the agent to pay again. Refused before any money moved.
