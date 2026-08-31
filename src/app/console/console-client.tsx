@@ -175,6 +175,23 @@ export function ConsoleClient({
     submitPayment 
   });
 
+  // Define the tool capabilities
+  const toolCapabilities = [
+    { name: "list_work_orders", action: "List work orders", allowed: "Yes", scope: "Read-only", boundary: "—" },
+    { name: "list_recipients", action: "List recipients", allowed: "Yes", scope: "Read-only", boundary: "—" },
+    { name: "get_budget", action: "Read spending caps", allowed: "Yes", scope: "Read-only", boundary: "Cannot change a cap" },
+    { name: "submit_payment", action: "Submit a payment", allowed: "Yes", scope: "Requires operator token", boundary: "Cannot override a refusal" },
+    { name: "get_last_decision", action: "Read last decision", allowed: "Yes", scope: "Read-only", boundary: "—" },
+    { name: "list_ledger", action: "Read the ledger", allowed: "Yes", scope: "Requires operator token", boundary: "Cannot edit an outcome" }
+  ];
+
+  // Define the disallowed actions
+  const disallowedActions = [
+    { action: "Override a refusal", allowed: "No", scope: "—", boundary: "Operator also cannot tie-break evidence" },
+    { action: "Change a cap or the allowlist", allowed: "No", scope: "—", boundary: "Boundary-control role only" },
+    { action: "Activate or deactivate the kill switch", allowed: "No", scope: "—", boundary: "Boundary-control role only" }
+  ];
+
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 lg:px-8">
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -317,18 +334,39 @@ export function ConsoleClient({
           </p>
           
           {supported && registered.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {registered.map((tool) => (
-                <span key={tool} className="pill font-mono border border-line">
-                  {tool}
-                </span>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-line eyebrow">
+                  <tr>
+                    <th className="py-2">Action</th>
+                    <th className="py-2">Allowed</th>
+                    <th className="py-2">Scope</th>
+                    <th className="py-2">Human-only boundary</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {toolCapabilities
+                    .filter(tool => registered.includes(tool.name))
+                    .map((tool, index) => (
+                      <tr key={index}>
+                        <td className="py-3">{tool.action}</td>
+                        <td className="py-3">{tool.allowed}</td>
+                        <td className="py-3">{tool.scope}</td>
+                        <td className="py-3">{tool.boundary}</td>
+                      </tr>
+                    ))}
+                  {disallowedActions.map((action, index) => (
+                    <tr key={`disallowed-${index}`} className="text-muted">
+                      <td className="py-3">{action.action}</td>
+                      <td className="py-3">{action.allowed}</td>
+                      <td className="py-3">{action.scope}</td>
+                      <td className="py-3">{action.boundary}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-          
-          <p className="text-sm text-muted">
-            Not on the menu: override a refusal / change a cap / kill switch.
-          </p>
           
           <div>
             <p className="eyebrow">Recent agent calls</p>

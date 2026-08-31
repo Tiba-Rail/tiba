@@ -4,6 +4,7 @@ import { DenialBanner } from "@/components/denial-banner";
 import { RouterHealthStrip } from "@/components/router-health-strip";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
+import { channelTuple, disagreementLine } from "@/lib/adjudication-display";
 
 export const dynamic = "force-dynamic";
 
@@ -28,21 +29,6 @@ function decisionFor(decisionClass: string): string {
   return decisionClass;
 }
 
-type ChannelTuple = { workOrderId: string; amount: string } | null;
-
-// Each adjudication stores the raw model JSON it produced in tupleJson:
-// { work_order_id, amount_micros, delivery_timestamp }. That IS the channel's
-// conclusion, so a disagreement can be shown in plain numbers instead of a code.
-function channelTuple(value: unknown): ChannelTuple {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const row = value as Record<string, unknown>;
-  const workOrderId = row.work_order_id;
-  const amountMicros = row.amount_micros;
-  if (typeof workOrderId !== "string") return null;
-  if (typeof amountMicros !== "string" || !/^\d+$/.test(amountMicros)) return null;
-  return { workOrderId, amount: microsToUsdc(amountMicros) };
-}
-
 function renderAdjudicationDetails(
   adjudications: Array<{ channel: string; tupleJson: unknown }>,
   reasonCode: string | null
@@ -52,10 +38,12 @@ function renderAdjudicationDetails(
   const a = channelTuple(adjudications.find((row) => row.channel === "artifact")?.tupleJson);
   const b = channelTuple(adjudications.find((row) => row.channel === "payer_record")?.tupleJson);
 
+  const disagreement = disagreementLine(reasonCode, a, b);
+  
   if (!a || !b) {
     return (
       <p className="mt-2 font-sans text-sm text-muted">
-        Two isolated channels disagreed. Tiba refused rather than guess.
+        {disagreement}
       </p>
     );
   }

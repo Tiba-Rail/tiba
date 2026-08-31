@@ -61,6 +61,12 @@ export default async function Home() {
             >
               Open ledger
             </Link>
+            <Link
+              className="btn btn-secondary"
+              href="/intents"
+            >
+              Payout intents
+            </Link>
           </div>
         </header>
 

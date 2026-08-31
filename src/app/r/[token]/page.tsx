@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { DenialBanner } from "@/components/denial-banner";
 import { formatLatency, microsToUsdc } from "@/lib/money";
 import { prisma } from "@/lib/db";
+import { channelTuple, disagreementLine } from "@/lib/adjudication-display";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,11 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   }));
   const paid = intent.decisionClass === "PAID";
 
+  // Get channel tuples for disagreement line
+  const channelATuple = channelTuple(adjudicationsByChannel.get("artifact")?.tupleJson);
+  const channelBTuple = channelTuple(adjudicationsByChannel.get("payer_record")?.tupleJson);
+  const disagreement = disagreementLine(intent.reasonCode, channelATuple, channelBTuple);
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 md:px-6 lg:px-8">
@@ -77,6 +83,9 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
 
         <section className="card p-5">
           <h2 className="text-xl font-bold">Model adjudications</h2>
+          {disagreement && (
+            <p className="mt-3 text-sm text-muted">{disagreement}</p>
+          )}
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {adjudications.map(({ channel, row }) => (
               <div key={channel} className="card p-4">
@@ -116,6 +125,9 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
               </a>
             ) : (
               <p className="mt-3 text-sm text-muted">No settlement digest for this decision.</p>
+            )}
+            {(intent.reasonCode === "SETTLEMENT_FAILED" || intent.reasonCode === "SUI_EXECUTION_FAILED") && (
+              <p className="mt-2 text-sm text-muted">Both channels agreed and policy passed — the on-chain transfer itself failed.</p>
             )}
           </div>
 
