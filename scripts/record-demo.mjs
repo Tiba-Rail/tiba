@@ -14,6 +14,8 @@ mkdirSync("C:/Users/diony/Downloads/Hackathons/MUBA", { recursive: true });
 let start = Date.now();
 const missed = [];
 const cursorPos = { x: 80, y: 80 };
+let activeBrowser;
+let activeContext;
 
 function offset() {
   return `${((Date.now() - start) / 1000).toFixed(1).padStart(5, " ")}s`;
@@ -178,10 +180,14 @@ async function main() {
     deviceScaleFactor: 1,
     recordVideo: { dir: recordingsDir, size: viewport }
   });
+  activeBrowser = browser;
+  activeContext = context;
   await injectCursor(context);
   const page = await context.newPage();
 
   start = Date.now();
+  logBeat("0:00 spawn npm run e2e (background; rows exist before the ledger opens)");
+  const e2e = spawnE2e();
   logBeat("0:00 goto /");
   await page.goto("/", { waitUntil: "networkidle" });
   await setCursor(page, 80, 80);
@@ -199,8 +205,7 @@ async function main() {
   await hover(page.getByRole("button", { name: /Engage kill switch|Disable kill switch/ }).first(), "kill switch", page);
   await waitUntil(50_000);
 
-  logBeat("0:50 spawn npm run e2e");
-  const e2e = spawnE2e();
+  logBeat("0:50 hover work orders");
   await hover(page.getByText("Work orders").first(), "Work orders", page);
   await waitUntil(75_000);
 
@@ -213,8 +218,8 @@ async function main() {
   logBeat('1:50 click "Open ledger"');
   await page.goto("/ledger", { waitUntil: "networkidle" });
   await waitForLedgerRows(page);
-  const redRow = page.locator("tbody tr").filter({ hasText: "RED" }).first();
-  const paidRow = page.locator("tbody tr").filter({ hasText: "PAID" }).first();
+  const redRow = page.locator("tbody tr:has(.pill-red)").first();
+  const paidRow = page.locator("tbody tr:has(.pill-paid)").first();
   await hover(redRow, "RED row", page).catch(() => missed.push("RED row hover missed"));
   await hover(paidRow, "PAID row", page).catch(() => missed.push("PAID row hover missed"));
   await waitUntil(140_000);
@@ -235,10 +240,8 @@ async function main() {
   await waitUntil(160_000);
 
   logBeat("2:40 back to ledger, inspect PAID row and open digest");
-  await page.goBack({ waitUntil: "networkidle", timeout: 30000 }).catch(async () => {
-    missed.push("goBack from receipt failed; reloaded ledger");
-    await page.goto("/ledger", { waitUntil: "networkidle" });
-  });
+  await page.goto("/ledger", { waitUntil: "networkidle" });
+  await waitForLedgerRows(page);
   await click(paidRow.getByText("Inspect row", { exact: true }).first(), "Inspect row PAID", page).catch(async () => {
     logBeat('fallback locator: summary "Inspect row" on PAID');
     await click(paidRow.locator("summary").first(), "Inspect row PAID summary", page);
@@ -281,7 +284,9 @@ async function main() {
   e2e.kill();
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
   console.error(error);
+  await activeContext?.close().catch(() => {});
+  await activeBrowser?.close().catch(() => {});
   process.exit(1);
 });

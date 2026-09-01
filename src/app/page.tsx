@@ -46,7 +46,7 @@ export default async function Home() {
             Software pays a person. No human approves each transfer. Policy holds the line.
           </p>
           <p className="mt-3 text-base text-muted">
-            Software pays a person. Two independent checks must agree before money moves.
+            Two independent checks must agree before money moves. Disagreement is a refusal, not a guess.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link

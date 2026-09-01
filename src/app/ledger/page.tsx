@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { DenialBanner } from "@/components/denial-banner";
 import { RouterHealthStrip } from "@/components/router-health-strip";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
@@ -133,7 +132,6 @@ export default async function LedgerPage() {
                           Inspect row
                         </summary>
                         <div className="mt-3 space-y-3">
-                          <DenialBanner decisionClass={intent.decisionClass} reasonCode={intent.reasonCode} />
                           <Link
                             className="btn btn-secondary"
                             href={`/r/${intent.publicToken}`}

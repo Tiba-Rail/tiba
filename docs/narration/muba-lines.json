@@ -4,35 +4,35 @@
   "text": "Tiba is a payment rail for software that pays people without asking a human to approve every transfer."
  },
  {
-  "t": 6,
+  "t": 13,
   "text": "The operator console shows the boundary: daily cap, hourly cap, recipients, work orders, and the kill switch."
  },
  {
-  "t": 36,
+  "t": 43,
   "text": "The demo submits two payout paths in the background: one clean delivery and one tampered request."
  },
  {
-  "t": 61,
+  "t": 68,
   "text": "Every payable amount starts as a registered work order. The AI can match delivery to approved work; it cannot invent a new payment."
  },
  {
-  "t": 96,
+  "t": 103,
   "text": "The ledger records both outcomes. A clean path becomes paid, while the adversarial path is refused."
  },
  {
-  "t": 126,
+  "t": 133,
   "text": "The red row shows the refusal reason, and its public receipt shows both channels. The model reading the evidence can be fooled, but the separate payer-record check disagrees, so Tiba refuses."
  },
  {
-  "t": 146,
+  "t": 154,
   "text": "The paid row includes a public digest. The recipient can inspect the chain record instead of trusting our database."
  },
  {
-  "t": 161,
+  "t": 171,
   "text": "Both outcomes stay in the ledger as records, with request IDs, reason codes, and receipt links."
  },
  {
-  "t": 172,
+  "t": 174,
   "text": "The proof is narrow on purpose: testnet only, SUI as a stand-in asset, GonkaRouter doing the verification."
  }
 ]
