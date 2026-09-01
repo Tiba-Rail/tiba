@@ -1,0 +1,46 @@
+[
+ {
+  "t": 1,
+  "text": "Every payment software makes today still waits for a human to click approve. Tiba lets software pay people on its own, and makes the boundary the product."
+ },
+ {
+  "t": 12,
+  "text": "The Agent tools card lists six tools. Not on the menu: override a refusal, change a cap, or the kill switch."
+ },
+ {
+  "t": 20,
+  "text": "The operator token was pasted in at the start. Until then, the agent could not even attempt a payment."
+ },
+ {
+  "t": 28,
+  "text": "Ask the agent to list open work orders. The call appears in the log."
+ },
+ {
+  "t": 40,
+  "text": "Ask it to pay KL Translator for an open work order, with a note claiming fifty. Refused."
+ },
+ {
+  "t": 70,
+  "text": "Open the ledger. Channel A read fifty, Channel B read five. They disagreed, so Tiba refused rather than guess."
+ },
+ {
+  "t": 89,
+  "text": "Ask the agent to override the refusal. It says it has no tool for that. Because it doesn't."
+ },
+ {
+  "t": 100,
+  "text": "Now ask it to pay with the clean note. Both channels agreed. Paid, and settled on Sui testnet."
+ },
+ {
+  "t": 120,
+  "text": "In the ledger, the paid row carries a Sui digest. Every outcome, paid or refused, has a public receipt with both channels' request IDs."
+ },
+ {
+  "t": 134,
+  "text": "Flip the kill switch by hand. Ask the agent to pay again. Refused before any money moved."
+ },
+ {
+  "t": 150,
+  "text": "The agent does the work. The human holds the line. That is the product."
+ }
+]
