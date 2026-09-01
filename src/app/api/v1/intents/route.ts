@@ -158,6 +158,18 @@ export async function POST(request: NextRequest) {
     return response(denied);
   }
 
+  // Identity gate (default off per agent). Sits before inference so an unverified
+  // recipient is refused without spending a model call.
+  const kycExpired = recipient.kycExpiresAt !== null && recipient.kycExpiresAt.getTime() < now.getTime();
+  if (agent.requireRecipientKyc && (recipient.kycStatus !== "verified" || kycExpired)) {
+    const pricing = await pricingData();
+    const denied = await prisma.payoutIntent.update({
+      where: { id: intent.id },
+      data: { status: "refused", decisionClass: "RED", reasonCode: "RECIPIENT_UNVERIFIED", ...pricing }
+    });
+    return response(denied);
+  }
+
   const artifactMessages: GonkaMessage[] = [
     { role: "system", content: artifactSystemPrompt },
     {

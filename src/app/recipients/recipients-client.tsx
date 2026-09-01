@@ -10,6 +10,16 @@ interface Recipient {
   displayName: string;
   suiAddress: string;
   active: boolean;
+  kycStatus: string;
+  kycProvider: string | null;
+  kycVerifiedAt: string | null;
+  kycExpiresAt: string | null;
+}
+
+function kycPill(status: string): { className: string; label: string } {
+  if (status === "verified") return { className: "pill pill-paid", label: "Verified" };
+  if (status === "failed") return { className: "pill pill-red", label: "Failed" };
+  return { className: "pill pill-amber", label: "Unverified" };
 }
 
 interface RecipientsClientProps {
@@ -22,7 +32,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  async function post(path: string, body: Record<string, unknown>, busyLabel: string) {
+  async function post(path: string, body: Record<string, unknown>, busyLabel: string, success = "Recipient registered successfully") {
     setBusy(busyLabel);
     setError(null);
     setMessage(null);
@@ -42,7 +52,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
       });
       const payload = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "REQUEST_FAILED");
-      setMessage("Recipient registered successfully");
+      setMessage(success);
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Request failed");
@@ -61,6 +71,10 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
       active: true
     }, "recipient");
     event.currentTarget.reset();
+  }
+
+  async function verifyIdentity(ref: string) {
+    await post(`/api/v1/recipients/${encodeURIComponent(ref)}/verify`, {}, `verify:${ref}`, "Identity check recorded");
   }
 
   const inputClass = "field mt-1";
@@ -102,6 +116,23 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
               </div>
               <p className="mt-1 font-mono text-xs text-muted">{recipient.ref}</p>
               <p className="mt-2 break-all font-mono text-xs text-muted">{recipient.suiAddress}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
+                <span className={kycPill(recipient.kycStatus).className}>{kycPill(recipient.kycStatus).label}</span>
+                <span className="text-xs text-muted">
+                  {recipient.kycProvider ? `via ${recipient.kycProvider}` : "no identity check yet"}
+                  {recipient.kycVerifiedAt ? ` · ${recipient.kycVerifiedAt}` : ""}
+                  {recipient.kycExpiresAt ? ` · expires ${recipient.kycExpiresAt}` : ""}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-secondary ml-auto"
+                  disabled={busy === `verify:${recipient.ref}`}
+                  aria-busy={busy === `verify:${recipient.ref}`}
+                  onClick={() => verifyIdentity(recipient.ref)}
+                >
+                  {busy === `verify:${recipient.ref}` ? "Checking..." : "Verify identity"}
+                </button>
+              </div>
             </div>
           ))}
         </div>

@@ -17,3 +17,4 @@
 - **Stand-in** — we settle in the test network's own coin because test USDC wasn't available. Same mechanics, different coin.
 - **PTB** — a way to bundle several payments into one blockchain transaction. We use it for batch payouts.
 - **API v1** — just the label on the first version of our interface. There is no v2.
+- **Identity gate** — an optional extra check, off by default: if the operator turns it on, a recipient who hasn't passed an identity (eKYC) check is refused before any AI runs. Today the check is a stand-in; a real provider plugs into the same slot.

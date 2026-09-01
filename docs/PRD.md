@@ -140,9 +140,11 @@ This is a build hypothesis supported by the current research, not a proven marke
 
 **Timeline:** Next
 
-### Priority 2: Electronic identity and compliance checks as another gate
+### Priority 2: Electronic identity and compliance checks as another gate — built (v1.1, default off)
 
 Integrate checks from an electronic KYC or compliance provider as one additional gate in the existing refuse-or-pay decision.
+
+**Status (1 Sep 2026):** built. A provider abstraction (`src/lib/identity.ts`, mock provider today; `IDENTITY_PROVIDER` reserved for Persona/Sumsub) writes a verdict onto the recipient; when an agent has `require_recipient_kyc` on (toggle on /policies, default off), an intent for a recipient whose check is missing, failed, or expired is refused `RED RECIPIENT_UNVERIFIED` before any model runs.
 
 The design is:
 
@@ -157,7 +159,7 @@ This would not turn Tiba into a full KYC product. It would add compliance-provid
 
 The verification-and-refusal engine remains the core product. A2A and electronic KYC are integrations around it, not a rewrite of Tiba.
 
-**Timeline:** After v1 traction
+**Timeline:** Gate shipped (v1.1). A real provider behind the same interface: after v1 traction.
 
 ## 9. Success criteria
 

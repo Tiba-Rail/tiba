@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 import { SiteNav } from "@/components/site-nav";
 import { KillSwitchButton } from "./kill-switch-button";
+import { IdentityGateButton } from "./identity-gate-button";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function PoliciesPage() {
           <p className="text-muted">Caps, allowlist, and the kill switch. An agent can read these. Only a human can change them.</p>
         </header>
 
-        <section className="grid gap-4 lg:grid-cols-3">
+        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
           {/* Spending caps card */}
           <div className="card p-5">
             <h2 className="text-xl font-bold">Spending caps</h2>
@@ -90,6 +91,21 @@ export default async function PoliciesPage() {
                 <KillSwitchButton current={agent.killSwitch} />
               </div>
               <p className="mt-4 text-sm text-muted">This can also be done from the <a href="/console" className="text-primary underline">Console</a>.</p>
+            </div>
+          </div>
+
+          {/* Identity gate card */}
+          <div className="card p-5">
+            <h2 className="text-xl font-bold">Identity gate</h2>
+            <div className="mt-5">
+              <p className="text-4xl font-semibold">{agent.requireRecipientKyc ? "Required" : "Not required"}</p>
+              <p className="mt-2 text-sm text-muted">
+                When required, a recipient without a current identity check is refused before any model runs.
+              </p>
+              <div className="mt-4">
+                <IdentityGateButton current={agent.requireRecipientKyc} />
+              </div>
+              <p className="mt-4 text-sm text-muted">Uses the operator token entered under Kill switch. Check recipients on <a href="/recipients" className="text-primary underline">Recipients</a>.</p>
             </div>
           </div>
         </section>

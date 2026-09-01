@@ -88,6 +88,16 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
     return "Passed";
   }
 
+  // Identity gate is per agent (default off); a refusal here happened before inference.
+  function getIdentityStatus(requireRecipientKyc: boolean, reasonCode: string | null): string {
+    if (!requireRecipientKyc) return "Not required";
+    return reasonCode === "RECIPIENT_UNVERIFIED" ? "Refused" : "Passed";
+  }
+
+  const identityDetail = intent.recipient.kycProvider
+    ? `${intent.recipient.kycStatus} via ${intent.recipient.kycProvider}`
+    : intent.recipient.kycStatus;
+
   // Determine settlement status
   function getSettlementStatus(decisionClass: string, reasonCode: string | null): string {
     if (decisionClass === "PAID") return "Paid";
@@ -198,6 +208,11 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                 <td className="py-3 px-3">Policy</td>
                 <td className="py-3 px-3">{getPolicyStatus(intent.reasonCode)}</td>
                 <td className="py-3 px-3">{getPolicyStatus(intent.reasonCode) === "Refused" ? explainDecision(intent.decisionClass, intent.reasonCode) : "—"}</td>
+              </tr>
+              <tr className="border-b border-line">
+                <td className="py-3 px-3">Identity</td>
+                <td className="py-3 px-3">{getIdentityStatus(intent.agent.requireRecipientKyc, intent.reasonCode)}</td>
+                <td className="py-3 px-3">{identityDetail}</td>
               </tr>
               <tr className="border-b border-line">
                 <td className="py-3 px-3">Settlement</td>

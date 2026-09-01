@@ -93,3 +93,18 @@ Two findings from that testing, both design limits rather than bugs:
    test/reconcile.test.mjs.
 2. A valid ISO timestamp in the artifact is copied by channel A while B uses received_at,
    so the channels split on delivery_timestamp. Presets now avoid ISO stamps.
+
+## Identity gate (1 Sep)
+
+eKYC ships as one more input to refuse-or-pay, not as a KYC product. `src/lib/identity.ts`
+defines `IdentityProvider` with a deterministic mock (ref containing "fail" fails; anything
+else verifies for a year; `IDENTITY_PROVIDER` is reserved for Persona/Sumsub, not implemented).
+`POST /api/v1/recipients/[ref]/verify` (operator) runs the provider and stores
+`kyc_status / kyc_provider / kyc_check_id / kyc_verified_at / kyc_expires_at` on the recipient.
+`POST /api/v1/policies { require_recipient_kyc }` (operator) flips the per-agent flag.
+
+Default OFF: the seeded agent has `require_recipient_kyc = false` and every existing recipient
+was backfilled `verified` by provider `seed`, so the live demo pays exactly as before. When on,
+the gate runs after the open-obligation check and before either Gonka channel, so an unverified,
+failed, or expired recipient is refused `RED RECIPIENT_UNVERIFIED` with no inference spent.
+Public receipts show an "Identity" row between Policy and Settlement.

@@ -49,6 +49,10 @@ export function explainDecision(decisionClass: string, reasonCode: string | null
     return "Both channels agreed and the payment settled on Sui testnet.";
   }
   
+  if (reasonCode === "RECIPIENT_UNVERIFIED") {
+    return "The recipient has not passed identity verification and this agent requires it, so Tiba refused.";
+  }
+
   if (reasonCode?.startsWith("QUORUM_SPLIT")) {
     return "The two channels disagreed about the work order or the amount, so Tiba refused. It never guesses which one is right.";
   }

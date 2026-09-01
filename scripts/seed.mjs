@@ -31,6 +31,7 @@ const agent = await prisma.agent.create({
     hourCountCap: 5,
     dayCountCap: 20,
     rail: agentRail,
+    requireRecipientKyc: false,
     windowStartedAt: seededAt,
     dayStartedAt: seededAt,
     createdAt: seededAt,
@@ -45,6 +46,9 @@ const creator = await prisma.recipient.create({
     displayName: "Demo Creator",
     suiAddress: demoRecipientAddress,
     active: true,
+    kycStatus: "verified",
+    kycProvider: "seed",
+    kycVerifiedAt: seededAt,
     createdAt: seededAt,
     updatedAt: seededAt
   }
@@ -57,6 +61,9 @@ const translator = await prisma.recipient.create({
     displayName: "KL Translator",
     suiAddress: demoRecipientAddress,
     active: true,
+    kycStatus: "verified",
+    kycProvider: "seed",
+    kycVerifiedAt: seededAt,
     createdAt: seededAt,
     updatedAt: seededAt
   }
@@ -69,6 +76,9 @@ const ali = await prisma.recipient.create({
     displayName: "Ali",
     suiAddress: demoRecipientAddress,
     active: true,
+    kycStatus: "verified",
+    kycProvider: "seed",
+    kycVerifiedAt: seededAt,
     createdAt: seededAt,
     updatedAt: seededAt
   }
