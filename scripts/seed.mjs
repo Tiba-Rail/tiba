@@ -22,7 +22,7 @@ await prisma.agent.deleteMany();
 const agent = await prisma.agent.create({
   data: {
     id: "agent-demo-day1",
-    name: "Demo agent",
+    name: "Tiba pilot agent",
     apiKeyHash,
     apiKeyPrefix: apiKey.slice(0, 12),
     ceilingMicros: 400_000_000n,

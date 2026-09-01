@@ -160,6 +160,8 @@ async function main() {
     return import("@playwright/test");
   });
 
+  // NOTE: this wipes the live ledger. demo:reset AND the e2e run's seed() both deleteMany
+  // every table and recreate the demo data; the site ends with the fresh RED + PAID pair.
   console.log("Running demo reset...");
   await run(npmCommand(), ["run", "demo:reset"]);
 
@@ -223,9 +225,20 @@ async function main() {
     await click(redRow.locator("summary").first(), "Inspect row RED summary", page);
   });
   await hover(redRow.locator("td").nth(4), "reason code", page).catch(() => missed.push("reason code hover missed"));
+  await waitUntil(148_000);
+
+  logBeat("2:28 open RED receipt (decision pipeline)");
+  await click(redRow.locator("a[href^='/r/']").first(), "RED receipt link", page).catch(() => missed.push("RED receipt link missed"));
+  await page.waitForURL("**/r/**", { timeout: 15000 }).catch(() => missed.push("receipt navigation was slow"));
+  await hover(page.getByRole("heading", { name: "Decision pipeline" }).first(), "Decision pipeline", page).catch(() => missed.push("Decision pipeline hover missed"));
+  await hover(page.locator("tbody tr").filter({ hasText: "Agreement" }).first(), "Agreement row", page).catch(() => missed.push("Agreement row hover missed"));
   await waitUntil(160_000);
 
-  logBeat("2:40 inspect PAID row and open digest");
+  logBeat("2:40 back to ledger, inspect PAID row and open digest");
+  await page.goBack({ waitUntil: "networkidle", timeout: 30000 }).catch(async () => {
+    missed.push("goBack from receipt failed; reloaded ledger");
+    await page.goto("/ledger", { waitUntil: "networkidle" });
+  });
   await click(paidRow.getByText("Inspect row", { exact: true }).first(), "Inspect row PAID", page).catch(async () => {
     logBeat('fallback locator: summary "Inspect row" on PAID');
     await click(paidRow.locator("summary").first(), "Inspect row PAID summary", page);

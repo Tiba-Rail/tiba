@@ -25,8 +25,8 @@ export default async function PoliciesPage() {
         <SiteNav current="policies" />
         <RouterHealthStrip />
         <div className="mx-auto max-w-7xl px-4 py-8">
-          <h1 className="display text-4xl md:text-5xl">No seeded agent</h1>
-          <p className="mt-2 text-muted">Run npm run seed before opening the policies page.</p>
+          <h1 className="display text-4xl md:text-5xl">No agent configured</h1>
+          <p className="mt-2 text-muted">This workspace has no paying agent yet.</p>
         </div>
       </main>
     );

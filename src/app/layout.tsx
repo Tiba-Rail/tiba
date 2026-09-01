@@ -9,7 +9,7 @@ const editorial = Instrument_Serif({ variable: "--font-editorial", subsets: ["la
 export const metadata: Metadata = {
   title: "Tiba — software pays a person, policy holds the line",
   description:
-    "An agent-to-human payment rail. Two isolated verification channels must agree before money moves; disagreement is a refusal, never a tie-break. Sui testnet, verified through GonkaRouter."
+    "An agent-to-human payment rail. Two isolated verification channels must agree before money moves; disagreement is a refusal, never a tie-break."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -3,7 +3,6 @@
 **The agent-to-human payment rail.** Software pays a person, on its own, without a human
 approving each transfer - and can't run away with the money.
 
-Built for the MUBA Blockchain Hackathon 2026, GonkaRouter "AI For Society" track.
 
 ## The Problem
 
@@ -128,7 +127,7 @@ Useful checks:
 
 ## Team
 
-Built by Rizqey Labs — Faris Irfan, Arthur Wong, and Aariz Sajan.
+Built by Rizqey Labs.
 Source: https://github.com/Tiba-Rail/tiba · Live: https://tiba-omega.vercel.app
 # Tiba Status
 

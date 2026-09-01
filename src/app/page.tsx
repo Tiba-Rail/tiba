@@ -46,7 +46,7 @@ export default async function Home() {
             Software pays a person. No human approves each transfer. Policy holds the line.
           </p>
           <p className="mt-3 text-base text-muted">
-            Agent-to-human payment rail on Sui testnet, verified through GonkaRouter.
+            Software pays a person. Two independent checks must agree before money moves.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -106,7 +106,7 @@ export default async function Home() {
             <div className="mt-3 grid gap-3 text-sm md:grid-cols-4">
               <div>
                 <p className="eyebrow">Amount</p>
-                <p className="mt-1 font-semibold">{microsToUsdc(paidIntent.amountMicros)} <span className="text-xs font-normal text-muted">settled as SUI, testnet stand-in</span></p>
+                <p className="mt-1 font-semibold">{microsToUsdc(paidIntent.amountMicros)} <span className="text-xs font-normal text-muted">settled in SUI on testnet</span></p>
               </div>
               <div className="md:col-span-2">
                 <p className="eyebrow">Digest</p>
@@ -138,12 +138,12 @@ export default async function Home() {
               </div>
             </div>
           ) : (
-            <p className="mt-3 text-sm text-muted">No settled payment yet - run npm run e2e</p>
+            <p className="mt-3 text-sm text-muted">No settled payment yet.</p>
           )}
         </section>
 
         <footer className="text-sm text-muted">
-          Testnet only. MUBA Blockchain Hackathon 2026 · Rizqey Labs - Faris Irfan, Arthur Wong, Aariz Sajan.{" "}
+          Tiba · Rizqey Labs · Testnet pilot, no real funds move yet ·{" "}
           <a className="text-primary underline-offset-4 hover:underline" href="https://github.com/Tiba-Rail/tiba">
             source
           </a>

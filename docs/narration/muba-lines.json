@@ -21,7 +21,7 @@
  },
  {
   "t": 126,
-  "text": "The red row shows the refusal reason. The model reading the evidence can be fooled, but the separate payer-record check blocks the mismatch."
+  "text": "The red row shows the refusal reason, and its public receipt shows both channels. The model reading the evidence can be fooled, but the separate payer-record check disagrees, so Tiba refuses."
  },
  {
   "t": 146,
