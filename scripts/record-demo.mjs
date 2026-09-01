@@ -1,15 +1,25 @@
+// Demo recorder. Default mode (Faris's laptop): resets the ledger, runs e2e in the
+// background, drives the tour, writes the MP4 to Downloads.
+//
+// Cloud / "tour only" mode (no reset, no e2e, Playwright's bundled Chromium, output
+// relative to the repo at recordings/tiba-demo.mp4):
+//   DEMO_TOUR_ONLY=1 DEMO_BASE_URL=https://tiba-omega.vercel.app node scripts/record-demo.mjs
+// Needs: npm ci, npx playwright install --with-deps chromium, ffmpeg (+ffprobe) on PATH.
+// The ledger must already have a RED + PAID row pair.
 import { spawn } from "node:child_process";
 import { createWriteStream, existsSync, mkdirSync, readdirSync, renameSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+const tourOnly = Boolean(process.env.DEMO_TOUR_ONLY);
 const baseUrl = process.env.DEMO_BASE_URL ?? "https://tiba-omega.vercel.app";
 const recordingsDir = resolve("recordings");
 const webmPath = join(recordingsDir, "tiba-demo.webm");
-const mp4Path = "C:/Users/diony/Downloads/Hackathons/MUBA/tiba-demo.mp4";
+const mp4Dir = "C:/Users/diony/Downloads/Hackathons/MUBA";
+const mp4Path = tourOnly ? join(recordingsDir, "tiba-demo.mp4") : join(mp4Dir, "tiba-demo.mp4");
 const viewport = { width: 1280, height: 720 };
 
 mkdirSync(recordingsDir, { recursive: true });
-mkdirSync("C:/Users/diony/Downloads/Hackathons/MUBA", { recursive: true });
+if (!tourOnly) mkdirSync(mp4Dir, { recursive: true });
 
 let start = Date.now();
 const missed = [];
@@ -164,13 +174,21 @@ async function main() {
 
   // NOTE: this wipes the live ledger. demo:reset AND the e2e run's seed() both deleteMany
   // every table and recreate the demo data; the site ends with the fresh RED + PAID pair.
-  console.log("Running demo reset...");
-  await run(npmCommand(), ["run", "demo:reset"]);
+  // DEMO_TOUR_ONLY skips both: the ledger already has rows.
+  if (tourOnly) {
+    console.log("DEMO_TOUR_ONLY set: skipping demo:reset and e2e");
+  } else {
+    console.log("Running demo reset...");
+    await run(npmCommand(), ["run", "demo:reset"]);
+  }
 
+  // Laptop: use the Chromium already in the Playwright cache; this machine cannot
+  // download the headless-shell build this Playwright version wants.
+  // Tour-only (cloud): Playwright's bundled browser unless PW_CHROME is set.
+  const executablePath = process.env.PW_CHROME
+    || (tourOnly ? undefined : "C:/Users/diony/AppData/Local/ms-playwright/chromium-1208/chrome-win64/chrome.exe");
   const browser = await chromium.launch({
-    // Use the Chromium already in the Playwright cache; this machine cannot
-    // download the headless-shell build this Playwright version wants.
-    executablePath: process.env.PW_CHROME || "C:/Users/diony/AppData/Local/ms-playwright/chromium-1208/chrome-win64/chrome.exe",
+    ...(executablePath ? { executablePath } : {}),
     headless: true,
     args: ["--disable-dev-shm-usage", "--disable-gpu", "--no-sandbox"]
   });
@@ -186,8 +204,10 @@ async function main() {
   const page = await context.newPage();
 
   start = Date.now();
-  logBeat("0:00 spawn npm run e2e (background; rows exist before the ledger opens)");
-  const e2e = spawnE2e();
+  logBeat(tourOnly
+    ? "0:00 tour only (no e2e; ledger rows already present)"
+    : "0:00 spawn npm run e2e (background; rows exist before the ledger opens)");
+  const e2e = tourOnly ? null : spawnE2e();
   logBeat("0:00 goto /");
   await page.goto("/", { waitUntil: "networkidle" });
   await setCursor(page, 80, 80);
@@ -281,7 +301,7 @@ async function main() {
     for (const item of missed) console.log(`- ${item}`);
   }
 
-  e2e.kill();
+  e2e?.kill();
 }
 
 main().catch(async (error) => {
