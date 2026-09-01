@@ -29,7 +29,12 @@ export function reconcile(
   const artifact = proposals.artifact;
   if (!payer && !artifact) return { ok: false, decisionClass: "AMBER", reasonCode: "INFERENCE_UNAVAILABLE" };
   if (requiredChannels === "payer_record") {
-    return payer ? { ok: true, tuple: payer } : { ok: false, decisionClass: "AMBER", reasonCode: "MISSING_PAYER_RECORD" };
+    if (!payer) return { ok: false, decisionClass: "AMBER", reasonCode: "MISSING_PAYER_RECORD" };
+    // Payer record is trusted for the amount, but the artifact must not name a different obligation.
+    if (artifact && artifact.workOrderId !== payer.workOrderId) {
+      return { ok: false, decisionClass: "RED", reasonCode: "QUORUM_SPLIT:work_order_id" };
+    }
+    return { ok: true, tuple: payer };
   }
   if (requiredChannels === "human") {
     return { ok: false, decisionClass: "AMBER", reasonCode: "HUMAN_REVIEW_REQUIRED" };

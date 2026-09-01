@@ -86,5 +86,10 @@ Two findings from that testing, both design limits rather than bugs:
    recipient (WO-11 pending). Proposed hardening, NOT done (would change eval numbers):
    in payer-record-only mode, still refuse when the artifact channel names a different
    work order.
+   Implemented 1 Sep: `reconcile()` in payer-record-only mode now returns RED
+   `QUORUM_SPLIT:work_order_id` when an artifact tuple is present and names a different
+   work order. Amounts are still not compared in that mode (the payer's approved amount
+   stays authoritative); "both" and "human" behaviour is unchanged. Covered in
+   test/reconcile.test.mjs.
 2. A valid ISO timestamp in the artifact is copied by channel A while B uses received_at,
    so the channels split on delivery_timestamp. Presets now avoid ISO stamps.

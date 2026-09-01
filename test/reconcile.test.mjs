@@ -15,6 +15,25 @@ test("a tuple mismatch names the differing field", () => {
   assert.deepEqual(result, { ok: false, decisionClass: "RED", reasonCode: "QUORUM_SPLIT:work_order_id" });
 });
 
+test("payer-record-only mode trusts the payer tuple when the artifact names the same work order", () => {
+  const payer = { workOrderId: "WO-11", amountMicros: 40_000_000n, deliveryTimestamp: "2026-08-30T00:00:00Z" };
+  const artifact = { workOrderId: "WO-11", amountMicros: 50_000_000n, deliveryTimestamp: "2026-08-30T00:00:00Z" };
+  assert.deepEqual(reconcile("payer_record", { artifact, payer_record: payer }), { ok: true, tuple: payer });
+});
+
+test("payer-record-only mode still refuses when the artifact names a different work order", () => {
+  const result = reconcile("payer_record", {
+    artifact: { workOrderId: "WO-12", amountMicros: 50_000_000n, deliveryTimestamp: "2026-08-30T00:00:00Z" },
+    payer_record: { workOrderId: "WO-11", amountMicros: 40_000_000n, deliveryTimestamp: "2026-08-30T00:00:00Z" }
+  });
+  assert.deepEqual(result, { ok: false, decisionClass: "RED", reasonCode: "QUORUM_SPLIT:work_order_id" });
+});
+
+test("payer-record-only mode with no artifact tuple is unchanged", () => {
+  const payer = { workOrderId: "WO-11", amountMicros: 40_000_000n, deliveryTimestamp: "2026-08-30T00:00:00Z" };
+  assert.deepEqual(reconcile("payer_record", { payer_record: payer }), { ok: true, tuple: payer });
+});
+
 test("verification bands select one channel, two channels, then human review", () => {
   assert.equal(requiredChannelsForAmount(49_999_999n), "payer_record");
   assert.equal(requiredChannelsForAmount(50_000_000n), "both");

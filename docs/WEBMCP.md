@@ -112,8 +112,9 @@ Do not put an ISO timestamp in the note; see Known limitations.
 
 - Channel B never sees the artifact. If one recipient has more than one verified open work
   order, channel B has to guess which obligation the intent refers to. Demo data gives each
-  recipient one payable order. Proposed hardening, not yet done: refuse when the two
-  channels name different work orders even in payer-record-only mode.
+  recipient one payable order. Hardening implemented 1 Sep: Tiba refuses
+  (`QUORUM_SPLIT:work_order_id`) when the two channels name different work orders even in
+  payer-record-only mode.
 - A valid ISO timestamp inside the artifact is copied by channel A, while channel B uses the
   system's received-at time, so the two split on `delivery_timestamp`. Working as designed
   (any disagreement refuses), but write notes in words, not ISO stamps.
