@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getGnkUsdRate } from "@/lib/gonka-pricing";
 import { runGonka, fingerprintPrompt, fingerprintResponse, type GonkaMessage, type GonkaResult } from "@/lib/gonka";
+import { recipientIdentityOk } from "@/lib/identity";
 import {
   artifactDecisionSchema,
   artifactSystemPrompt,
@@ -160,8 +161,7 @@ export async function POST(request: NextRequest) {
 
   // Identity gate (default off per agent). Sits before inference so an unverified
   // recipient is refused without spending a model call.
-  const kycExpired = recipient.kycExpiresAt !== null && recipient.kycExpiresAt.getTime() < now.getTime();
-  if (agent.requireRecipientKyc && (recipient.kycStatus !== "verified" || kycExpired)) {
+  if (agent.requireRecipientKyc && !recipientIdentityOk(recipient, now)) {
     const pricing = await pricingData();
     const denied = await prisma.payoutIntent.update({
       where: { id: intent.id },

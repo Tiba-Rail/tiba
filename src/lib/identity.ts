@@ -16,12 +16,25 @@ export interface IdentityProvider {
 
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
-/** Deterministic stand-in: a ref containing "fail" fails, anything else verifies for one year. */
+/**
+ * The gate condition the intents route refuses on. A recipient passes only with a
+ * stored `verified` verdict that has not expired; `kycExpiresAt = null` never expires
+ * (seed/backfill data has no expiry by design).
+ */
+export function recipientIdentityOk(
+  recipient: { kycStatus: string; kycExpiresAt: Date | null },
+  now: Date
+): boolean {
+  if (recipient.kycStatus !== "verified") return false;
+  return recipient.kycExpiresAt === null || recipient.kycExpiresAt.getTime() >= now.getTime();
+}
+
+/** Deterministic stand-in: a ref ending in "-fail" fails, anything else verifies for one year. */
 export class MockIdentityProvider implements IdentityProvider {
   name = "mock";
 
   async verify(input: { recipientRef: string; displayName: string; suiAddress: string }) {
-    const decision = input.recipientRef.includes("fail") ? "failed" as const : "verified" as const;
+    const decision = input.recipientRef.endsWith("-fail") ? "failed" as const : "verified" as const;
     const digest = createHash("sha256").update(`${input.recipientRef}:${input.suiAddress}`).digest("hex");
     return {
       decision,

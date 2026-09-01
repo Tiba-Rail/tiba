@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { channelTuple, disagreementLine, type ChannelTuple } from "@/lib/adjudication-display";
 import { SiteNav } from "@/components/site-nav";
 import { explainDecision } from "@/app/console/types";
+import { recipientIdentityOk } from "@/lib/identity";
 
 export const dynamic = "force-dynamic";
 
@@ -88,15 +89,26 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
     return "Passed";
   }
 
-  // Identity gate is per agent (default off); a refusal here happened before inference.
-  function getIdentityStatus(requireRecipientKyc: boolean, reasonCode: string | null): string {
-    if (!requireRecipientKyc) return "Not required";
-    return reasonCode === "RECIPIENT_UNVERIFIED" ? "Refused" : "Passed";
-  }
+  // Identity gate is per agent (default off) and sits before inference. No per-intent
+  // snapshot is stored, so "Passed" is derived from the recipient's stored verdict at the
+  // intent's creation time, never from the flag alone. An intent refused before the gate
+  // (no adjudications, not RECIPIENT_UNVERIFIED) was never evaluated.
+  const identityStatus = !intent.agent.requireRecipientKyc
+    ? "Not required"
+    : intent.reasonCode === "RECIPIENT_UNVERIFIED"
+      ? "Refused"
+      : intent.adjudications.length === 0
+        ? "Not evaluated"
+        : recipientIdentityOk(intent.recipient, intent.createdAt)
+          ? "Passed"
+          : "Not checked";
 
-  const identityDetail = intent.recipient.kycProvider
-    ? `${intent.recipient.kycStatus} via ${intent.recipient.kycProvider}`
-    : intent.recipient.kycStatus;
+  // Recipient KYC state is only shown when the agent actually enforces it.
+  const identityDetail = !intent.agent.requireRecipientKyc
+    ? "—"
+    : intent.recipient.kycProvider
+      ? `${intent.recipient.kycStatus} via ${intent.recipient.kycProvider}`
+      : intent.recipient.kycStatus;
 
   // Determine settlement status
   function getSettlementStatus(decisionClass: string, reasonCode: string | null): string {
@@ -211,7 +223,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
               </tr>
               <tr className="border-b border-line">
                 <td className="py-3 px-3">Identity</td>
-                <td className="py-3 px-3">{getIdentityStatus(intent.agent.requireRecipientKyc, intent.reasonCode)}</td>
+                <td className="py-3 px-3">{identityStatus}</td>
                 <td className="py-3 px-3">{identityDetail}</td>
               </tr>
               <tr className="border-b border-line">

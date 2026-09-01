@@ -12,11 +12,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
   if (!recipient) return NextResponse.json({ error: "RECIPIENT_NOT_FOUND" }, { status: 404 });
 
   const provider = getIdentityProvider();
-  const result = await provider.verify({
-    recipientRef: recipient.ref,
-    displayName: recipient.displayName,
-    suiAddress: recipient.suiAddress
-  });
+  let result: Awaited<ReturnType<typeof provider.verify>>;
+  try {
+    result = await provider.verify({
+      recipientRef: recipient.ref,
+      displayName: recipient.displayName,
+      suiAddress: recipient.suiAddress
+    });
+  } catch {
+    return NextResponse.json({ error: "IDENTITY_PROVIDER_UNAVAILABLE" }, { status: 502 });
+  }
   const updated = await prisma.recipient.update({
     where: { id: recipient.id },
     data: {
