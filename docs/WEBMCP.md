@@ -88,7 +88,8 @@ both channels' numbers; a clean note settles on Sui testnet with a public digest
 9. No agent? Paste the token, click a preset under "Send a test payment", click
    "Send test payment".
 
-A work order can be paid once. Use "Register work order" on the same page to create
+A work order can be paid once. Use "Register work order" on the Work orders page
+(nav link "Work orders", https://tiba-omega.vercel.app/work-orders) to create
 another — but only after the current one is paid; two open verified orders on one
 recipient make channel B guess and every intent refuses (recipient `translator-kl`, ceiling `5`, required channels `both`, payer record
 `{"approved_amount_micros":"5000000","delivery_status":"verified_complete"}`).

@@ -96,24 +96,15 @@ Tiba serves the buyer's need for controlled autonomous spending. It does not rep
 
 The supplied research shows that existing products cover important parts of the agent-payment problem, but not the same verification-and-refusal mechanism.
 
-| Product or company | Focus identified in the research | Tiba's relevant difference |
-|---|---|---|
-| Circle Agent Stack | Agent wallet and payment infrastructure | Tiba adds two isolated verification channels that must agree before execution. |
-| Skyfire | Agent identity, including KYA ("Know Your Agent"), which is different from human KYC | Tiba's core control is payment authorization through independent evidence checks, not agent identity alone. |
-| Crossmint | Agent wallet and payment tooling | Tiba adds mandatory agreement between two independent checks and refusal on disagreement. |
-| Coinbase x402 | Agent payment infrastructure; the research reports more than 100 million transactions | The research does not identify x402 as documenting Tiba's two-channel agreement requirement. A builder described its developer funnel as narrow despite the high transaction volume. |
-| Google AP2 | Agent payment and agent-to-agent protocol infrastructure | Open GitHub feedback challenged claims that AP2 was production-ready. The research does not identify AP2 as documenting Tiba's independent verification-and-refusal mechanism. |
-| Stripe and Bridge | Stablecoin infrastructure and live agent-stablecoin-payment documentation, including MPP and x402; Stripe acquired Bridge in a deal reported at $1.1 billion | Tiba is not trying to replace Stripe or Circle as a settlement rail. Its distinction is the authorization engine that refuses when independent checks disagree. |
-
-| Competitor | Agent Wallets | Spend Limits | Agent Identity | Verification Mechanism |
-|------------|---------------|--------------|----------------|------------------------|
-| Circle Agent Stack | Yes | Yes | No | Single verification |
-| Skyfire | Yes | Yes | Yes (KYA) | Single verification |
-| Crossmint | Yes | Yes | No | Single verification |
-| Coinbase x402 | Yes | Yes | No | Single verification |
-| Google AP2 | Yes | Yes | No | Single verification |
-| Stripe/Bridge | Yes | Yes | No | Single verification |
-| **Tiba** | Yes | Yes | No | **Two independent verification channels that must agree** |
+| Product or company | Focus identified in the research | Verification mechanism | Tiba's relevant difference |
+|---|---|---|---|
+| Circle Agent Stack | Agent wallet and payment infrastructure | Single verification | Tiba adds two isolated verification channels that must agree before execution. |
+| Skyfire | Agent identity, including KYA ("Know Your Agent"), which is different from human KYC | Single verification | Tiba's core control is payment authorization through independent evidence checks, not agent identity alone. |
+| Crossmint | Agent wallet and payment tooling | Single verification | Tiba adds mandatory agreement between two independent checks and refusal on disagreement. |
+| Coinbase x402 | Agent payment infrastructure; the research reports more than 100 million transactions | Single verification | The research does not identify x402 as documenting Tiba's two-channel agreement requirement. A builder described its developer funnel as narrow despite the high transaction volume. |
+| Google AP2 | Agent payment and agent-to-agent protocol infrastructure | Single verification | Open GitHub feedback challenged claims that AP2 was production-ready. The research does not identify AP2 as documenting Tiba's independent verification-and-refusal mechanism. |
+| Stripe and Bridge | Stablecoin infrastructure and live agent-stablecoin-payment documentation, including MPP and x402; Stripe acquired Bridge in a deal reported at $1.1 billion | Single verification | Tiba is not trying to replace Stripe or Circle as a settlement rail. Its distinction is the authorization engine that refuses when independent checks disagree. |
+| **Tiba** | Payment authorization for autonomous agents | **Two independent verification channels that must agree** | Disagreement is a refusal, not a guess. |
 
 Two independent verification channels that must agree provide superior security compared to a single verification path. This approach catches specific failure modes that single verification systems miss: if one verification channel is compromised or hallucinates, or if an evidence artifact is manipulated, the disagreement between the isolated channels will trigger a refusal. Single verification systems have no way to detect these failures and may incorrectly approve fraudulent payments. By requiring agreement between two independent, isolated channels, Tiba creates a fail-closed system that defaults to refusing payment when there's any doubt about the validity of the request.
 
