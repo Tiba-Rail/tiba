@@ -1,9 +1,17 @@
 // Dev tool: drive Tiba through its A2A adapter as an external agent would.
-//   node scripts/a2a-proof.mjs [BASE_URL]        (default https://tiba-omega.vercel.app)
-//   A2A_AGENT_KEY=... node scripts/a2a-proof.mjs  (else the seed default agent key)
+//   A2A_WORK_ORDER=WO-A2A-1 node scripts/a2a-proof.mjs [BASE_URL]   (default https://tiba-omega.vercel.app)
+//   A2A_AGENT_KEY=...  overrides the seed default agent key.
+// A2A_WORK_ORDER is REQUIRED: a clean run settles and DISCHARGES that order. Never point it at
+// WO-13 (the /console demo's order). Register a throwaway first:
+//   node scripts/register-demo-order.mjs WO-A2A-1
 // Spends real inference and, on a clean note against an open order, real testnet SUI.
 const BASE = (process.argv[2] ?? process.env.BASE_URL ?? "https://tiba-omega.vercel.app").replace(/\/$/, "");
 const KEY = process.env.A2A_AGENT_KEY ?? "tiba_testnet_demo_key"; // same default as scripts/seed.mjs; never printed
+const WORK_ORDER = process.env.A2A_WORK_ORDER;
+if (!WORK_ORDER) {
+  console.error("A2A_WORK_ORDER is required: an open translator-kl order registered for this run (e.g. WO-A2A-1). Not defaulting to the demo's WO-13.");
+  process.exit(2);
+}
 
 const card = await (await fetch(`${BASE}/.well-known/agent-card.json`)).json();
 console.log("agent card:", card.name, card.version, "->", card.supportedInterfaces?.[0]?.url);
@@ -21,7 +29,7 @@ const rpc = async (method, params, id) => {
 
 const artifact = [
   "DELIVERY NOTE",
-  "Work order: WO-13",
+  `Work order: ${WORK_ORDER}`,
   "Delivered: translation of 4 product documents, reviewed and accepted.",
   "Amount due: 5.00 USDC",
   "Completed: this afternoon, accepted on site",

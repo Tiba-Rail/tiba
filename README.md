@@ -48,7 +48,8 @@ Operator console at `/console`, ledger at `/ledger`, public receipts at `/r/<tok
 External agents can call the same pipeline over Google's Agent2Agent protocol (1.0):
 Agent Card at `/.well-known/agent-card.json`, JSON-RPC at `POST /a2a` (`SendMessage`,
 `GetTask`), bearer = a Tiba agent API key. See [docs/A2A.md](docs/A2A.md);
-`npm run a2a:proof` drives it end to end.
+`A2A_WORK_ORDER=<ref> npm run a2a:proof` drives it end to end against an order registered
+for that run (it settles the order, so never the demo's `WO-13`).
 
 ## Status
 

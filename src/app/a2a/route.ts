@@ -10,16 +10,20 @@ export const runtime = "nodejs";
 
 type RpcId = string | number | null;
 type ErrorInfo = { reason: string; metadata?: Record<string, string> };
+type RpcInit = { status?: number; headers?: Record<string, string> };
 
-function envelope(id: RpcId, body: Record<string, unknown>, status = 200) {
-  return NextResponse.json({ jsonrpc: "2.0", id, ...body }, { status, headers: { "A2A-Version": A2A_VERSION } });
+function envelope(id: RpcId, body: Record<string, unknown>, init: RpcInit = {}) {
+  return NextResponse.json(
+    { jsonrpc: "2.0", id, ...body },
+    { status: init.status ?? 200, headers: { "A2A-Version": A2A_VERSION, ...init.headers } }
+  );
 }
 
-function error(id: RpcId, code: number, message: string, info?: ErrorInfo) {
+function error(id: RpcId, code: number, message: string, info?: ErrorInfo, init?: RpcInit) {
   const data = info
     ? [{ "@type": "type.googleapis.com/google.rpc.ErrorInfo", domain: "a2a-protocol.org", ...info }]
     : undefined;
-  return envelope(id, { error: { code, message, ...(data ? { data } : {}) } });
+  return envelope(id, { error: { code, message, ...(data ? { data } : {}) } }, init);
 }
 
 async function upstream(origin: string, path: string, authorization: string, init?: RequestInit) {
@@ -39,6 +43,15 @@ function upstreamError(id: RpcId, result: { status: number; body: unknown }) {
     metadata: { status: String(result.status), body: typeof result.body === "string" ? result.body : JSON.stringify(result.body) }
   };
   if (result.status === 400) return error(id, -32602, "Invalid parameters", info);
+  if (result.status === 401 || result.status === 403) {
+    // A2A §3.3.2: auth failures are HTTP 401/403 (client SDKs key off the status), with a
+    // custom JSON-RPC code; -32000 is the first implementation-defined code A2A leaves free.
+    const unauthenticated = result.status === 401;
+    return error(id, -32000, unauthenticated ? "Unauthorized" : "Forbidden", info, {
+      status: result.status,
+      headers: unauthenticated ? { "www-authenticate": "Bearer" } : undefined
+    });
+  }
   return error(id, -32603, "Internal error", info);
 }
 
@@ -65,6 +78,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return error(null, -32700, "Invalid JSON payload");
   }
+  if (!rpc || typeof rpc !== "object") return error(null, -32600, "Request payload validation error");
   const id = rpc.id ?? null;
   if (rpc.jsonrpc !== "2.0" || typeof rpc.method !== "string") return error(id, -32600, "Request payload validation error");
   const params = rpc.params ?? {};

@@ -131,5 +131,7 @@ byte-for-byte the REST path. `message.messageId` is the idempotency key. Card at
 `/.well-known/agent-card.json` only (`agent.json` is not in the 1.0 spec). `receipt_url` in
 the decision artifact is absolute. Streaming, push, list, cancel and the extended card
 return the spec's `-32003` / `-32004`. Details and error table in `docs/A2A.md`;
-mapping covered by `test/a2a.test.mjs`. Not yet run against production (needs an open
-order for the target recipient); `npm run a2a:proof` is the runner.
+mapping covered by `test/a2a.test.mjs`. Not yet run against production. The runner,
+`A2A_WORK_ORDER=<ref> npm run a2a:proof`, refuses to start without an explicit order ref
+because a clean run settles and discharges that order; `WO-13` belongs to the `/console`
+demo, so register a throwaway (`node scripts/register-demo-order.mjs WO-A2A-1`) instead.

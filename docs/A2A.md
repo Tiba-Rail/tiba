@@ -10,14 +10,18 @@ adapter cannot bypass any of them.
 - JSON-RPC endpoint: `POST https://tiba-omega.vercel.app/a2a` (`Content-Type: application/json`, `A2A-Version: 1.0`)
 - Code: `src/lib/a2a.ts` (pure mapping, tested in `test/a2a.test.mjs`),
   `src/app/.well-known/agent-card.json/route.ts`, `src/app/a2a/route.ts`
-- Proof script: `npm run a2a:proof -- [BASE_URL]` (reads `A2A_AGENT_KEY`, else the seed default)
+- Proof script: `A2A_WORK_ORDER=<ref> npm run a2a:proof -- [BASE_URL]` (reads `A2A_AGENT_KEY`,
+  else the seed default). `A2A_WORK_ORDER` is required: a clean run settles and discharges
+  that order, so never use `WO-13` (the `/console` demo's order). Register a throwaway first
+  with `node scripts/register-demo-order.mjs WO-A2A-1`.
 
 ## Security
 
 The bearer is a **Tiba agent API key**, the same key `/api/v1/intents` accepts. The card
 declares it as `securitySchemes.bearer` (HTTP `Bearer`) and requires it in
-`securityRequirements`. A missing or wrong key is a JSON-RPC `-32603` whose `data` carries
-the upstream `401`. Tasks are scoped to the agent that created them, because
+`securityRequirements`. A missing or wrong key is HTTP `401` with `WWW-Authenticate: Bearer`
+and a JSON-RPC `-32000` error whose `data` carries the upstream body (`403` passes through
+the same way). Tasks are scoped to the agent that created them, because
 `GET /api/v1/intents/[id]` is.
 
 ## Skill
@@ -120,16 +124,19 @@ is `-32001 TaskNotFoundError`.
 
 ## Errors
 
-Standard JSON-RPC envelope, always HTTP 200 (405 for non-POST). `error.data`, when
-present, is `[ { "@type": "type.googleapis.com/google.rpc.ErrorInfo", "reason", "domain", "metadata" } ]`.
+Standard JSON-RPC envelope. HTTP status is 200 except 405 for non-POST and the upstream
+`401` / `403` passed through for auth failures (A2A §3.3.2; `401` carries
+`WWW-Authenticate: Bearer`). `error.data`, when present, is
+`[ { "@type": "type.googleapis.com/google.rpc.ErrorInfo", "reason", "domain", "metadata" } ]`.
 
 | Code | When |
 |---|---|
 | `-32700` | body is not JSON |
-| `-32600` | not a JSON-RPC 2.0 request |
+| `-32600` | not a JSON-RPC 2.0 request (incl. a JSON `null` or non-object body) |
 | `-32601` | unknown method |
 | `-32602` | no `message`, no `{recipient_ref, artifact}` part, no `id`, or upstream `400` |
-| `-32603` | upstream failure; `metadata.status` / `metadata.body` carry it (incl. `401`) |
+| `-32000` | upstream `401` / `403` (missing or wrong agent key); response carries the same HTTP status |
+| `-32603` | upstream `5xx`; `metadata.status` / `metadata.body` carry it |
 | `-32001` | task not found |
 | `-32003` | any push-notification-config method (`capabilities.pushNotifications` is false) |
 | `-32004` | streaming, subscribe, cancel, list, extended card (not supported) |
