@@ -20,6 +20,7 @@
     "e2e": "node scripts/e2e.mjs",
     "eval": "node scripts/eval.mjs",
     "sui:smoke": "node scripts/sui-smoke.mjs",
+    "a2a:proof": "node scripts/a2a-proof.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {

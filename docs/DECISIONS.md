@@ -108,3 +108,20 @@ was backfilled `verified` by provider `seed`, so the live demo pays exactly as b
 the gate runs after the open-obligation check and before either Gonka channel, so an unverified,
 failed, or expired recipient is refused `RED RECIPIENT_UNVERIFIED` with no inference spent.
 Public receipts show an "Identity" row between Policy and Settlement.
+
+## A2A adapter (1 Sep)
+
+Google Agent2Agent, spec 1.0 (v1.0.1 tag, 2026-05-28), not 0.3: PascalCase methods,
+`TASK_STATE_*` / `ROLE_*` enums, no `kind` on parts, card fields `supportedInterfaces` /
+`securityRequirements` rather than the 0.3 top-level `url` / `security`. The 0.3 names
+`message/send` and `tasks/get` are accepted as aliases; 0.3 response shapes are not emitted.
+
+The adapter is a proxy, not a second entry point into the engine: `POST /a2a` forwards to
+`POST /api/v1/intents` on the same origin with the caller's `Authorization` header passed
+through, so the bearer is a Tiba agent key and auth, verification, policy and settlement are
+byte-for-byte the REST path. `message.messageId` is the idempotency key. Card at
+`/.well-known/agent-card.json` only (`agent.json` is not in the 1.0 spec). `receipt_url` in
+the decision artifact is absolute. Streaming, push, list, cancel and the extended card
+return the spec's `-32003` / `-32004`. Details and error table in `docs/A2A.md`;
+mapping covered by `test/a2a.test.mjs`. Not yet run against production (needs an open
+order for the target recipient); `npm run a2a:proof` is the runner.

@@ -130,15 +130,17 @@ V1 does not provide production custody of real funds on a mainnet network. It ru
 
 ## 8. Roadmap (v1.1+, not yet built)
 
-### Priority 1: A thin Agent2Agent adapter
+### Priority 1: A thin Agent2Agent adapter — built (v1.1)
 
 Build a small adapter for Google's Agent2Agent, or A2A, protocol. A2A is a standard way for one software agent to call another.
 
 The adapter would allow external agents to call Tiba's payment authorization and settlement flow without changing the core verification engine.
 
+**Status (1 Sep 2026):** built. Agent Card at `/.well-known/agent-card.json`, JSON-RPC `SendMessage` / `GetTask` at `POST /a2a`, forwarding to `/api/v1/intents` with the caller's agent key; the verification engine is untouched (`docs/A2A.md`).
+
 This is a build hypothesis supported by the current research, not a proven market gap or guaranteed source of demand.
 
-**Timeline:** Next
+**Timeline:** Shipped (v1.1). Streaming and push notifications: only if a real A2A client asks.
 
 ### Priority 2: Electronic identity and compliance checks as another gate — built (v1.1, default off)
 

@@ -43,6 +43,13 @@ is what GonkaRouter is. The router is load-bearing here, not a swapped base URL.
 **https://tiba-omega.vercel.app** — production deployment on Vercel (Sui testnet, GonkaRouter).
 Operator console at `/console`, ledger at `/ledger`, public receipts at `/r/<token>`.
 
+### A2A
+
+External agents can call the same pipeline over Google's Agent2Agent protocol (1.0):
+Agent Card at `/.well-known/agent-card.json`, JSON-RPC at `POST /a2a` (`SendMessage`,
+`GetTask`), bearer = a Tiba agent API key. See [docs/A2A.md](docs/A2A.md);
+`npm run a2a:proof` drives it end to end.
+
 ## Status
 
 Tiba runs locally as a Next.js app with a Prisma database, GonkaRouter verification, and Sui
