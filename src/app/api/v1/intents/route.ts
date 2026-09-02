@@ -14,6 +14,7 @@ import {
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
 import { reconcile, type DecisionTuple, type RequiredChannels } from "@/lib/reconcile";
 import { PayoutRailError, payoutRail } from "@/lib/rails";
+import { replenishDemoWorkOrder } from "@/lib/demo-replenish";
 
 export const runtime = "nodejs";
 
@@ -338,6 +339,8 @@ export async function POST(request: NextRequest) {
         }
       });
     }, { timeout: 120_000 });
+    // Demo fixture only: let the documented walkthrough order be paid again by the next judge.
+    await replenishDemoWorkOrder(prisma, { workOrderId: updated.workOrderId, settled: updated.status === "settled" });
     return response(updated);
   } catch {
     const pricing = await pricingData();
