@@ -228,7 +228,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
           </div>
         </form>
         <p className="mt-4 text-sm text-muted">
-          Get paid to the wallet you already have. Connect it and the address fills in - no copying.
+          Get paid to the wallet you already have. Connect it and the address fills in - no copying. Works with Slush, Suiet, OKX, Bitget, Nightly, Backpack and any other Sui wallet.
         </p>
       </section>
     </div>
