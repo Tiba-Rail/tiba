@@ -122,6 +122,7 @@ export default async function Home() {
               ceiling, hourly and daily spending limits, an allowlist of who may be paid, and a kill
               switch.
             </p>
+            <p className="lede">Paid to the wallet you already have.</p>
           </div>
         </section>
 
