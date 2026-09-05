@@ -128,6 +128,6 @@ Useful checks:
 ## Team
 
 - Faris Irfan — Rizqey Labs
-- Aariz Sajan — Rizqey Labs
+- Arthur Wong
 
 Source: https://github.com/Tiba-Rail/tiba · Live: https://tiba-omega.vercel.app
