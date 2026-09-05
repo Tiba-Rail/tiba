@@ -1,0 +1,86 @@
+[
+ {
+  "t": 0,
+  "text": "Tiba is a payment rail for software that pays people without asking a human to approve every transfer."
+ },
+ {
+  "t": 8,
+  "text": "The problem is simple. Software can already move money. What it cannot do is decide, safely, when to move it."
+ },
+ {
+  "t": 19,
+  "text": "The operator console shows the boundary: daily cap, hourly cap, recipients, work orders, and the kill switch."
+ },
+ {
+  "t": 27,
+  "text": "Every limit here is set once, in advance, by a human. A cap on each payment, caps per hour and per day, and a list of who may be paid at all."
+ },
+ {
+  "t": 37,
+  "text": "The kill switch belongs to the operator, not the agent. Nothing the agent says can switch it off."
+ },
+ {
+  "t": 47,
+  "text": "The demo submits two payout paths in the background: one clean delivery and one tampered request."
+ },
+ {
+  "t": 55,
+  "text": "Behind the scenes two checks are running through GonkaRouter, and they are deliberately given different evidence."
+ },
+ {
+  "t": 63,
+  "text": "One reads the delivery note the agent supplied. The other reads only our own payer records, and never sees that note."
+ },
+ {
+  "t": 72,
+  "text": "Every payable amount starts as a registered work order. The AI can match delivery to approved work; it cannot invent a new payment."
+ },
+ {
+  "t": 82,
+  "text": "You can try all four cases here. A clean delivery note, a prompt injection, an inflated amount, and an unknown work order."
+ },
+ {
+  "t": 91,
+  "text": "The first one should pay. The other three should be refused. That is the product."
+ },
+ {
+  "t": 98,
+  "text": "Both checks must name the same work order and the same amount. If they disagree, Tiba refuses rather than split the difference."
+ },
+ {
+  "t": 107,
+  "text": "The ledger records both outcomes. A clean path becomes paid, while the adversarial path is refused."
+ },
+ {
+  "t": 116,
+  "text": "Here both outcomes sit side by side. Two USDC paid to Ali, and one refusal, in the same list."
+ },
+ {
+  "t": 125,
+  "text": "The refusal is the row that matters. Channel A read nine hundred and ninety nine USDC. Channel B read two."
+ },
+ {
+  "t": 137,
+  "text": "The red row shows the refusal reason, and its public receipt shows both channels. The model reading the evidence can be fooled, but the separate payer-record check disagrees, so Tiba refuses."
+ },
+ {
+  "t": 150,
+  "text": "The receipt is public. Anyone can open it and see which channel said what, and the Gonka request ID behind each one."
+ },
+ {
+  "t": 158,
+  "text": "The paid row includes a public digest. The recipient can inspect the chain record instead of trusting our database."
+ },
+ {
+  "t": 164,
+  "text": "Both outcomes stay in the ledger as records, with request IDs, reason codes, and receipt links."
+ },
+ {
+  "t": 173,
+  "text": "The proof is narrow on purpose: testnet only, SUI as a stand-in asset, GonkaRouter doing the verification."
+ },
+ {
+  "t": 180,
+  "text": "Software does the work. The human holds the line."
+ }
+]
