@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 import { RecipientsClient } from "./recipients-client";
+import { SiteNav } from "@/components/site-nav";
+import { RouterHealthStrip } from "@/components/router-health-strip";
 
 export const dynamic = "force-dynamic";
 
@@ -13,17 +15,21 @@ export default async function RecipientsPage() {
   });
 
   return (
-    <RecipientsClient
-      recipients={recipients.map((recipient) => ({
-        ref: recipient.ref,
-        displayName: recipient.displayName,
-        suiAddress: recipient.suiAddress,
-        active: recipient.active,
-        kycStatus: recipient.kycStatus,
-        kycProvider: recipient.kycProvider,
-        kycVerifiedAt: formatDate(recipient.kycVerifiedAt),
-        kycExpiresAt: formatDate(recipient.kycExpiresAt)
-      }))}
-    />
+    <main className="min-h-screen bg-background text-foreground">
+      <SiteNav current="recipients" />
+      <RouterHealthStrip />
+      <RecipientsClient
+        recipients={recipients.map((recipient) => ({
+          ref: recipient.ref,
+          displayName: recipient.displayName,
+          suiAddress: recipient.suiAddress,
+          active: recipient.active,
+          kycStatus: recipient.kycStatus,
+          kycProvider: recipient.kycProvider,
+          kycVerifiedAt: formatDate(recipient.kycVerifiedAt),
+          kycExpiresAt: formatDate(recipient.kycExpiresAt)
+        }))}
+      />
+    </main>
   );
 }
