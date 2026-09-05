@@ -20,7 +20,7 @@ export function OperatorTokenField({ className }: OperatorTokenFieldProps) {
 
   return (
     <label className={`block w-full max-w-sm text-sm font-medium ${className}`}>
-      Operator token
+      Operator key
       <input
         className="field mt-1"
         type="password"
@@ -29,6 +29,9 @@ export function OperatorTokenField({ className }: OperatorTokenFieldProps) {
         onChange={(event) => saveToken(event.target.value)}
         spellCheck={false}
       />
+      <span className="mt-1 block text-xs font-normal text-muted">
+        Set by whoever runs this deployment. Kept in this tab only.
+      </span>
     </label>
   );
 }
