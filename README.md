@@ -127,7 +127,9 @@ Useful checks:
 
 ## Team
 
-Built by Rizqey Labs.
+- Faris Irfan — Rizqey Labs
+- Aariz Sajan — Rizqey Labs
+
 Source: https://github.com/Tiba-Rail/tiba · Live: https://tiba-omega.vercel.app
 # Tiba Status
 
@@ -169,3 +171,7 @@ Useful proof commands:
 - `npm run e2e`
 - `npm run eval`
 - `npm run demo:reset`
+
+## Hackathon submission (MUBA 2026)
+
+This README is the public product documentation. For the MUBA Blockchain Hackathon package, Devfolio copy is in `docs/DEVFOLIO.md` and the required declaration of AI tools used during development is in `docs/AI_TOOLS_DECLARATION.md`.
