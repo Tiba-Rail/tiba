@@ -113,6 +113,7 @@ model Adjudication {
   channel      String
   model        String
   requestId    String?  @map("request_id")
+  fallback     String?  @map("gonka_fallback")
   promptSha    String   @map("prompt_sha")
   responseSha  String?  @map("response_sha")
   inputTokens  Int?     @map("input_tokens")

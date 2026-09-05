@@ -25,6 +25,8 @@ export interface GonkaResult {
   ok: boolean;
   model: string;
   requestId?: string;
+  /** Set when Gonka served a different model than requested (X-Gonka-Fallback). */
+  fallback?: string;
   content?: string;
   inputTokens?: number;
   outputTokens?: number;
@@ -110,14 +112,18 @@ async function requestOnce(
     });
     const latencyMs = Date.now() - started;
     const requestId = response.headers.get("x-request-id") ?? undefined;
-    if (!response.ok) return { status: response.status, result: { ok: false, model, requestId, latencyMs, errorCode: "REQUEST_REJECTED" } };
+    // Gonka substitutes a saturated model rather than failing the request, and says so
+    // only in this header. Isolation here is by evidence, not by model, so a substitution
+    // is not a refusal - but it must be recorded and shown, never silently absorbed.
+    const fallback = response.headers.get("x-gonka-fallback") ?? undefined;
+    if (!response.ok) return { status: response.status, result: { ok: false, model, requestId, fallback, latencyMs, errorCode: "REQUEST_REJECTED" } };
     const body: unknown = await response.json();
     const content = parseContent(body);
     const usage = body as { usage?: { prompt_tokens?: number; completion_tokens?: number } };
     const valid = content !== null && isJsonForSchema(content, schema);
     const result: GonkaResult = valid
-      ? { ok: true, model, requestId, content, latencyMs, inputTokens: usage.usage?.prompt_tokens, outputTokens: usage.usage?.completion_tokens }
-      : { ok: false, model, requestId, content: content ?? undefined, latencyMs, errorCode: "SCHEMA_INVALID" };
+      ? { ok: true, model, requestId, fallback, content, latencyMs, inputTokens: usage.usage?.prompt_tokens, outputTokens: usage.usage?.completion_tokens }
+      : { ok: false, model, requestId, fallback, content: content ?? undefined, latencyMs, errorCode: "SCHEMA_INVALID" };
     health[model] = { ok: valid, latencyMs, at: new Date().toISOString() };
     return { result, schemaInvalid: !valid };
   } catch {

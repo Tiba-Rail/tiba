@@ -160,6 +160,12 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                   {adjudicationsByChannel.get("artifact") ? (
                     <div className="text-sm">
                       <div>Model: {adjudicationsByChannel.get("artifact")?.model}</div>
+                      {adjudicationsByChannel.get("artifact")?.fallback ? (
+                        <div style={{ color: "var(--held)" }}>
+                          Gonka substituted a model for this channel:{" "}
+                          <span className="font-mono text-xs">{adjudicationsByChannel.get("artifact")?.fallback}</span>
+                        </div>
+                      ) : null}
                       <div>
                         x-request-id:{" "}
                         {adjudicationsByChannel.get("artifact")?.requestId ? (
@@ -189,6 +195,12 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                   {adjudicationsByChannel.get("payer_record") ? (
                     <div className="text-sm">
                       <div>Model: {adjudicationsByChannel.get("payer_record")?.model}</div>
+                      {adjudicationsByChannel.get("payer_record")?.fallback ? (
+                        <div style={{ color: "var(--held)" }}>
+                          Gonka substituted a model for this channel:{" "}
+                          <span className="font-mono text-xs">{adjudicationsByChannel.get("payer_record")?.fallback}</span>
+                        </div>
+                      ) : null}
                       <div>
                         x-request-id:{" "}
                         {adjudicationsByChannel.get("payer_record")?.requestId ? (
