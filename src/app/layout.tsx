@@ -2,21 +2,26 @@ import type { Metadata } from "next";
 import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Inter({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = JetBrains_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-const editorial = Instrument_Serif({ variable: "--font-editorial", subsets: ["latin"], weight: "400" });
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
+const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"]
+});
 
 export const metadata: Metadata = {
-  title: "Tiba — software pays a person, policy holds the line",
+  title: "Tiba — software pays a person, two checks agree first",
   description:
-    "An agent-to-human payment rail. Two isolated verification channels must agree before money moves; disagreement is a refusal, never a tie-break."
+    "Software pays a person under rules you set. Two separate automated checks must agree before any money moves; if they disagree, Tiba refuses instead of guessing."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${editorial.variable} h-full antialiased`}
+      className={`${inter.variable} ${jetbrains.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <body className="min-h-full">{children}</body>
     </html>
