@@ -120,7 +120,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
           <div className="card p-4 md:min-w-72">
             <p className="text-sm text-muted">{paid ? "Amount" : "Amount asked for"}</p>
             <p className="num mt-1 text-2xl">
-              {microsToUsdc(intent.amountMicros)}{" "}
+              {microsToUsdc(intent.amountMicros).replace(/ USDC$/, "")}{" "}
               <span className="text-sm text-muted">USDC</span>
             </p>
           </div>
