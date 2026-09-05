@@ -43,14 +43,14 @@ export default async function Home() {
       <RouterHealthStrip />
       <div className="mx-auto flex max-w-5xl flex-col gap-12 px-4 pb-16 pt-16 md:gap-16 md:px-6 md:pt-24 lg:px-8">
         <header>
-          <p className="eyebrow">Automated payments · test network</p>
+          <p className="eyebrow">A wallet for software · test network</p>
           <h1 className="display-xl mt-4 max-w-[20ch]">
-            Software pays a person. Two checks must <em>agree</em> first.
+            A wallet your software can <em>pay people</em> from.
           </h1>
           <p className="lede mt-6">
-            One automated check reads the delivery note. A separate automated check reads the payer's
-            own record. Money moves only when both name the same job and the same amount. Anything
-            else is refused or held for a human, and the receipt says why.
+            Tiba pays on your behalf, within the limits you set, and only after two separate checks agree
+            on the job and the amount. Anything else is refused or held for a human, and the receipt
+            says why.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link className="btn btn-primary" href="/console">

@@ -12,9 +12,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Tiba — software pays a person, two checks agree first",
+  title: "Tiba — a wallet for software",
   description:
-    "Software pays a person under rules you set. Two separate automated checks must agree before any money moves; if they disagree, Tiba refuses instead of guessing."
+    "Tiba is a wallet for software: it pays people on your behalf, within your limits, and only after two separate checks agree on the job and the amount. Disagreement is a refusal, not a guess."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
