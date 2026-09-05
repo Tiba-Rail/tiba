@@ -2,10 +2,14 @@ import { prisma } from "@/lib/db";
 import { formatLatency } from "@/lib/money";
 
 function labelFor(model: string): string {
-  if (model.toLowerCase().includes("kimi")) return "KIMI";
-  if (model.toLowerCase().includes("deepseek")) return "DEEPSEEK";
-  return model.split("/").pop()?.toUpperCase() ?? model.toUpperCase();
+  if (model.toLowerCase().includes("kimi")) return "Kimi";
+  if (model.toLowerCase().includes("deepseek")) return "DeepSeek";
+  const tail = model.split("/").pop() ?? model;
+  return tail.charAt(0).toUpperCase() + tail.slice(1);
 }
+
+const stripClass =
+  "sticky top-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line bg-surface/95 px-4 py-2 text-xs font-medium text-muted backdrop-blur";
 
 export async function RouterHealthStrip() {
   const adjudications = await prisma.adjudication.findMany({
@@ -19,21 +23,21 @@ export async function RouterHealthStrip() {
   const latest = Array.from(latestByModel.values()).slice(0, 4);
   if (latest.length === 0) {
     return (
-      <div className="sticky top-0 z-20 border-b border-line bg-surface/95 px-4 py-3 text-sm font-semibold text-muted backdrop-blur">
-        ROUTER <span className="text-muted">-</span> no calls yet
+      <div className={stripClass}>
+        Checks · none run yet
       </div>
     );
   }
   return (
-    <div className="sticky top-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-surface/95 px-4 py-3 text-sm font-semibold backdrop-blur">
+    <div className={stripClass}>
       <span className="inline-flex items-center gap-2">
-        ROUTER <StatusDot ok /> live
+        Checks online
       </span>
       {latest.map((row) => (
-        <span key={row.id} className="inline-flex items-center gap-2 text-muted">
-          <span className="text-muted">|</span>
+        <span key={row.id} className="inline-flex items-center gap-2">
+          <span className="text-muted">·</span>
           {labelFor(row.model)} <StatusDot ok={row.ok} />
-          {formatLatency(row.latencyMs)}
+          <span className="num">{formatLatency(row.latencyMs)}</span>
         </span>
       ))}
     </div>

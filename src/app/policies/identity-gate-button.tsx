@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { humanError } from "@/app/console/types";
 
 interface IdentityGateButtonProps {
   current: boolean;
@@ -16,7 +17,7 @@ export function IdentityGateButton({ current }: IdentityGateButtonProps) {
   async function toggle() {
     const token = window.sessionStorage.getItem("tiba_operator_token");
     if (!token) {
-      setError("Operator token required");
+      setError("OPERATOR_TOKEN_REQUIRED");
       return;
     }
 
@@ -37,10 +38,10 @@ export function IdentityGateButton({ current }: IdentityGateButtonProps) {
       const payload = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "REQUEST_FAILED");
 
-      setMessage("Updated");
+      setMessage("Saved.");
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Request failed");
+      setError(caught instanceof Error ? caught.message : "REQUEST_FAILED");
     } finally {
       setBusy(false);
     }
@@ -50,18 +51,25 @@ export function IdentityGateButton({ current }: IdentityGateButtonProps) {
     <div className="space-y-4">
       {(message || error) && (
         <div className={error ? "text-red-ink text-sm" : "text-paid text-sm"}>
-          {error ?? message}
+          {error ? (
+            <>
+              {humanError(error).text}
+              <span className="num mt-1 block text-xs text-muted">{humanError(error).code}</span>
+            </>
+          ) : (
+            message
+          )}
         </div>
       )}
 
       <button
         type="button"
-        className={current ? "btn btn-secondary" : "btn btn-primary"}
+        className="btn btn-secondary"
         disabled={busy}
         aria-busy={busy}
         onClick={toggle}
       >
-        {busy ? "Processing..." : (current ? "Stop requiring verified identity" : "Require verified identity")}
+        {busy ? "Saving…" : (current ? "Stop requiring identity check" : "Require identity check")}
       </button>
     </div>
   );

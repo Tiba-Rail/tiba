@@ -3,15 +3,15 @@ import { notFound } from "next/navigation";
 import { DenialBanner } from "@/components/denial-banner";
 import { formatLatency, microsToUsdc } from "@/lib/money";
 import { prisma } from "@/lib/db";
-import { channelTuple, disagreementLine, type ChannelTuple } from "@/lib/adjudication-display";
+import { channelTuple, type ChannelTuple } from "@/lib/adjudication-display";
 import { SiteNav } from "@/components/site-nav";
-import { explainDecision } from "@/app/console/types";
+import { decisionSentence, disagreementLine, explainDecision } from "@/app/console/types";
 import { recipientIdentityOk } from "@/lib/identity";
 
 export const dynamic = "force-dynamic";
 
 function formatTime(date: Date | null): string {
-  if (!date) return "rate unavailable";
+  if (!date) return "time unknown";
   return new Intl.DateTimeFormat("en", {
     month: "short",
     day: "2-digit",
@@ -25,14 +25,6 @@ function formatTime(date: Date | null): string {
 function remainingBudget(dayCapMicros: bigint, spentMicrosDay: bigint): string {
   const remaining = dayCapMicros > spentMicrosDay ? dayCapMicros - spentMicrosDay : 0n;
   return microsToUsdc(remaining);
-}
-
-function decisionLabel(decisionClass: string): string {
-  return decisionClass === "PAID" ? "PAID" : decisionClass;
-}
-
-function channelTitle(channel: string): string {
-  return channel === "artifact" ? "A - artifact" : channel === "payer_record" ? "B - payer record" : channel;
 }
 
 export default async function ReceiptPage({ params }: { params: Promise<{ token: string }> }) {
@@ -49,10 +41,6 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   if (!intent) notFound();
 
   const adjudicationsByChannel = new Map(intent.adjudications.map((row) => [row.channel, row]));
-  const adjudications = ["artifact", "payer_record"].map((channel) => ({
-    channel,
-    row: adjudicationsByChannel.get(channel)
-  }));
   const paid = intent.decisionClass === "PAID";
 
   // Get channel tuples for disagreement line
@@ -62,30 +50,31 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
 
   // Determine channel match status
   function getChannelMatchStatus(tupleA: ChannelTuple, tupleB: ChannelTuple): string {
-    if (!tupleA || !tupleB) return "Unavailable";
-    if (tupleA.workOrderId === tupleB.workOrderId && tupleA.amount === tupleB.amount) return "Match";
-    return "Mismatch";
+    if (!tupleA || !tupleB) return "Not run";
+    if (tupleA.workOrderId === tupleB.workOrderId && tupleA.amount === tupleB.amount) return "Same answer";
+    return "Different answer";
   }
 
   // Determine agreement status -- must mirror the channel-level comparison above it,
   // not guess from the reason code (a kill-switch/policy refusal can still show a real
   // channel mismatch underneath it, and the two rows must not contradict each other).
   function getAgreementStatus(tupleA: ChannelTuple, tupleB: ChannelTuple): string {
-    if (!tupleA || !tupleB) return "Unavailable";
-    if (tupleA.workOrderId === tupleB.workOrderId && tupleA.amount === tupleB.amount) return "Agreed";
-    return "Refused";
+    if (!tupleA || !tupleB) return "Not run";
+    if (tupleA.workOrderId === tupleB.workOrderId && tupleA.amount === tupleB.amount) return "Yes";
+    return "No";
   }
 
   // Determine policy status
   function getPolicyStatus(reasonCode: string | null): string {
     const policyRefusalCodes = [
       "DAY_AMOUNT_CAP", "DAY_COUNT_CAP", "HOUR_AMOUNT_CAP", "HOUR_COUNT_CAP",
-      "TRANSACTION_CEILING", "WORK_ORDER_CEILING", "WORK_ORDER_EXPIRED", 
-      "WORK_ORDER_NOT_OPEN", "NO_OPEN_OBLIGATION", "RECIPIENT_INACTIVE", 
-      "RECIPIENT_NOT_FOUND", "KILL_SWITCH"
+      "TRANSACTION_CEILING", "WORK_ORDER_CEILING", "WORK_ORDER_EXPIRED",
+      "WORK_ORDER_NOT_OPEN", "NO_OPEN_OBLIGATION", "RECIPIENT_INACTIVE",
+      "RECIPIENT_NOT_FOUND", "KILL_SWITCH", "RECIPIENT_UNVERIFIED",
+      "INVALID_AMOUNT", "INVALID_TIMESTAMP"
     ];
-    
-    if (policyRefusalCodes.includes(reasonCode || "")) return "Refused";
+
+    if (policyRefusalCodes.includes(reasonCode || "")) return "Blocked";
     return "Passed";
   }
 
@@ -96,9 +85,9 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   const identityStatus = !intent.agent.requireRecipientKyc
     ? "Not required"
     : intent.reasonCode === "RECIPIENT_UNVERIFIED"
-      ? "Refused"
+      ? "Blocked"
       : intent.adjudications.length === 0
-        ? "Not evaluated"
+        ? "Never reached"
         : recipientIdentityOk(intent.recipient, intent.createdAt)
           ? "Passed"
           : "Not checked";
@@ -107,14 +96,14 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   const identityDetail = !intent.agent.requireRecipientKyc
     ? "—"
     : intent.recipient.kycProvider
-      ? `${intent.recipient.kycStatus} via ${intent.recipient.kycProvider}`
-      : intent.recipient.kycStatus;
+      ? `Identity ${intent.recipient.kycStatus}, checked by ${intent.recipient.kycProvider}`
+      : `Identity ${intent.recipient.kycStatus}`;
 
   // Determine settlement status
   function getSettlementStatus(decisionClass: string, reasonCode: string | null): string {
-    if (decisionClass === "PAID") return "Paid";
-    if (reasonCode === "SETTLEMENT_FAILED" || reasonCode === "SUI_EXECUTION_FAILED") return "Failed";
-    return "Not attempted";
+    if (decisionClass === "PAID") return "Yes";
+    if (reasonCode === "SETTLEMENT_FAILED" || reasonCode === "SUI_EXECUTION_FAILED") return "Tried and failed";
+    return "Not tried";
   }
 
   return (
@@ -123,54 +112,69 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 md:px-6 lg:px-8">
         <header className="flex flex-col gap-4 border-b border-line pb-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="eyebrow">Public receipt</p>
-            <h1 className="display mt-2 text-4xl md:text-5xl">
-              {decisionLabel(intent.decisionClass)}
+            <p className="eyebrow">Receipt — anyone with this link can read it</p>
+            <h1 className="display-l mt-2">
+              {decisionSentence(intent.decisionClass)}
             </h1>
           </div>
           <div className="card p-4 md:min-w-72">
-            <p className="text-sm text-muted">Amount</p>
-            <p className="mt-1 text-2xl font-semibold">{microsToUsdc(intent.amountMicros)}</p>
+            <p className="text-sm text-muted">{paid ? "Amount" : "Amount asked for"}</p>
+            <p className="num mt-1 text-2xl">
+              {microsToUsdc(intent.amountMicros).replace(/ USDC$/, "")}{" "}
+              <span className="text-sm text-muted">USDC</span>
+            </p>
           </div>
         </header>
 
         <DenialBanner decisionClass={intent.decisionClass} reasonCode={intent.reasonCode} />
 
         <section className="grid gap-4 md:grid-cols-3">
-          <Fact label="Recipient" value={intent.recipient.displayName} detail={intent.recipient.ref} />
-          <Fact label="Rule fired" value={paid ? "PAID" : intent.reasonCode ?? "UNKNOWN"} />
-          <Fact label="Remaining day budget" value={remainingBudget(intent.agent.dayCapMicros, intent.agent.spentMicrosDay)} />
+          <Fact
+            label={paid ? "Paid to" : "Would have paid"}
+            value={intent.recipient.displayName}
+            detail={`ID ${intent.recipient.ref}`}
+          />
+          <Fact
+            label="Why"
+            value={explainDecision(intent.decisionClass, intent.reasonCode)}
+            detail={paid ? undefined : `Reason code ${intent.reasonCode ?? "none recorded"}`}
+          />
+          <Fact
+            label="Left to spend today (live)"
+            value={remainingBudget(intent.agent.dayCapMicros, intent.agent.spentMicrosDay)}
+            detail="right now, not at the time of this receipt"
+          />
         </section>
 
         <section className="card p-5">
-          <h2 className="text-xl font-bold">Decision pipeline</h2>
+          <h2 className="title">How this decision was made</h2>
           <table className="mt-4 w-full">
             <thead>
               <tr className="border-b border-line">
-                <th className="text-left py-2 px-3">Gate</th>
+                <th className="text-left py-2 px-3">Step</th>
                 <th className="text-left py-2 px-3">Result</th>
                 <th className="text-left py-2 px-3">Detail</th>
               </tr>
             </thead>
             <tbody>
               <tr className="border-b border-line">
-                <td className="py-3 px-3">Channel A — artifact</td>
+                <td className="py-3 px-3">Reader A — read the delivery note</td>
                 <td className="py-3 px-3">{getChannelMatchStatus(channelATuple, channelBTuple)}</td>
                 <td className="py-3 px-3">
                   {adjudicationsByChannel.get("artifact") ? (
                     <div className="text-sm">
-                      <div>Model: {adjudicationsByChannel.get("artifact")?.model}</div>
+                      <div>Model used: {adjudicationsByChannel.get("artifact")?.model}</div>
                       {adjudicationsByChannel.get("artifact")?.fallback ? (
                         <div style={{ color: "var(--held)" }}>
-                          Gonka substituted a model for this channel:{" "}
-                          <span className="font-mono text-xs">{adjudicationsByChannel.get("artifact")?.fallback}</span>
+                          The reading service (Gonka) swapped in a different model for this reader:{" "}
+                          <span className="num text-xs">{adjudicationsByChannel.get("artifact")?.fallback}</span>
                         </div>
                       ) : null}
                       <div>
-                        x-request-id:{" "}
+                        Reference (Gonka request ID):{" "}
                         {adjudicationsByChannel.get("artifact")?.requestId ? (
                           <a
-                            className="text-primary underline-offset-4 hover:underline"
+                            className="link num text-xs"
                             href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("artifact")?.requestId}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -181,31 +185,31 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                           "missing"
                         )}
                       </div>
-                      <div>Latency: {formatLatency(adjudicationsByChannel.get("artifact")?.latencyMs)}</div>
+                      <div>Took: <span className="num">{formatLatency(adjudicationsByChannel.get("artifact")?.latencyMs)}</span></div>
                     </div>
                   ) : (
-                    "No adjudication recorded for this channel."
+                    "This reader was not run."
                   )}
                 </td>
               </tr>
               <tr className="border-b border-line">
-                <td className="py-3 px-3">Channel B — payer record</td>
+                <td className="py-3 px-3">Reader B — read the payer's own record</td>
                 <td className="py-3 px-3">{getChannelMatchStatus(channelBTuple, channelATuple)}</td>
                 <td className="py-3 px-3">
                   {adjudicationsByChannel.get("payer_record") ? (
                     <div className="text-sm">
-                      <div>Model: {adjudicationsByChannel.get("payer_record")?.model}</div>
+                      <div>Model used: {adjudicationsByChannel.get("payer_record")?.model}</div>
                       {adjudicationsByChannel.get("payer_record")?.fallback ? (
                         <div style={{ color: "var(--held)" }}>
-                          Gonka substituted a model for this channel:{" "}
-                          <span className="font-mono text-xs">{adjudicationsByChannel.get("payer_record")?.fallback}</span>
+                          The reading service (Gonka) swapped in a different model for this reader:{" "}
+                          <span className="num text-xs">{adjudicationsByChannel.get("payer_record")?.fallback}</span>
                         </div>
                       ) : null}
                       <div>
-                        x-request-id:{" "}
+                        Reference (Gonka request ID):{" "}
                         {adjudicationsByChannel.get("payer_record")?.requestId ? (
                           <a
-                            className="text-primary underline-offset-4 hover:underline"
+                            className="link num text-xs"
                             href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("payer_record")?.requestId}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -216,38 +220,38 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                           "missing"
                         )}
                       </div>
-                      <div>Latency: {formatLatency(adjudicationsByChannel.get("payer_record")?.latencyMs)}</div>
+                      <div>Took: <span className="num">{formatLatency(adjudicationsByChannel.get("payer_record")?.latencyMs)}</span></div>
                     </div>
                   ) : (
-                    "No adjudication recorded for this channel."
+                    "This reader was not run."
                   )}
                 </td>
               </tr>
               <tr className="border-b border-line">
-                <td className="py-3 px-3">Agreement</td>
+                <td className="py-3 px-3">Did the readers agree?</td>
                 <td className="py-3 px-3">{getAgreementStatus(channelATuple, channelBTuple)}</td>
                 <td className="py-3 px-3">{disagreement || "—"}</td>
               </tr>
               <tr className="border-b border-line">
-                <td className="py-3 px-3">Policy</td>
+                <td className="py-3 px-3">Your rules</td>
                 <td className="py-3 px-3">{getPolicyStatus(intent.reasonCode)}</td>
-                <td className="py-3 px-3">{getPolicyStatus(intent.reasonCode) === "Refused" ? explainDecision(intent.decisionClass, intent.reasonCode) : "—"}</td>
+                <td className="py-3 px-3">{getPolicyStatus(intent.reasonCode) === "Blocked" ? explainDecision(intent.decisionClass, intent.reasonCode) : "—"}</td>
               </tr>
               <tr className="border-b border-line">
-                <td className="py-3 px-3">Identity</td>
+                <td className="py-3 px-3">Identity check</td>
                 <td className="py-3 px-3">{identityStatus}</td>
                 <td className="py-3 px-3">{identityDetail}</td>
               </tr>
               <tr className="border-b border-line">
-                <td className="py-3 px-3">Settlement</td>
+                <td className="py-3 px-3">Money sent?</td>
                 <td className="py-3 px-3">{getSettlementStatus(intent.decisionClass, intent.reasonCode)}</td>
                 <td className="py-3 px-3">
                   {intent.explorerUrl ? (
-                    <a href={intent.explorerUrl} className="text-primary underline-offset-4 hover:underline">
-                      {intent.digest}
+                    <a href={intent.explorerUrl} className="link num break-all text-xs">
+                      {intent.digest} — view on Sui test network
                     </a>
                   ) : (
-                    "No settlement digest for this decision."
+                    "No transfer happened, so there is no transaction record."
                   )}
                 </td>
               </tr>
@@ -257,25 +261,25 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
 
         <section className="grid gap-4 md:grid-cols-2">
           <div className="card p-5">
-            <h2 className="text-xl font-bold">GNK/USD</h2>
+            <h2 className="title">Reader cost basis (GNK/USD)</h2>
             {intent.gnkUsd ? (
-              <p className="mt-3 text-2xl font-semibold">
+              <p className="num mt-3 text-2xl">
                 ${intent.gnkUsd}
                 <span className="ml-2 align-middle text-sm font-medium text-muted">
                   at {formatTime(intent.pricingUpdatedAt)}
                 </span>
               </p>
             ) : (
-              <p className="mt-3 text-sm text-muted">rate unavailable</p>
+              <p className="mt-3 text-sm text-muted">price not available</p>
             )}
           </div>
         </section>
 
         <Link
-          className="btn btn-secondary w-fit"
+          className="btn btn-ghost w-fit"
           href="/ledger"
         >
-          View ledger
+          See all payments →
         </Link>
       </div>
     </main>
@@ -285,9 +289,9 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
 function Fact({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
     <div className="card p-5">
-      <p className="text-sm text-muted">{label}</p>
+      <p className="title text-muted">{label}</p>
       <p className="mt-2 break-words text-xl font-semibold">{value}</p>
-      {detail ? <p className="mt-1 break-words font-mono text-xs text-muted">{detail}</p> : null}
+      {detail ? <p className="num mt-1 break-words text-xs text-muted">{detail}</p> : null}
     </div>
   );
 }

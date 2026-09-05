@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { OperatorTokenField } from "@/components/operator-token-field";
+import { humanError } from "@/app/console/types";
 
 interface KillSwitchButtonProps {
   current: boolean;
@@ -17,7 +18,7 @@ export function KillSwitchButton({ current }: KillSwitchButtonProps) {
   async function toggleKillSwitch() {
     const token = window.sessionStorage.getItem("tiba_operator_token");
     if (!token) {
-      setError("Operator token required");
+      setError("OPERATOR_TOKEN_REQUIRED");
       return;
     }
 
@@ -38,10 +39,10 @@ export function KillSwitchButton({ current }: KillSwitchButtonProps) {
       const payload = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "REQUEST_FAILED");
 
-      setMessage("Updated");
+      setMessage("Saved.");
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Request failed");
+      setError(caught instanceof Error ? caught.message : "REQUEST_FAILED");
     } finally {
       setBusy(false);
     }
@@ -53,18 +54,25 @@ export function KillSwitchButton({ current }: KillSwitchButtonProps) {
 
       {(message || error) && (
         <div className={error ? "text-red-ink text-sm" : "text-paid text-sm"}>
-          {error ?? message}
+          {error ? (
+            <>
+              {humanError(error).text}
+              <span className="num mt-1 block text-xs text-muted">{humanError(error).code}</span>
+            </>
+          ) : (
+            message
+          )}
         </div>
       )}
 
       <button
         type="button"
-        className={current ? "btn btn-secondary text-red-ink" : "btn btn-primary"}
+        className="btn btn-secondary"
         disabled={busy}
         aria-busy={busy}
         onClick={toggleKillSwitch}
       >
-        {busy ? "Processing..." : (current ? "Disable kill switch" : "Engage kill switch")}
+        {busy ? "Saving…" : (current ? "Allow payments again" : "Stop all payments")}
       </button>
     </div>
   );

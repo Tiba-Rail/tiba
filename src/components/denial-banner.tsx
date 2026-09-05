@@ -1,45 +1,32 @@
-type DenialClass = "AMBER" | "RED";
-
-const amberReasons = new Set([
-  "SCHEMA_INVALID",
-  "INFERENCE_UNAVAILABLE",
-  "HUMAN_REVIEW_REQUIRED",
-  "MISSING_PAYER_RECORD",
-  "MISSING_REQUIRED_CHANNEL"
-]);
-
-export function denialClassFor(reasonCode: string | null | undefined, decisionClass: string): DenialClass | null {
-  if (decisionClass === "PAID") return null;
-  if (decisionClass === "AMBER" || amberReasons.has(reasonCode ?? "")) return "AMBER";
-  return "RED";
-}
-
-export function denialCopy(kind: DenialClass): string {
-  return kind === "AMBER" ? "couldn't decide" : "decided not to pay";
-}
+import { explainDecision } from "@/app/console/types";
 
 export function DenialBanner({
   decisionClass,
-  reasonCode
+  reasonCode,
 }: {
   decisionClass: string;
   reasonCode: string | null;
 }) {
-  const kind = denialClassFor(reasonCode, decisionClass);
-  if (!kind) return null;
-  const isAmber = kind === "AMBER";
+  const isHeld = decisionClass === "AMBER";
+  if (decisionClass === "PAID") return null;
+
   return (
     <div
       className={[
-        "card p-5 border-line-strong",
-        isAmber
-          ? "bg-[var(--amber-bg)] text-[var(--amber-ink)]"
-          : "bg-[var(--red-bg)] text-red-ink"
+        "rounded-lg border p-5",
+        isHeld
+          ? "border-[var(--held)]/20 bg-[var(--held-bg)] text-[var(--held)]"
+          : "border-[var(--refused)]/20 bg-[var(--refused-bg)] text-[var(--refused)]",
       ].join(" ")}
     >
-      <p className="text-sm font-semibold uppercase tracking-widest">{kind} - {denialCopy(kind)}</p>
-      <p className="mt-2 break-words text-5xl font-semibold leading-none tracking-normal sm:text-6xl">
-        {reasonCode ?? "UNKNOWN"}
+      <p className="eyebrow" style={{ color: "inherit" }}>
+        {isHeld ? "Held — waiting for a human" : "Refused — Tiba decided not to pay"}
+      </p>
+      <p className="display-m mt-2" style={{ color: "var(--foreground)" }}>
+        {explainDecision(decisionClass, reasonCode)}
+      </p>
+      <p className="num mt-3 text-xs opacity-70">
+        Reason code {reasonCode ?? "none recorded"}
       </p>
     </div>
   );

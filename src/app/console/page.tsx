@@ -43,8 +43,8 @@ export default async function ConsolePage() {
       <SiteNav current="console" />
         <RouterHealthStrip />
         <div className="mx-auto max-w-7xl px-4 py-8">
-          <h1 className="display text-4xl md:text-5xl">No agent configured</h1>
-          <p className="mt-2 text-muted">This workspace has no paying agent yet.</p>
+          <h1 className="display-l">Nothing is set up yet</h1>
+          <p className="lede mt-2">This workspace has no paying program yet.</p>
         </div>
       </main>
     );

@@ -2,8 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { SiteNav } from "@/components/site-nav";
 import { OperatorTokenField } from "@/components/operator-token-field";
+import { humanError, workOrderStatusWord } from "@/app/console/types";
 
 interface Recipient {
   ref: string;
@@ -41,9 +41,9 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
     try {
       const token = window.sessionStorage.getItem("tiba_operator_token");
       if (!token) {
-        throw new Error("Operator token required");
+        throw new Error("OPERATOR_TOKEN_REQUIRED");
       }
-      
+
       const response = await fetch(path, {
         method: "POST",
         headers: {
@@ -54,10 +54,10 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
       });
       const payload = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "REQUEST_FAILED");
-      setMessage("Work order registered successfully");
+      setMessage("Job added.");
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Request failed");
+      setError(caught instanceof Error ? caught.message : "REQUEST_FAILED");
     } finally {
       setBusy(null);
     }
@@ -79,54 +79,58 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
   }
 
   const inputClass = "field mt-1";
-  const buttonClass = "btn btn-primary";
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 lg:px-8">
-      <SiteNav current="work-orders" />
-      
       <header className="flex flex-col gap-4">
         <div>
-          <p className="eyebrow">Work orders</p>
-          <h1 className="display mt-2 text-3xl md:text-5xl">What the agent may pay against</h1>
+          <p className="eyebrow">Jobs</p>
+          <h1 className="display-l mt-2">What the program may pay for</h1>
         </div>
-        <p className="text-muted">
-          Every open obligation an agent can submit a payment for. Registering one here does not pay anyone — it only opens the possibility.
+        <p className="lede">
+          Every job that is still open for payment. Adding one here pays nobody. It only makes a
+          payment possible.
         </p>
       </header>
 
       {(message || error) && (
         <div className={error ? "card p-4 text-red-ink" : "card p-4 text-paid"}>
-          {error ?? message}
+          {error ? (
+            <>
+              {humanError(error).text}
+              <span className="num mt-1 block text-xs text-muted">{humanError(error).code}</span>
+            </>
+          ) : (
+            message
+          )}
         </div>
       )}
 
       <section className="card p-5">
-        <h2 className="mb-4 text-xl font-bold">Work orders</h2>
+        <h2 className="title mb-4">Open jobs</h2>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] text-left text-sm">
             <thead className="eyebrow">
               <tr>
-                <th className="py-2">Ref</th>
-                <th>Recipient</th>
-                <th>Ceiling</th>
-                <th>Expiry</th>
+                <th className="py-2">Job ID</th>
+                <th>Paid to</th>
+                <th className="text-right">Maximum</th>
+                <th>Open until</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {workOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-6 text-muted">No work orders registered.</td>
+                  <td colSpan={5} className="py-6 text-muted">No jobs yet. Add the first one below.</td>
                 </tr>
               ) : workOrders.map((workOrder) => (
                 <tr key={workOrder.ref}>
-                  <td className="py-4 font-mono">{workOrder.ref}</td>
+                  <td className="py-4 num">{workOrder.ref}</td>
                   <td className="py-4">{workOrder.recipient.displayName}</td>
-                  <td className="py-4">{workOrder.ceiling}</td>
+                  <td className="py-4 num text-right">{workOrder.ceiling}</td>
                   <td className="py-4">{workOrder.expiresAt}</td>
-                  <td className="py-4">{workOrder.status}</td>
+                  <td className="py-4">{workOrderStatusWord(workOrder.status)}</td>
                 </tr>
               ))}
             </tbody>
@@ -135,10 +139,10 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
       </section>
 
       <section className="card p-5">
-        <h2 className="mb-4 text-xl font-bold">Register work order</h2>
+        <h2 className="title mb-4">Add a job</h2>
         <form onSubmit={registerWorkOrder} className="space-y-4">
           <label className="block text-sm font-medium">
-            Work order ref
+            Job ID (e.g. WO-14)
             <input
               className={inputClass}
               name="ref"
@@ -148,9 +152,9 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
               required
             />
           </label>
-          
+
           <label className="block text-sm font-medium">
-            Recipient
+            Paid to
             <select className={inputClass} name="recipient_ref" required>
               {recipients.map((recipient) => (
                 <option key={recipient.ref} value={recipient.ref}>
@@ -159,9 +163,9 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
               ))}
             </select>
           </label>
-          
+
           <label className="block text-sm font-medium">
-            Ceiling in USDC
+            Maximum payment (USDC)
             <input
               className={inputClass}
               name="ceiling_usdc"
@@ -172,9 +176,9 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
               required
             />
           </label>
-          
+
           <label className="block text-sm font-medium">
-            Expiry
+            Open until
             <input
               className={inputClass}
               name="expires_at"
@@ -183,47 +187,49 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
               required
             />
           </label>
-          
+
           <label className="block text-sm font-medium">
-            Required channels
+            Who must confirm before paying
             <select className={inputClass} name="required_channels" defaultValue="both" required>
-              <option value="payer_record">payer record</option>
-              <option value="both">both</option>
-              <option value="human">human</option>
+              <option value="payer_record">The payer's record only</option>
+              <option value="both">Both checks</option>
+              <option value="human">A human</option>
             </select>
           </label>
-          
+
           <label className="block text-sm font-medium">
-            Brief text
+            What the job is
             <textarea className={inputClass} name="brief_text" rows={3} required />
           </label>
-          
+
           <label className="block text-sm font-medium">
-            Payer record JSON
-            <textarea 
-              className={inputClass} 
-              name="payer_record" 
-              rows={4} 
-              defaultValue={'{"approved_amount_micros":"180000000","delivery_status":"verified_complete"}'} 
-              required 
+            The payer's own record of this job (JSON)
+            <textarea
+              className={inputClass}
+              name="payer_record"
+              rows={4}
+              defaultValue={'{"approved_amount_micros":"180000000","delivery_status":"verified_complete"}'}
+              required
             />
+            <span className="mt-1 block text-xs font-normal text-muted">
+              Amounts are in millionths: 180000000 means 180 USDC
+            </span>
           </label>
-          
+
           <div className="flex items-center gap-4">
-            <button 
-              className={buttonClass} 
-              type="submit" 
-              disabled={busy === "work-order"} 
+            <button
+              className="btn btn-primary"
+              type="submit"
+              disabled={busy === "work-order"}
               aria-busy={busy === "work-order"}
             >
-              {busy === "work-order" ? "Registering..." : "Register work order"}
+              {busy === "work-order" ? "Adding…" : "Add job"}
             </button>
-            
+
             <OperatorTokenField />
           </div>
         </form>
       </section>
     </div>
-    </main>
   );
 }
