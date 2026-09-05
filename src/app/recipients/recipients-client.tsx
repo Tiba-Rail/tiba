@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { ConnectModal, useCurrentAccount } from "@mysten/dapp-kit";
 import { OperatorTokenField } from "@/components/operator-token-field";
 import { humanError } from "@/app/console/types";
 
@@ -31,6 +32,13 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const account = useCurrentAccount();
+  const [manualAddress, setManualAddress] = useState<string | null>(null);
+
+  const walletAddress = manualAddress ?? account?.address ?? "";
+  const shortAddress = account
+    ? `${account.address.slice(0, 6)}…${account.address.slice(-4)}`
+    : "";
 
   async function post(path: string, body: Record<string, unknown>, busyLabel: string, success = "Person added.") {
     setBusy(busyLabel);
@@ -71,6 +79,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
       active: true
     }, "recipient");
     event.currentTarget.reset();
+    setManualAddress(null);
   }
 
   async function verifyIdentity(ref: string) {
@@ -142,7 +151,16 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
       </section>
 
       <section className="card p-5">
-        <h2 className="title mb-4">Add a person</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="title">Add a person</h2>
+          <ConnectModal
+            trigger={
+              <button className="btn btn-secondary" type="button">
+                Connect wallet
+              </button>
+            }
+          />
+        </div>
         <form onSubmit={registerRecipient} className="space-y-4">
           <label className="block text-sm font-medium">
             Short ID (e.g. translator-kl)
@@ -177,8 +195,24 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
               autoComplete="off"
               spellCheck={false}
               required
+              value={walletAddress}
+              onChange={(event) => setManualAddress(event.target.value)}
             />
           </label>
+          {account && manualAddress === null && (
+            <div className="-mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
+              <span className="num">
+                Address from your connected wallet - {shortAddress}
+              </span>
+              <button
+                type="button"
+                className="link"
+                onClick={() => setManualAddress("")}
+              >
+                Use a different address
+              </button>
+            </div>
+          )}
 
           <div className="flex items-center gap-4">
             <button
@@ -193,6 +227,9 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
             <OperatorTokenField />
           </div>
         </form>
+        <p className="mt-4 text-sm text-muted">
+          Get paid to the wallet you already have. Connect it and the address fills in - no copying.
+        </p>
       </section>
     </div>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
+import { SuiProviders } from "@/components/sui-providers";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       lang="en"
       className={`${inter.variable} ${jetbrains.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <SuiProviders>{children}</SuiProviders>
+      </body>
     </html>
   );
 }
