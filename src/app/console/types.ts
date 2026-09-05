@@ -43,35 +43,104 @@ export type TestIntentResponse = {
   publicToken?: string;
 };
 
-// Helper function to get explanation text based on reason code
-export function explainDecision(decisionClass: string, reasonCode: string | null): string {
-  if (decisionClass === "PAID" && !reasonCode) {
-    return "Both channels agreed and the payment settled on Sui testnet.";
-  }
-  
-  if (reasonCode === "RECIPIENT_UNVERIFIED") {
-    return "The recipient has not passed identity verification and this agent requires it, so Tiba refused.";
-  }
-
-  if (reasonCode?.startsWith("QUORUM_SPLIT")) {
-    return "The two channels disagreed about the work order or the amount, so Tiba refused. It never guesses which one is right.";
-  }
-  
-  if (reasonCode && reasonCode.includes("CAP")) {
-    return "This would have pushed the agent past its spending cap, so it was refused.";
-  }
-  
-  if (reasonCode && (reasonCode.includes("WORK_ORDER") || reasonCode.includes("NOT_FOUND"))) {
-    return "There is no open work order that matches this artifact, so there was nothing to pay against.";
-  }
-  
-  return "Refused by policy before any money moved.";
-}
-
-// The internal enum (RED/AMBER) is not what a person should read; a refusal is the
-// product working, so it says so.
 export function decisionWord(decisionClass: string): string {
   if (decisionClass === "AMBER") return "HELD";
   if (decisionClass === "RED") return "REFUSED";
   return decisionClass;
 }
+
+export function decisionSentence(decisionClass: string): string {
+  if (decisionClass === "PAID") return "Paid";
+  if (decisionClass === "AMBER") return "Held — waiting for a human";
+  if (decisionClass === "RED") return "Refused";
+  return decisionClass;
+}
+
+export function explainDecision(decisionClass: string, reasonCode: string | null): string {
+  if (decisionClass === "PAID") {
+    return "Both checks agreed, the limits passed, and the test transfer completed.";
+  }
+
+  if (decisionClass === "AMBER") {
+    switch (reasonCode) {
+      case "HUMAN_REVIEW_REQUIRED": return "This amount is large enough that your rules require a human to decide.";
+      case "INFERENCE_UNAVAILABLE": return "Neither check could run, so the payment is held for a human.";
+      case "MISSING_PAYER_RECORD":
+      case "MISSING_REQUIRED_CHANNEL": return "The payer's own record could not be read, so the payment is held for a human.";
+      case "SCHEMA_INVALID": return "A check returned an unreadable answer, so the payment is held for a human.";
+      case "REQUEST_REJECTED": return "The reading service turned the request away, so the payment is held for a human.";
+      default: return "Held for a human.";
+    }
+  }
+
+  if (reasonCode?.startsWith("QUORUM_SPLIT")) {
+    if (reasonCode === "QUORUM_SPLIT:work_order_id") return "The two checks named different jobs, so Tiba refused.";
+    if (reasonCode === "QUORUM_SPLIT:amount_micros") return "The two checks named different amounts, so Tiba refused.";
+    if (reasonCode === "QUORUM_SPLIT:delivery_timestamp") return "The two checks gave different delivery dates, so Tiba refused.";
+    return "The two checks disagreed, so Tiba refused.";
+  }
+
+  switch (reasonCode) {
+    case "DAY_AMOUNT_CAP": return "This would take the program past its daily spending limit, so Tiba refused.";
+    case "HOUR_AMOUNT_CAP": return "This would take the program past its hourly spending limit, so Tiba refused.";
+    case "DAY_COUNT_CAP": return "The program has already made its maximum number of payments today, so Tiba refused.";
+    case "HOUR_COUNT_CAP": return "The program has already made its maximum number of payments this hour, so Tiba refused.";
+    case "TRANSACTION_CEILING": return "The amount is more than any single payment may be, so Tiba refused.";
+    case "WORK_ORDER_CEILING": return "The amount is more than this job allows, so Tiba refused.";
+    case "WORK_ORDER_EXPIRED": return "The job named has passed its deadline, so Tiba refused.";
+    case "WORK_ORDER_NOT_OPEN": return "The job named is closed, so Tiba refused.";
+    case "NO_OPEN_OBLIGATION": return "There is no open job matching this delivery note, so there was nothing to pay.";
+    case "RECIPIENT_NOT_FOUND": return "This person is not on the approved list, so Tiba refused.";
+    case "RECIPIENT_INACTIVE": return "This person is on the approved list but blocked, so Tiba refused.";
+    case "RECIPIENT_UNVERIFIED": return "This person's identity has not been checked, and your rules require it, so Tiba refused.";
+    case "KILL_SWITCH": return "The emergency stop is on, so every payment is refused before any check runs.";
+    case "INVALID_AMOUNT": return "The amount in this request was not valid, so Tiba refused.";
+    case "INVALID_TIMESTAMP": return "A date in this request was not valid, so Tiba refused.";
+    case "SETTLEMENT_FAILED":
+    case "SUI_EXECUTION_FAILED":
+      return "Both checks agreed and the limits passed, but the transfer itself failed. No money moved.";
+    default:
+      return "Refused before any money moved.";
+  }
+}
+
+export function humanError(code: string | null | undefined): { text: string; code: string } {
+  const map: Record<string, string> = {
+    UNAUTHORIZED: "Wrong operator key.",
+    OPERATOR_TOKEN_NOT_SET: "Enter the operator key first.",
+    OPERATOR_TOKEN_REQUIRED: "Enter the operator key first.",
+    REQUEST_FAILED: "Something went wrong. Try again.",
+    INVALID_REQUEST: "Something in the form is not valid.",
+    NOT_FOUND: "Not found.",
+    NOT_OVERRIDABLE: "This one cannot be approved by hand.",
+    ALREADY_PAID: "Already paid.",
+    RECIPIENT_NOT_FOUND: "That person is not on the approved list.",
+    INVALID_PAYER_RECORD_JSON: "The payer record is not valid JSON.",
+    INVALID_TIMESTAMP: "The date is not valid.",
+    IDENTITY_PROVIDER_UNAVAILABLE: "The identity-check service is unavailable. Try again later.",
+  };
+  const c = code ?? "UNKNOWN";
+  return { text: map[c] ?? `Something went wrong (${c}).`, code: c };
+}
+
+export function workOrderStatusWord(status: string): string {
+  if (status === "open") return "Open";
+  if (status === "closed") return "Closed";
+  if (status === "expired") return "Expired";
+  if (status === "discharged") return "Closed";
+  return status;
+}
+
+// Reader A/B wording for quorum-split disagreements. Lives here (not in
+// src/lib/adjudication-display.ts) because the redesign may not touch src/lib.
+export function disagreementLine(
+  reasonCode: string | null,
+  a: ChannelTupleLike,
+  b: ChannelTupleLike
+): string | null {
+  if (!reasonCode?.startsWith("QUORUM_SPLIT")) return null;
+  if (!a || !b) return "The two checks gave different answers, so Tiba refused.";
+  return `Reader A (the delivery note) saw job ${a.workOrderId}, ${a.amount}. Reader B (the payer's record) saw job ${b.workOrderId}, ${b.amount}. They disagreed, so Tiba refused.`;
+}
+
+export type ChannelTupleLike = { workOrderId: string; amount: string } | null;
