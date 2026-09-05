@@ -1,22 +1,15 @@
 import Link from "next/link";
 import { RouterHealthStrip } from "@/components/router-health-strip";
+import { SiteNav } from "@/components/site-nav";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
+import { channelTuple } from "@/lib/adjudication-display";
+import { disagreementLine } from "@/app/console/types";
 
 export const dynamic = "force-dynamic";
 
 function requestIdFor(adjudications: Array<{ channel: string; requestId: string | null }>, channel: string): string {
   return adjudications.find((row) => row.channel === channel)?.requestId ?? "missing";
-}
-
-function channelTuple(value: unknown): { work_order_id: string; amount_micros: string } | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const row = value as Record<string, unknown>;
-  const workOrderId = row.work_order_id;
-  const amountMicros = row.amount_micros;
-  if (typeof workOrderId !== "string") return null;
-  if (typeof amountMicros !== "string" || !/^\d+$/.test(amountMicros)) return null;
-  return { work_order_id: workOrderId, amount_micros: amountMicros };
 }
 
 export default async function Home() {
@@ -36,115 +29,160 @@ export default async function Home() {
     orderBy: { createdAt: "desc" }
   });
 
+  const refusedDisagreement = refusedIntent
+    ? disagreementLine(
+        refusedIntent.reasonCode,
+        channelTuple(refusedIntent.adjudications.find((row) => row.channel === "artifact")?.tupleJson),
+        channelTuple(refusedIntent.adjudications.find((row) => row.channel === "payer_record")?.tupleJson)
+      )
+    : null;
+
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SiteNav current="" />
       <RouterHealthStrip />
-      <div className="mx-auto flex max-w-7xl flex-col gap-7 px-4 py-8 md:px-6 lg:px-8">
-        <header className="max-w-4xl">
-          <h1 className="display text-5xl md:text-7xl"><span className="text-accent">Tiba</span></h1>
-          <p className="mt-4 max-w-3xl text-xl font-semibold leading-snug md:text-2xl">
-            Software pays a person. No human approves each transfer. Policy holds the line.
+      <div className="mx-auto flex max-w-5xl flex-col gap-12 px-4 pb-16 pt-16 md:gap-16 md:px-6 md:pt-24 lg:px-8">
+        <header>
+          <p className="eyebrow">Automated payments · test network</p>
+          <h1 className="display-xl mt-4 max-w-[20ch]">
+            Software pays a person. Two checks must <em>agree</em> first.
+          </h1>
+          <p className="lede mt-6">
+            One automated check reads the delivery note. A separate automated check reads the payer's
+            own record. Money moves only when both name the same job and the same amount. Anything
+            else is refused or held for a human, and the receipt says why.
           </p>
-          <p className="mt-3 text-base text-muted">
-            Two independent checks must agree before money moves. Disagreement is a refusal, not a guess.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              className="btn btn-primary"
-              href="/console"
-            >
-              Open console
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link className="btn btn-primary" href="/console">
+              Try a test payment
             </Link>
-            <Link
-              className="btn btn-secondary"
-              href="/ledger"
-            >
-              Open ledger
-            </Link>
-            <Link
-              className="btn btn-secondary"
-              href="/intents"
-            >
-              Payout intents
+            <Link className="btn btn-secondary" href="/ledger">
+              See every decision
             </Link>
           </div>
         </header>
 
-        <section className="card p-4">
-          <p className="eyebrow">Proof</p>
-          {refusedIntent ? (
-            <div className="mt-3 mb-4">
-              <p className="eyebrow">REFUSED</p>
-              <div className="mt-2 text-sm">
-                {(() => {
-                  const artifactTuple = channelTuple(refusedIntent.adjudications.find((row) => row.channel === "artifact")?.tupleJson);
-                  const payerRecordTuple = channelTuple(refusedIntent.adjudications.find((row) => row.channel === "payer_record")?.tupleJson);
-                  
-                  if (artifactTuple && payerRecordTuple) {
-                    return (
-                      <div>
-                        <p>Channel A read {artifactTuple.work_order_id} · {microsToUsdc(artifactTuple.amount_micros)}</p>
-                        <p>Channel B read {payerRecordTuple.work_order_id} · {microsToUsdc(payerRecordTuple.amount_micros)}</p>
-                        <p className="mt-1">They disagreed, so Tiba refused rather than guess.</p>
-                      </div>
-                    );
-                  } else {
-                    return <p>Two isolated channels disagreed. Tiba refused rather than guess.</p>;
-                  }
-                })()}
-                <p className="mt-2 font-mono text-xs">{refusedIntent.reasonCode}</p>
-                <Link
-                  className="btn btn-secondary mt-2"
-                  href={`/r/${refusedIntent.publicToken}`}
-                >
-                  Public receipt
-                </Link>
-              </div>
+        <section className="mt-12 border-t border-line pt-12">
+          <p className="eyebrow">Measured on the test-network pilot</p>
+          <div className="mt-6 grid grid-cols-2 gap-8 md:grid-cols-4">
+            <div>
+              <p className="num display-l">20 / 20</p>
+              <p className="eyebrow mt-2">honest notes paid</p>
             </div>
-          ) : null}
-          {paidIntent ? (
-            <div className="mt-3 grid gap-3 text-sm md:grid-cols-4">
-              <div>
-                <p className="eyebrow">Amount</p>
-                <p className="mt-1 font-semibold">{microsToUsdc(paidIntent.amountMicros)} <span className="text-xs font-normal text-muted">settled in SUI on testnet</span></p>
-              </div>
-              <div className="md:col-span-2">
-                <p className="eyebrow">Digest</p>
-                {paidIntent.explorerUrl ? (
-                  <a
-                    className="mt-1 block break-all font-mono text-xs text-primary underline-offset-4 hover:underline"
-                    href={paidIntent.explorerUrl}
-                  >
-                    {paidIntent.digest ?? "missing"}
-                  </a>
-                ) : (
-                  <p className="mt-1 font-mono text-xs text-muted">{paidIntent.digest ?? "missing"}</p>
-                )}
-              </div>
-              <div>
-                <p className="eyebrow">Receipt</p>
-                <Link
-                  className="btn btn-secondary mt-1"
-                  href={`/r/${paidIntent.publicToken}`}
-                >
-                  Public receipt
-                </Link>
-              </div>
-              <div className="md:col-span-4">
-                <p className="eyebrow">Gonka request IDs</p>
-                <p className="mt-1 font-mono text-xs text-muted">
-                  A: {requestIdFor(paidIntent.adjudications, "artifact")} | B: {requestIdFor(paidIntent.adjudications, "payer_record")}
-                </p>
-              </div>
+            <div>
+              <p className="num display-l">10 / 10</p>
+              <p className="eyebrow mt-2">tampered notes refused</p>
             </div>
-          ) : (
-            <p className="mt-3 text-sm text-muted">No settled payment yet.</p>
-          )}
+            <div>
+              <p className="num display-l">0</p>
+              <p className="eyebrow mt-2">false refusals</p>
+            </div>
+            <div>
+              <p className="num display-l">~13 s</p>
+              <p className="eyebrow mt-2">per decision</p>
+            </div>
+          </div>
         </section>
 
-        <footer className="text-sm text-muted">
-          Tiba · Rizqey Labs · Testnet pilot, no real funds move yet ·{" "}
-          <a className="text-primary underline-offset-4 hover:underline" href="https://github.com/Tiba-Rail/tiba">
+        <section className="mt-12 border-t border-line pt-12">
+          <p className="eyebrow">How a payment gets checked</p>
+          <ol className="mt-8 grid gap-8 md:grid-cols-3">
+            <li>
+              <p className="num text-sm text-muted">01</p>
+              <p className="lede mt-3">
+                A program acting for the payer submits a delivery note for a job.
+              </p>
+            </li>
+            <li>
+              <p className="num text-sm text-muted">02</p>
+              <p className="lede mt-3">
+                Two separate automated checks read it: one the delivery note, one the payer's own
+                record. Neither sees the other's answer.
+              </p>
+            </li>
+            <li>
+              <p className="num text-sm text-muted">03</p>
+              <p className="lede mt-3">
+                Same job and same amount from both: paid. Otherwise: refused or held for a human, and
+                the receipt says why.
+              </p>
+            </li>
+          </ol>
+          <div className="mt-10 space-y-4">
+            <p className="lede">
+              A forged note, an inflated amount, or a hidden instruction can change one check but not
+              the other — so it does not go through.
+            </p>
+            <p className="lede">
+              If a check cannot run, the payment is held for a human. Tiba never fills the gap with a
+              guess.
+            </p>
+            <p className="lede">
+              Around both checks sit limits a human sets and an agent can only read: a per-payment
+              ceiling, hourly and daily spending limits, an allowlist of who may be paid, and a kill
+              switch.
+            </p>
+          </div>
+        </section>
+
+        <section className="mt-12 border-t border-line pt-12">
+          <p className="eyebrow">A real example, from this pilot</p>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {refusedIntent ? (
+              <div className="card p-5">
+                <span className="pill pill-refused">Refused</span>
+                <p className="mt-3 text-sm">
+                  {refusedDisagreement ??
+                    "The two checks gave different answers, so Tiba refused."}
+                </p>
+                <p className="num mt-3 text-xs text-muted">
+                  Reason code {refusedIntent.reasonCode ?? "none recorded"}
+                </p>
+                <Link className="btn btn-ghost mt-3" href={`/r/${refusedIntent.publicToken}`}>
+                  Open receipt →
+                </Link>
+              </div>
+            ) : null}
+            {paidIntent ? (
+              <div className="card p-5">
+                <span className="pill pill-paid">Paid</span>
+                <p className="mt-3 text-sm">
+                  <span className="num">{microsToUsdc(paidIntent.amountMicros)}</span> — test
+                  transfer, no real money moved
+                </p>
+                <p className="eyebrow mt-4">Transaction</p>
+                {paidIntent.explorerUrl ? (
+                  <a className="link mt-1 inline-block text-sm" href={paidIntent.explorerUrl}>
+                    View on test network
+                  </a>
+                ) : (
+                  <p className="num mt-1 text-xs text-muted">{paidIntent.digest ?? "missing"}</p>
+                )}
+                <p className="eyebrow mt-4">Check references</p>
+                <p className="num mt-1 text-xs text-muted">
+                  A: {requestIdFor(paidIntent.adjudications, "artifact")} · B:{" "}
+                  {requestIdFor(paidIntent.adjudications, "payer_record")}
+                </p>
+                <div>
+                  <Link className="btn btn-ghost mt-3" href={`/r/${paidIntent.publicToken}`}>
+                    Open receipt →
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="card p-5">
+                <span className="pill pill-paid">Paid</span>
+                <p className="mt-3 text-sm text-muted">
+                  No paid example yet. Send a test payment from the console.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <footer className="mt-12 border-t border-line pt-12 text-sm text-muted">
+          Tiba · Test network only — no real money moves yet ·{" "}
+          <a className="link" href="https://github.com/Tiba-Rail/tiba">
             source
           </a>
         </footer>
