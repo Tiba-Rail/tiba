@@ -120,18 +120,18 @@ export function StartClient() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium">Sui testnet address (optional)</span>
+              <span className="text-sm font-medium">Wallet address for settlement (optional)</span>
               <input
                 className="field mt-1 font-mono text-xs"
                 type="text"
                 value={suiAddress}
                 onChange={(e) => setSuiAddress(e.target.value)}
-                placeholder={typeof window !== "undefined" ? "Defaults to the deployed testnet address" : ""}
+                placeholder={typeof window !== "undefined" ? "Defaults to the deployment address" : ""}
                 autoComplete="off"
                 spellCheck={false}
               />
               <span className="mt-1 block text-xs text-muted">
-                Used for the first example payment. Leave blank to use the deployment address.
+                Used for the first example payment. Leave blank to use the default settlement address.
               </span>
             </label>
 
@@ -241,11 +241,11 @@ export function StartClient() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Link href={`/console?agent=${result.workspace_id}`} className="btn btn-primary">
+            <Link href={`/app?agent=${result.workspace_id}`} className="btn btn-primary">
               Send a payment →
             </Link>
-            <Link href="/" className="btn btn-secondary">
-              Home
+            <Link href="/app" className="btn btn-secondary">
+              Open the app
             </Link>
           </div>
         </div>

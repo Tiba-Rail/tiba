@@ -182,7 +182,7 @@ export function FundClient({ address, shortAddress, qrSvg, balanceText }: FundCl
         </div>
       </details>
 
-      <Link className="link" href="/">
+      <Link className="link" href="/app">
         ← Back to Home
       </Link>
     </div>
