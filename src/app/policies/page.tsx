@@ -1,4 +1,3 @@
-import { RouterHealthStrip } from "@/components/router-health-strip";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 import { SiteNav } from "@/components/site-nav";
@@ -24,7 +23,6 @@ export default async function PoliciesPage() {
     return (
       <main className="min-h-screen bg-background text-foreground">
         <SiteNav current="policies" />
-        <RouterHealthStrip />
         <div className="mx-auto max-w-7xl px-4 py-8">
           <h1 className="display-l">Nothing is set up yet</h1>
           <p className="lede mt-2">This wallet has no software attached yet.</p>
@@ -36,7 +34,6 @@ export default async function PoliciesPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="policies" />
-      <RouterHealthStrip />
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 lg:px-8">
         <header className="flex flex-col gap-4">
           <p className="eyebrow">Limits</p>

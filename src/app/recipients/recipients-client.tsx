@@ -128,16 +128,16 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
               </div>
               <p className="num mt-1 text-xs text-muted">ID {recipient.ref}</p>
               <p className="num mt-2 break-all text-xs text-muted">Wallet {recipient.suiAddress}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
+              <div className="mt-3 flex flex-wrap items-start gap-3 border-t border-line pt-3">
                 <span className={kycPill(recipient.kycStatus).className}>{kycPill(recipient.kycStatus).label}</span>
-                <span className="text-xs text-muted">
-                  {recipient.kycProvider ? `verified by ${recipient.kycProvider}` : "not verified yet"}
+                <span className="min-w-0 flex-1 break-words text-xs text-muted">
+                  {recipient.kycProvider ? "verified" : "not verified yet"}
                   {recipient.kycVerifiedAt ? ` · ${recipient.kycVerifiedAt}` : ""}
                   {recipient.kycExpiresAt ? ` · valid until ${recipient.kycExpiresAt}` : ""}
                 </span>
                 <button
                   type="button"
-                  className="btn btn-secondary ml-auto"
+                  className="btn btn-secondary ml-auto shrink-0"
                   disabled={busy === `verify:${recipient.ref}`}
                   aria-busy={busy === `verify:${recipient.ref}`}
                   onClick={() => verifyIdentity(recipient.ref)}
@@ -214,7 +214,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
             </div>
           )}
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-start gap-4">
             <button
               className="btn btn-primary"
               type="submit"
@@ -224,7 +224,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
               {busy === "recipient" ? "Saving…" : "Save recipient"}
             </button>
 
-            <OperatorTokenField />
+            <OperatorTokenField className="basis-full md:basis-auto" />
           </div>
         </form>
         <p className="mt-4 text-sm text-muted">

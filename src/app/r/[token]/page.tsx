@@ -149,7 +149,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
 
         <section className="card p-5">
           <h2 className="title">How this decision was made</h2>
-          <table className="mt-4 w-full">
+          <div className="mt-4 max-w-full overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-line">
                 <th className="text-left py-2 px-3">Step</th>
@@ -164,18 +165,18 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                 <td className="py-3 px-3">
                   {adjudicationsByChannel.get("artifact") ? (
                     <div className="text-sm">
-                      <div>Model used: {adjudicationsByChannel.get("artifact")?.model}</div>
+                      <div className="break-all">Model used: {adjudicationsByChannel.get("artifact")?.model}</div>
                       {adjudicationsByChannel.get("artifact")?.fallback ? (
                         <div style={{ color: "var(--held)" }}>
                           The reading service (Gonka) swapped in a different model for this reader:{" "}
-                          <span className="num text-xs">{adjudicationsByChannel.get("artifact")?.fallback}</span>
+                          <span className="num break-all text-xs">{adjudicationsByChannel.get("artifact")?.fallback}</span>
                         </div>
                       ) : null}
                       <div>
                         Reference (Gonka request ID):{" "}
                         {adjudicationsByChannel.get("artifact")?.requestId ? (
                           <a
-                            className="link num text-xs"
+                            className="link num inline-block max-w-full break-all text-xs"
                             href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("artifact")?.requestId}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -199,18 +200,18 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                 <td className="py-3 px-3">
                   {adjudicationsByChannel.get("payer_record") ? (
                     <div className="text-sm">
-                      <div>Model used: {adjudicationsByChannel.get("payer_record")?.model}</div>
+                      <div className="break-all">Model used: {adjudicationsByChannel.get("payer_record")?.model}</div>
                       {adjudicationsByChannel.get("payer_record")?.fallback ? (
                         <div style={{ color: "var(--held)" }}>
                           The reading service (Gonka) swapped in a different model for this reader:{" "}
-                          <span className="num text-xs">{adjudicationsByChannel.get("payer_record")?.fallback}</span>
+                          <span className="num break-all text-xs">{adjudicationsByChannel.get("payer_record")?.fallback}</span>
                         </div>
                       ) : null}
                       <div>
                         Reference (Gonka request ID):{" "}
                         {adjudicationsByChannel.get("payer_record")?.requestId ? (
                           <a
-                            className="link num text-xs"
+                            className="link num inline-block max-w-full break-all text-xs"
                             href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("payer_record")?.requestId}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -258,6 +259,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
               </tr>
             </tbody>
           </table>
+          </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-2">

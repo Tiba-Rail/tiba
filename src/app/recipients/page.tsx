@@ -1,13 +1,12 @@
 import { prisma } from "@/lib/db";
 import { RecipientsClient } from "./recipients-client";
 import { SiteNav } from "@/components/site-nav";
-import { RouterHealthStrip } from "@/components/router-health-strip";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Recipients - Tiba" };
 
 function formatDate(date: Date | null): string | null {
-  return date ? new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", year: "numeric" }).format(date) : null;
+  return date ? new Intl.DateTimeFormat("en", { day: "2-digit", month: "short", year: "numeric" }).format(date) : null;
 }
 
 export default async function RecipientsPage() {
@@ -18,7 +17,6 @@ export default async function RecipientsPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="recipients" />
-      <RouterHealthStrip />
       <RecipientsClient
         recipients={recipients.map((recipient) => ({
           ref: recipient.ref,

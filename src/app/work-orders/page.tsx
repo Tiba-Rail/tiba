@@ -2,7 +2,6 @@ import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 import { WorkOrdersClient } from "./work-orders-client";
 import { SiteNav } from "@/components/site-nav";
-import { RouterHealthStrip } from "@/components/router-health-strip";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Invoices - Tiba" };
@@ -31,7 +30,6 @@ export default async function WorkOrdersPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="work-orders" />
-      <RouterHealthStrip />
       <WorkOrdersClient
         workOrders={workOrders.map((workOrder) => ({
           ref: workOrder.ref,

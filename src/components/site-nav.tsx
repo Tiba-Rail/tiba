@@ -17,9 +17,11 @@ export function SiteNav({ current }: SiteNavProps) {
 
   return (
     <nav className="border-b border-line">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 md:px-6 lg:px-8">
-        <Wordmark />
-        <div className="flex flex-row gap-6 text-sm">
+      <div className="mx-auto max-w-7xl px-4 md:flex md:h-14 md:items-center md:justify-between md:px-6 lg:px-8">
+        <div className="flex h-14 items-center md:h-auto">
+          <Wordmark />
+        </div>
+        <div className="site-nav-links -mx-4 flex w-[calc(100%+2rem)] shrink-0 gap-4 overflow-x-auto px-4 pb-3 text-sm md:mx-0 md:w-auto md:gap-6 md:overflow-visible md:px-0 md:pb-0">
           {links.map((link) => (
             <Link
               key={link.key}
