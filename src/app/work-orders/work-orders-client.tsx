@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { OperatorTokenField } from "@/components/operator-token-field";
 import { humanError, workOrderStatusWord } from "@/app/console/types";
@@ -57,6 +57,7 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [payerRecord, setPayerRecord] = useState(defaultPayerRecord);
+  const advancedRef = useRef<HTMLDetailsElement>(null);
 
   async function post(path: string, body: Record<string, unknown>, busyLabel: string) {
     setBusy(busyLabel);
@@ -227,25 +228,32 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
             <textarea className={inputClass} name="brief_text" rows={3} required />
           </label>
 
-          <label className="block text-sm font-medium">
+          <div className="text-sm font-medium">
             Your record for this invoice
             {payerRecordSummaryText ? (
               <span className="mt-1 block text-sm font-normal">
                 {payerRecordSummaryText}
               </span>
             ) : null}
-            <textarea
-              className={inputClass}
-              name="payer_record"
-              rows={4}
-              value={payerRecord}
-              onChange={(event) => setPayerRecord(event.target.value)}
-              required
-            />
-            <span className="mt-1 block text-xs font-normal text-muted">
-              Amounts are in millionths: 180000000 means 180 USDC
-            </span>
-          </label>
+          </div>
+          <details ref={advancedRef} className="text-sm">
+            <summary className="cursor-pointer text-muted">Advanced — raw record (JSON)</summary>
+            <label className="mt-2 block text-sm font-medium">
+              <span className="sr-only">Your record for this invoice (JSON)</span>
+              <textarea
+                className={`${inputClass} font-mono text-xs`}
+                name="payer_record"
+                rows={4}
+                value={payerRecord}
+                onChange={(event) => setPayerRecord(event.target.value)}
+                onInvalid={() => { if (advancedRef.current) advancedRef.current.open = true; }}
+                required
+              />
+              <span className="mt-1 block text-xs font-normal text-muted">
+                Amounts are in millionths: 180000000 means 180 USDC
+              </span>
+            </label>
+          </details>
 
           <div className="flex flex-wrap items-start gap-4">
             <button
