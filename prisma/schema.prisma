@@ -197,3 +197,14 @@ model Artifact {
 
   @@map("artifacts")
 }
+
+// Which Tiba wallet a Telegram chat pays from. Set with /connect; without a row
+// the chat falls back to the pilot wallet in the environment.
+model TelegramChat {
+  chatId    String   @id @map("chat_id")
+  agentKey  String   @map("agent_key")
+  ownerKey  String   @map("owner_key")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("telegram_chats")
+}
