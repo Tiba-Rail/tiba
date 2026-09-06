@@ -9,6 +9,7 @@ import { decisionSentence, disagreementLine, explainDecision } from "@/app/conso
 import { recipientIdentityOk } from "@/lib/identity";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Receipt - Tiba" };
 
 function formatTime(date: Date | null): string {
   if (!date) return "time unknown";
@@ -130,7 +131,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
 
         <section className="grid gap-4 md:grid-cols-3">
           <Fact
-            label={paid ? "Paid to" : "Would have paid"}
+            label={paid ? "Paid to" : "To"}
             value={intent.recipient.displayName}
             detail={`ID ${intent.recipient.ref}`}
           />
@@ -158,7 +159,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
             </thead>
             <tbody>
               <tr className="border-b border-line">
-                <td className="py-3 px-3">Reader A — read the delivery note</td>
+                <td className="py-3 px-3">Check 1 — read the delivery note</td>
                 <td className="py-3 px-3">{getChannelMatchStatus(channelATuple, channelBTuple)}</td>
                 <td className="py-3 px-3">
                   {adjudicationsByChannel.get("artifact") ? (
@@ -188,12 +189,12 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                       <div>Took: <span className="num">{formatLatency(adjudicationsByChannel.get("artifact")?.latencyMs)}</span></div>
                     </div>
                   ) : (
-                    "This reader was not run."
+                    "This check was not run."
                   )}
                 </td>
               </tr>
               <tr className="border-b border-line">
-                <td className="py-3 px-3">Reader B — read the payer's own record</td>
+                <td className="py-3 px-3">Check 2 — read your own records</td>
                 <td className="py-3 px-3">{getChannelMatchStatus(channelBTuple, channelATuple)}</td>
                 <td className="py-3 px-3">
                   {adjudicationsByChannel.get("payer_record") ? (
@@ -223,17 +224,17 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                       <div>Took: <span className="num">{formatLatency(adjudicationsByChannel.get("payer_record")?.latencyMs)}</span></div>
                     </div>
                   ) : (
-                    "This reader was not run."
+                    "This check was not run."
                   )}
                 </td>
               </tr>
               <tr className="border-b border-line">
-                <td className="py-3 px-3">Did the readers agree?</td>
+                <td className="py-3 px-3">Did both checks agree?</td>
                 <td className="py-3 px-3">{getAgreementStatus(channelATuple, channelBTuple)}</td>
                 <td className="py-3 px-3">{disagreement || "—"}</td>
               </tr>
               <tr className="border-b border-line">
-                <td className="py-3 px-3">Your rules</td>
+                <td className="py-3 px-3">Your limits</td>
                 <td className="py-3 px-3">{getPolicyStatus(intent.reasonCode)}</td>
                 <td className="py-3 px-3">{getPolicyStatus(intent.reasonCode) === "Blocked" ? explainDecision(intent.decisionClass, intent.reasonCode) : "—"}</td>
               </tr>
@@ -243,7 +244,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                 <td className="py-3 px-3">{identityDetail}</td>
               </tr>
               <tr className="border-b border-line">
-                <td className="py-3 px-3">Money sent?</td>
+                <td className="py-3 px-3">Payment</td>
                 <td className="py-3 px-3">{getSettlementStatus(intent.decisionClass, intent.reasonCode)}</td>
                 <td className="py-3 px-3">
                   {intent.explorerUrl ? (
@@ -261,7 +262,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
 
         <section className="grid gap-4 md:grid-cols-2">
           <div className="card p-5">
-            <h2 className="title">Reader cost basis (GNK/USD)</h2>
+            <h2 className="title">Verification cost (GNK/USD)</h2>
             {intent.gnkUsd ? (
               <p className="num mt-3 text-2xl">
                 ${intent.gnkUsd}
@@ -279,7 +280,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
           className="btn btn-ghost w-fit"
           href="/ledger"
         >
-          See all payments →
+          See all activity →
         </Link>
       </div>
     </main>
