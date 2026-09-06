@@ -13,6 +13,8 @@ jobs:
         with:
           node-version: 25
           cache: npm
-      - run: npm ci
+      # Tailwind's wasm fallback packages are optional, never used on the runner, and npm
+      # cannot write them into the lockfile from Windows. Skipping them keeps npm ci strict.
+      - run: npm ci --omit=optional
       - run: npm run typecheck
       - run: npm test
