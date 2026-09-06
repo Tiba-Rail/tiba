@@ -18,9 +18,9 @@ interface Recipient {
 }
 
 function kycPill(status: string): { className: string; label: string } {
-  if (status === "verified") return { className: "pill pill-paid", label: "Identity checked" };
-  if (status === "failed") return { className: "pill pill-refused", label: "Identity check failed" };
-  return { className: "pill pill-held", label: "Identity not checked" };
+  if (status === "verified") return { className: "pill pill-paid", label: "Verified" };
+  if (status === "failed") return { className: "pill pill-refused", label: "Verification failed" };
+  return { className: "pill pill-held", label: "Not verified" };
 }
 
 interface RecipientsClientProps {
@@ -40,7 +40,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
     ? `${account.address.slice(0, 6)}…${account.address.slice(-4)}`
     : "";
 
-  async function post(path: string, body: Record<string, unknown>, busyLabel: string, success = "Person added.") {
+  async function post(path: string, body: Record<string, unknown>, busyLabel: string, success = "Recipient saved.") {
     setBusy(busyLabel);
     setError(null);
     setMessage(null);
@@ -83,7 +83,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
   }
 
   async function verifyIdentity(ref: string) {
-    await post(`/api/v1/recipients/${encodeURIComponent(ref)}/verify`, {}, `verify:${ref}`, "Identity check done.");
+    await post(`/api/v1/recipients/${encodeURIComponent(ref)}/verify`, {}, `verify:${ref}`, "Identity verified.");
   }
 
   const inputClass = "field mt-1";
@@ -92,11 +92,11 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 lg:px-8">
       <header className="flex flex-col gap-4">
         <div>
-          <p className="eyebrow">People</p>
-          <h1 className="display-l mt-2">Who the program may pay</h1>
+          <p className="eyebrow">Recipients</p>
+          <h1 className="display-l mt-2">Saved recipients</h1>
         </div>
         <p className="lede">
-          The approved list. The program cannot pay anyone who is not on it.
+          Your software can only send to people saved here.
         </p>
       </header>
 
@@ -114,16 +114,16 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
       )}
 
       <section className="card p-5">
-        <h2 className="title mb-4">Approved people</h2>
+        <h2 className="title mb-4">Recipients</h2>
         <div className="divide-y divide-line">
           {recipients.length === 0 ? (
-            <p className="py-6 text-sm text-muted">Nobody yet. Add the first person below.</p>
+            <p className="py-6 text-sm text-muted">No recipients yet. Add the first one below.</p>
           ) : recipients.map((recipient) => (
             <div key={recipient.ref} className="py-4">
               <div className="flex items-center justify-between gap-3">
                 <p className="font-semibold">{recipient.displayName}</p>
                 <span className={recipient.active ? "text-sm text-paid" : "text-sm text-red-ink"}>
-                  {recipient.active ? "can be paid" : "blocked"}
+                  {recipient.active ? "ready" : "blocked"}
                 </span>
               </div>
               <p className="num mt-1 text-xs text-muted">ID {recipient.ref}</p>
@@ -131,7 +131,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
               <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
                 <span className={kycPill(recipient.kycStatus).className}>{kycPill(recipient.kycStatus).label}</span>
                 <span className="text-xs text-muted">
-                  {recipient.kycProvider ? `checked by ${recipient.kycProvider}` : "no identity check yet"}
+                  {recipient.kycProvider ? `verified by ${recipient.kycProvider}` : "not verified yet"}
                   {recipient.kycVerifiedAt ? ` · ${recipient.kycVerifiedAt}` : ""}
                   {recipient.kycExpiresAt ? ` · valid until ${recipient.kycExpiresAt}` : ""}
                 </span>
@@ -142,7 +142,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
                   aria-busy={busy === `verify:${recipient.ref}`}
                   onClick={() => verifyIdentity(recipient.ref)}
                 >
-                  {busy === `verify:${recipient.ref}` ? "Checking…" : "Run identity check"}
+                  {busy === `verify:${recipient.ref}` ? "Checking…" : "Verify identity"}
                 </button>
               </div>
             </div>
@@ -152,7 +152,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
 
       <section className="card p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="title">Add a person</h2>
+          <h2 className="title">Add recipient</h2>
           <ConnectModal
             trigger={
               <button className="btn btn-secondary" type="button">
@@ -221,14 +221,14 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
               disabled={busy === "recipient"}
               aria-busy={busy === "recipient"}
             >
-              {busy === "recipient" ? "Adding…" : "Add person"}
+              {busy === "recipient" ? "Saving…" : "Save recipient"}
             </button>
 
             <OperatorTokenField />
           </div>
         </form>
         <p className="mt-4 text-sm text-muted">
-          Get paid to the wallet you already have. Connect it and the address fills in - no copying. Works with Slush, Suiet, OKX, Bitget, Nightly, Backpack and any other Sui wallet.
+          Get paid to the wallet you already have. Connect it and the address fills in - no copying. Works with Slush, Suiet, OKX, Bitget, Nightly, Backpack and other compatible wallets.
         </p>
       </section>
     </div>
