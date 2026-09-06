@@ -1,7 +1,7 @@
 # Tiba
 
-**The agent-to-human payment rail.** Software pays a person, on its own, without a human
-approving each transfer - and can't run away with the money.
+**A wallet for software.** Tiba pays people on your behalf - within your limits, and only after
+two independent checks agree on the invoice and the amount. It can't run away with the money.
 
 
 ## The Problem
