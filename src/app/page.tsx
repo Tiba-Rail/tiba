@@ -44,7 +44,7 @@ export default async function Home() {
         <header>
           <p className="eyebrow">A wallet for AI agents · test network</p>
           <h1 className="display-xl mt-4 max-w-[20ch]">
-            A wallet your <RotatingWord words={["AI agents", "software", "apps", "workflows"]} intervalMs={2500} /> can <em>pay people</em> from.
+            A wallet your <RotatingWord words={["AI agents", "workflows", "software", "apps"]} intervalMs={2500} /> can <em>pay people</em> from.
           </h1>
           <p className="lede mt-6">
             Tiba pays on your behalf, within the limits you set, and only after two separate checks agree
