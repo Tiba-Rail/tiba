@@ -216,7 +216,7 @@ export default async function Home() {
                 ))
               )}
             </div>
-            <Link className="btn btn-secondary mt-8 w-full" href="/console">
+            <Link className="btn btn-primary mt-8 w-full" href="/console">
               Send
             </Link>
           </div>
