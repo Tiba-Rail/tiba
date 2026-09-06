@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ConnectModal, useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { shortSuiAddress, suiToMist } from "@/app/format";
+import { OpenInSlush } from "@/components/open-in-slush";
 
 interface FundClientProps {
   address: string;
@@ -82,6 +83,7 @@ export function FundClient({ address, shortAddress, qrSvg, balanceText }: FundCl
                 </button>
               }
             />
+            <OpenInSlush className="btn btn-secondary" />
             {account && (
               <span className="num text-sm text-muted">
                 {shortSuiAddress(account.address)}

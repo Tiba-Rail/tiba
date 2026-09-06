@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ConnectModal, useCurrentAccount } from "@mysten/dapp-kit";
 import { OperatorTokenField } from "@/components/operator-token-field";
 import { humanError } from "@/app/console/types";
+import { OpenInSlush } from "@/components/open-in-slush";
 
 interface Recipient {
   ref: string;
@@ -157,6 +158,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
               </button>
             }
           />
+          <OpenInSlush className="btn btn-secondary" />
         </div>
         <form onSubmit={registerRecipient} className="space-y-4">
           <label className="block text-sm font-medium">

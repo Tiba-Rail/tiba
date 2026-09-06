@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { ConnectModal, useCurrentAccount, useSignPersonalMessage } from "@mysten/dapp-kit";
 import type { SignInProvider } from "@/lib/auth-providers";
+import { OpenInSlush } from "@/components/open-in-slush";
 
 // Wallet sign-in is the front door. The server issues a nonce, the wallet signs it,
 // the server verifies the signature against the address and opens a session.
@@ -53,7 +54,10 @@ export function SignInClient({ providers, callbackUrl }: { providers: SignInProv
           {busy ? "Confirm in wallet…" : `Continue as ${account.address.slice(0, 6)}…${account.address.slice(-4)}`}
         </button>
       ) : (
-        <ConnectModal trigger={<button type="button" className="btn btn-primary w-full">Continue with your wallet</button>} />
+        <>
+          <ConnectModal trigger={<button type="button" className="btn btn-primary w-full">Continue with your wallet</button>} />
+          <OpenInSlush />
+        </>
       )}
 
       {social.length > 0 ? (
