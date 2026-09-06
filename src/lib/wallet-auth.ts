@@ -51,6 +51,7 @@ export function createWalletChallenge(addressValue: string): {
   message: string;
   cookieValue: string;
   maxAge: number;
+  expiresAt: number;
 } | null {
   const secret = authSecret();
   const address = canonicalAddress(addressValue);
