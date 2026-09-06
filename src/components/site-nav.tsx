@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Wordmark } from "./wordmark";
 import { prisma } from "@/lib/db";
+import { auth, signOut } from "@/auth";
 
 interface SiteNavProps {
   current: string;
@@ -21,6 +22,7 @@ export async function SiteNav({ current }: SiteNavProps) {
           </div>
           <div className="site-nav-links -mx-4 flex w-[calc(100%+2rem)] shrink-0 gap-4 overflow-x-auto px-4 pb-3 text-sm md:mx-0 md:w-auto md:gap-6 md:overflow-visible md:px-0 md:pb-0">
             {marketing ? <MarketingLinks current={current} /> : <AppLinks current={current} />}
+            <AuthLinks />
           </div>
         </div>
       </nav>
@@ -87,5 +89,46 @@ function AppLinks({ current }: { current: string }) {
         </Link>
       ))}
     </>
+  );
+}
+
+async function AuthLinks() {
+  let session = null;
+  try {
+    session = await auth();
+  } catch {
+    session = null;
+  }
+  const user = session?.user;
+  if (!user?.id) {
+    return (
+      <span className="ml-auto flex shrink-0 items-center gap-4 md:ml-4">
+        <Link href="/signin" className="text-muted transition-colors duration-150 hover:text-foreground">
+          Sign in
+        </Link>
+        <Link href="/start" className="btn btn-primary btn-nav">
+          Create wallet
+        </Link>
+      </span>
+    );
+  }
+  const label = user.name || user.email || "Signed in";
+  return (
+    <span className="ml-auto flex shrink-0 items-center gap-4 md:ml-4">
+      <Link href="/workspaces" className="text-muted transition-colors duration-150 hover:text-foreground">
+        My wallets
+      </Link>
+      <span className="hidden max-w-[16ch] truncate text-muted md:inline" title={label}>{label}</span>
+      <form
+        action={async () => {
+          "use server";
+          await signOut({ redirectTo: "/" });
+        }}
+      >
+        <button type="submit" className="text-muted transition-colors duration-150 hover:text-foreground">
+          Sign out
+        </button>
+      </form>
+    </span>
   );
 }

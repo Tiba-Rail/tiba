@@ -5,6 +5,7 @@ import { decisionSentence } from "@/app/console/types";
 import { formatDollars } from "@/app/format";
 import { getSettlementAddress, getSettlementBalance } from "@/app/settlement";
 import { LiveRefresh } from "@/components/live-refresh";
+import { auth } from "@/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,12 @@ export default async function AppHome({
   searchParams: Promise<{ agent?: string }>;
 }) {
   const { agent: agentId } = await searchParams;
+  let signedIn = false;
+  try {
+    signedIn = Boolean((await auth())?.user?.id);
+  } catch {
+    signedIn = false;
+  }
 
   const agent = agentId
     ? await prisma.agent.findUnique({ where: { id: agentId } })
@@ -81,6 +88,13 @@ export default async function AppHome({
       <LiveRefresh />
       <div className="mx-auto flex max-w-3xl flex-col px-4 pb-16 pt-10 md:px-6 md:pt-14 lg:px-8">
 
+        {!signedIn && !agentId && (
+          <p className="mb-6 rounded-md border border-line bg-surface px-4 py-3 text-sm text-muted">
+            This is the shared demo wallet.{" "}
+            <Link className="link" href="/start">Create your own</Link> or{" "}
+            <Link className="link" href="/signin">sign in</Link>.
+          </p>
+        )}
         {/* Spendable today — the number */}
         <header>
           <p className="eyebrow">Spendable today</p>

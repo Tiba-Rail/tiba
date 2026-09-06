@@ -310,3 +310,5 @@ pre {
 .site-nav-links a.is-active { color: var(--action); font-weight: 600; }
 .card a:not(.btn):hover { color: var(--action); }
 .title { color: var(--foreground); }
+
+.btn-nav { padding: 0.375rem 0.75rem; font-size: 0.875rem; min-height: 0; height: auto; line-height: 1.25; }

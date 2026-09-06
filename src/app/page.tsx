@@ -50,11 +50,14 @@ export default async function Home() {
             says why.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link className="btn btn-primary" href="/app">
-              Open the app
-            </Link>
-            <Link className="btn btn-secondary" href="/start">
+            <Link className="btn btn-primary" href="/start">
               Create your wallet
+            </Link>
+            <Link className="btn btn-secondary" href="/signin">
+              Sign in
+            </Link>
+            <Link className="btn btn-ghost" href="/app">
+              See the demo wallet
             </Link>
           </div>
         </header>
