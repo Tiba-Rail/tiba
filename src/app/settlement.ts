@@ -1,4 +1,5 @@
-import { getJsonRpcFullnodeUrl } from "@mysten/sui/jsonRpc";
+const TESTNET_GRAPHQL_URL = "https://graphql.testnet.sui.io/graphql";
+
 
 const SUI_TYPE_ARG = "0x2::sui::SUI";
 
@@ -9,29 +10,26 @@ export function getSettlementAddress(): string | null {
 
 export async function getSettlementBalance(address: string): Promise<bigint> {
   const coinType = process.env.SUI_USDC_TYPE?.trim() || SUI_TYPE_ARG;
-  const url = getJsonRpcFullnodeUrl("testnet");
+  // JSON-RPC on public fullnodes is deprecated and now answers "Method not found", which made
+  // every balance read silently return zero. Read it over GraphQL, the transport settlement uses.
+  const query = `{ address(address: "${address}") { balance(coinType: "${coinType}") { totalBalance } } }`;
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(TESTNET_GRAPHQL_URL, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "suix_getBalance",
-        params: [address, coinType]
-      })
+      body: JSON.stringify({ query }),
+      cache: "no-store"
     });
-
     if (!response.ok) return 0n;
 
     const payload = (await response.json()) as {
-      result?: { totalBalance?: string } | null;
-      error?: { message?: string } | null;
+      data?: { address?: { balance?: { totalBalance?: string } | null } | null } | null;
     };
 
-    if (payload.error || !payload.result?.totalBalance) return 0n;
-    const raw = BigInt(payload.result.totalBalance);
+    const total = payload.data?.address?.balance?.totalBalance;
+    if (!total) return 0n;
+    const raw = BigInt(total);
     const isSui = coinType === SUI_TYPE_ARG;
     return isSui ? raw / 1_000n : raw;
   } catch {
