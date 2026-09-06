@@ -72,40 +72,7 @@ export function FundClient({ address, shortAddress, qrSvg, balanceText }: FundCl
   return (
     <div className="space-y-6">
       <section className="card p-5">
-        <p className="eyebrow">Settlement account</p>
-        <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
-          <div className="shrink-0">
-            <div
-              className="rounded border border-line [&>svg]:block [&>svg]:h-[180px] [&>svg]:w-[180px]"
-              role="img"
-              aria-label="QR code for the settlement address"
-              dangerouslySetInnerHTML={{ __html: qrSvg }}
-            />
-          </div>
-          <div className="flex-1 space-y-2">
-            <p className="text-sm text-muted">Address</p>
-            <p className="num break-all text-sm">{address}</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={copyAddress}
-              >
-                Copy
-              </button>
-              <span className="num text-sm text-muted" aria-label="Short address">
-                {shortAddress}
-              </span>
-            </div>
-            <p className="mt-4 text-sm text-muted">
-              Current balance: <span className="num font-medium text-foreground">{balanceText}</span>
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="card p-5">
-        <p className="eyebrow">Deposit from your wallet</p>
+        <p className="eyebrow">Add funds</p>
         <div className="mt-4 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <ConnectModal
@@ -179,6 +146,41 @@ export function FundClient({ address, shortAddress, qrSvg, balanceText }: FundCl
           Get test SUI →
         </a>
       </section>
+      <details className="card p-5">
+        <summary className="cursor-pointer text-sm text-muted">Or send manually from another wallet</summary>
+        <div className="mt-4">
+          <p className="eyebrow">Settlement account</p>
+          <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
+            <div className="shrink-0">
+              <div
+                className="rounded border border-line [&>svg]:block [&>svg]:h-[180px] [&>svg]:w-[180px]"
+                role="img"
+                aria-label="QR code for the settlement address"
+                dangerouslySetInnerHTML={{ __html: qrSvg }}
+              />
+            </div>
+            <div className="flex-1 space-y-2">
+              <p className="text-sm text-muted">Address</p>
+              <p className="num break-all text-sm">{address}</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={copyAddress}
+                >
+                  Copy
+                </button>
+                <span className="num text-sm text-muted" aria-label="Short address">
+                  {shortAddress}
+                </span>
+              </div>
+              <p className="mt-4 text-sm text-muted">
+                Current balance: <span className="num font-medium text-foreground">{balanceText}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </details>
 
       <Link className="link" href="/">
         ← Back to Home
