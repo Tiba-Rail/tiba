@@ -102,9 +102,9 @@ async function requestOnce(
   const attempt = async (): Promise<Response> => await fetcher(API_URL, {
       method: "POST",
       signal: controller.signal,
-      // No substitution: a swapped-in model answered differently and produced a FALSE refusal
-      // on a clean note. A held payment is recoverable; a wrong refusal is not.
-      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}`, "X-Gonka-No-Fallback": "true" },
+      // Substitution is allowed so a saturated model does not kill the call. It is recorded
+      // per adjudication, and the route refuses to blame the payer when models were swapped.
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
         messages: SCHEMA_FREE.has(model)
