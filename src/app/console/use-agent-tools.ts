@@ -33,13 +33,13 @@ export function useAgentTools(deps: {
     // Register tools
     const registerTools = async () => {
       const tools: WebMCPTool[] = [
-        // Deliberately NOT exposed to agents: override a refusal, change a cap, kill switch.
+        // Deliberately NOT exposed to agents: override a refusal, change a cap, freeze.
         // Those are human-only controls. The boundary is the product.
         
         // Tool 1: list_work_orders
         {
           name: "list_work_orders",
-          description: "List the open work orders an agent may pay against. A payment must match exactly one of these by ref and amount.",
+          description: "List the invoices awaiting delivery that your software may pay against. A payment must match exactly one of these by ref and amount.",
           inputSchema: {
             type: "object",
             properties: {},
@@ -59,7 +59,7 @@ export function useAgentTools(deps: {
             setCalls(prev => [{ 
               at: new Date().toISOString(), 
               tool: "list_work_orders", 
-              summary: `Listed ${workOrders.length} work orders` 
+              summary: `Listed ${workOrders.length} invoices` 
             }, ...prev].slice(0, 50));
             
             return JSON.stringify(result);
@@ -69,7 +69,7 @@ export function useAgentTools(deps: {
         // Tool 2: list_recipients
         {
           name: "list_recipients",
-          description: "List recipients on the allowlist. Only these can be paid.",
+          description: "List saved recipients. Only these can be paid.",
           inputSchema: {
             type: "object",
             properties: {},
@@ -96,7 +96,7 @@ export function useAgentTools(deps: {
         // Tool 3: get_budget
         {
           name: "get_budget",
-          description: "Read the agent's spending caps and current usage. The agent cannot change these.",
+          description: "Read the software's spending limits and current usage. Your software cannot change these.",
           inputSchema: {
             type: "object",
             properties: {},
@@ -126,7 +126,7 @@ export function useAgentTools(deps: {
         // Tool 4: submit_payment
         {
           name: "submit_payment",
-          description: "Attempt a payment. Two isolated verification channels must agree on the work order and amount; if they disagree the payment is refused and the agent cannot override that. Takes up to 60 seconds.",
+          description: "Attempt a payment. Two isolated verification channels must agree on the invoice and amount; if they disagree the payment is refused and the software cannot override that. Takes up to 60 seconds.",
           inputSchema: {
             type: "object",
             properties: {
@@ -144,14 +144,14 @@ export function useAgentTools(deps: {
             if (!token) {
               const result = { 
                 error: "OPERATOR_TOKEN_NOT_SET",
-                message: "A human must paste the operator token into the console before any payment can be attempted."
+                message: "Paste the owner key into Send before any payment can be attempted."
               };
               
               // Log the call
               setCalls(prev => [{ 
                 at: new Date().toISOString(), 
                 tool: "submit_payment", 
-                summary: `Failed: Operator token not set` 
+                summary: `Failed: Owner key not set` 
               }, ...prev].slice(0, 50));
               
               return JSON.stringify(result);
@@ -259,7 +259,7 @@ export function useAgentTools(deps: {
         // Tool 6: list_ledger
         {
           name: "list_ledger",
-          description: "Get the payment ledger history.",
+          description: "Get the payment history.",
           inputSchema: {
             type: "object",
             properties: {},
@@ -271,14 +271,14 @@ export function useAgentTools(deps: {
             if (!token) {
               const result = { 
                 error: "OPERATOR_TOKEN_NOT_SET",
-                message: "A human must paste the operator token into the console before any payment can be attempted."
+                message: "Paste the owner key into Send before any payment can be attempted."
               };
               
               // Log the call
               setCalls(prev => [{ 
                 at: new Date().toISOString(), 
                 tool: "list_ledger", 
-                summary: `Failed: Operator token not set` 
+                summary: `Failed: Owner key not set` 
               }, ...prev].slice(0, 50));
               
               return JSON.stringify(result);
@@ -301,7 +301,7 @@ export function useAgentTools(deps: {
               setCalls(prev => [{ 
                 at: new Date().toISOString(), 
                 tool: "list_ledger", 
-                summary: "Retrieved ledger" 
+                summary: "Retrieved activity" 
               }, ...prev].slice(0, 50));
               
               return result;
