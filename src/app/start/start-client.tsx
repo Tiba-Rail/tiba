@@ -92,7 +92,7 @@ export function StartClient() {
     : "";
 
   const telegramSnippet = result
-    ? `Set these environment variables in your Telegram bot host:\n\nTIBA_AGENT_KEY=${result.agent_key}\nTIBA_BASE=${base}`
+    ? `Open @tibapay_bot in Telegram and send this one message:\n\n/connect ${result.agent_key} ${result.owner_key}\n\nThen try: pay 0x<sui address> 1 USDC`
     : "";
 
   return (

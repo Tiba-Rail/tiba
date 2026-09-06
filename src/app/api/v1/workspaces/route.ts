@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-  const [agent, recipient] = await prisma.$transaction(async (tx) => {
+  // Neon cold starts make Prisma miss its transaction-open deadline (P2028); one retry clears it.
+  const createWorkspace = () => prisma.$transaction(async (tx) => {
     const agent = await tx.agent.create({
       data: {
         name,
@@ -127,8 +128,17 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return [agent, recipient];
+    return [agent, recipient] as const;
   });
+  let created: Awaited<ReturnType<typeof createWorkspace>>;
+  try {
+    created = await createWorkspace();
+  } catch (error) {
+    if ((error as { code?: string })?.code !== "P2028") throw error;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    created = await createWorkspace();
+  }
+  const [agent, recipient] = created;
 
   return NextResponse.json({
     workspace_id: agent.id,

@@ -40,13 +40,16 @@ export async function POST(request: NextRequest) {
   ) {
     return NextResponse.json({ error: "INVALID_REQUEST" }, { status: 400 });
   }
-  const recipient = await prisma.recipient.create({
-    data: {
+  // Same ref twice (an agent re-adding a wallet it already knows) returns the existing record.
+  const recipient = await prisma.recipient.upsert({
+    where: { ref: body.ref.trim() },
+    create: {
       ref: body.ref.trim(),
       displayName: body.display_name.trim(),
       suiAddress: body.sui_address.trim(),
       active: body.active !== false
-    }
+    },
+    update: {}
   });
   return NextResponse.json({
     id: recipient.id,
