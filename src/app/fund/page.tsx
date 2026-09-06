@@ -1,4 +1,5 @@
 import Link from "next/link";
+import QRCode from "qrcode";
 import { SiteNav } from "@/components/site-nav";
 import { FundClient } from "./fund-client";
 import { formatDollars } from "@/app/format";
@@ -10,6 +11,10 @@ export const metadata = { title: "Add funds - Tiba" };
 export default async function FundPage() {
   const address = getSettlementAddress();
   const balanceMicros = address ? await getSettlementBalance(address) : 0n;
+  // Rendered on the server so the settlement address never leaves this deployment.
+  const qrSvg = address
+    ? await QRCode.toString(address, { type: "svg", margin: 0, errorCorrectionLevel: "M" })
+    : "";
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -27,6 +32,7 @@ export default async function FundPage() {
           <FundClient
             address={address}
             shortAddress={`${address.slice(0, 6)}…${address.slice(-4)}`}
+            qrSvg={qrSvg}
             balanceText={formatDollars(balanceMicros)}
           />
         ) : (

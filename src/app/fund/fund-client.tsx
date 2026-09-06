@@ -9,6 +9,7 @@ import { shortSuiAddress, suiToMist } from "@/app/format";
 interface FundClientProps {
   address: string;
   shortAddress: string;
+  qrSvg: string;
   balanceText: string;
 }
 
@@ -17,7 +18,7 @@ function isUserRejection(error: unknown): boolean {
   return /rejected|cancelled|declined|user denied/i.test(message);
 }
 
-export function FundClient({ address, shortAddress, balanceText }: FundClientProps) {
+export function FundClient({ address, shortAddress, qrSvg, balanceText }: FundClientProps) {
   const account = useCurrentAccount();
   const [amount, setAmount] = useState("");
   const [digest, setDigest] = useState<string | null>(null);
@@ -68,20 +69,17 @@ export function FundClient({ address, shortAddress, balanceText }: FundClientPro
     void navigator.clipboard.writeText(address);
   }
 
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(address)}`;
-
   return (
     <div className="space-y-6">
       <section className="card p-5">
         <p className="eyebrow">Settlement account</p>
         <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
           <div className="shrink-0">
-            <img
-              src={qrUrl}
-              alt="QR code for the settlement address"
-              width={180}
-              height={180}
-              className="rounded border border-line"
+            <div
+              className="rounded border border-line [&>svg]:block [&>svg]:h-[180px] [&>svg]:w-[180px]"
+              role="img"
+              aria-label="QR code for the settlement address"
+              dangerouslySetInnerHTML={{ __html: qrSvg }}
             />
           </div>
           <div className="flex-1 space-y-2">
