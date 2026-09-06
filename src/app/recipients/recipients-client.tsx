@@ -154,7 +154,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
           <ConnectModal
             trigger={
               <button className="btn btn-secondary" type="button">
-                Connect wallet
+                Use my wallet address
               </button>
             }
           />

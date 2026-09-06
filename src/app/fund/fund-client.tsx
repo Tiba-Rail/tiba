@@ -79,7 +79,7 @@ export function FundClient({ address, shortAddress, qrSvg, balanceText }: FundCl
             <ConnectModal
               trigger={
                 <button type="button" className="btn btn-secondary">
-                  {account ? "Wallet connected" : "Connect wallet"}
+                  {account ? "Wallet connected" : "Connect to deposit"}
                 </button>
               }
             />
