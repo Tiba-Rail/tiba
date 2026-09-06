@@ -28,11 +28,35 @@ interface WorkOrdersClientProps {
   recipients: Recipient[];
 }
 
+const defaultPayerRecord = '{"approved_amount_micros":"180000000","delivery_status":"verified_complete"}';
+
+function payerRecordSummary(value: string): string | null {
+  try {
+    const record = JSON.parse(value) as {
+      approved_amount_micros?: unknown;
+      delivery_status?: unknown;
+    };
+    const rawAmount = record.approved_amount_micros;
+    const amountMicros = typeof rawAmount === "number"
+      ? rawAmount
+      : typeof rawAmount === "string" && rawAmount.trim()
+        ? Number(rawAmount)
+        : Number.NaN;
+
+    if (!Number.isFinite(amountMicros) || typeof record.delivery_status !== "string") return null;
+
+    return `Approved amount: ${(amountMicros / 1_000_000).toFixed(2)} USDC \u00b7 Status: ${record.delivery_status.replace(/_/g, " ")}`;
+  } catch {
+    return null;
+  }
+}
+
 export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientProps) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [payerRecord, setPayerRecord] = useState(defaultPayerRecord);
 
   async function post(path: string, body: Record<string, unknown>, busyLabel: string) {
     setBusy(busyLabel);
@@ -79,6 +103,7 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
   }
 
   const inputClass = "field mt-1";
+  const payerRecordSummaryText = payerRecordSummary(payerRecord);
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 lg:px-8">
@@ -108,7 +133,7 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
 
       <section className="card p-5">
         <h2 className="title mb-4">Awaiting delivery</h2>
-        <div className="overflow-x-auto">
+        <div className="max-w-full overflow-x-auto">
           <table className="w-full min-w-[680px] text-left text-sm">
             <thead className="eyebrow">
               <tr>
@@ -203,12 +228,18 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
           </label>
 
           <label className="block text-sm font-medium">
-            Your own record of this invoice (JSON)
+            Your record for this invoice
+            {payerRecordSummaryText ? (
+              <span className="mt-1 block text-sm font-normal">
+                {payerRecordSummaryText}
+              </span>
+            ) : null}
             <textarea
               className={inputClass}
               name="payer_record"
               rows={4}
-              defaultValue={'{"approved_amount_micros":"180000000","delivery_status":"verified_complete"}'}
+              value={payerRecord}
+              onChange={(event) => setPayerRecord(event.target.value)}
               required
             />
             <span className="mt-1 block text-xs font-normal text-muted">
@@ -216,7 +247,7 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
             </span>
           </label>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-start gap-4">
             <button
               className="btn btn-primary"
               type="submit"
@@ -226,7 +257,7 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
               {busy === "work-order" ? "Adding…" : "Add invoice"}
             </button>
 
-            <OperatorTokenField />
+            <OperatorTokenField className="basis-full md:basis-auto" />
           </div>
         </form>
       </section>

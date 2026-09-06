@@ -224,12 +224,12 @@ export function ConsoleClient({
             </select>
           </label>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
             {presetArtifacts.map((preset) => (
               <button
                 key={preset.label}
                 type="button"
-                className="btn btn-secondary aria-pressed:border-foreground aria-pressed:bg-foreground/5 aria-pressed:text-foreground"
+                className="btn btn-secondary w-full min-w-0 aria-pressed:border-foreground aria-pressed:bg-foreground/5 aria-pressed:text-foreground md:w-auto"
                 aria-pressed={artifact === preset.body}
                 onClick={() => setArtifact(preset.body)}
               >
@@ -239,7 +239,7 @@ export function ConsoleClient({
           </div>
 
           <p className="text-sm text-muted">
-            The first should be paid. The other three should be refused.
+            Tiba will pay the genuine note and refuse the other three.
           </p>
 
           <label className="block text-sm font-medium">
@@ -277,10 +277,6 @@ export function ConsoleClient({
               </div>
 
               <p className="text-sm">{explainDecision(testResponse.decision, testResponse.reasonCode ?? null)}</p>
-              {testResponse.reasonCode && (
-                <p className="num text-xs text-muted">Reason code {testResponse.reasonCode}</p>
-              )}
-
               <div className="flex flex-wrap gap-2">
                 {testResponse.explorerUrl && (
                   <a
@@ -324,7 +320,7 @@ export function ConsoleClient({
           </p>
 
           {supported && registered.length > 0 && (
-            <div className="overflow-x-auto">
+            <div className="max-w-full overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-line eyebrow">
                   <tr>
@@ -432,16 +428,13 @@ export function ConsoleClient({
           <div className="divide-y divide-line">
             {heldIntents.map((intent) => (
               <div key={intent.id} className="grid gap-3 py-4 hover:bg-[rgba(20,22,26,.03)] md:grid-cols-[1fr_auto] md:items-center">
-                <div>
-                  <p className="num text-xs text-muted">{intent.id}</p>
+                <div className="min-w-0">
+                  <p className="num break-all text-xs text-muted">{intent.id}</p>
                   <p className="mt-1 text-lg font-bold">
                     {intent.recipientName} · <span className="num">{intent.amount}</span>
                   </p>
                   <p className="mt-1 text-sm text-muted">
                     {decisionWord(intent.decisionClass)} · {explainDecision(intent.decisionClass, intent.reasonCode)} · {intent.createdAt}
-                  </p>
-                  <p className="num mt-1 text-xs text-muted">
-                    Reason code {intent.reasonCode ?? "none recorded"}
                   </p>
                 </div>
                 <button
