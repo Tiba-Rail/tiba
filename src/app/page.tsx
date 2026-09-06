@@ -44,9 +44,9 @@ export default async function Home() {
       <RouterHealthStrip />
       <div className="mx-auto flex max-w-5xl flex-col gap-12 px-4 pb-16 pt-16 md:gap-16 md:px-6 md:pt-24 lg:px-8">
         <header>
-          <p className="eyebrow">A wallet for software · test network</p>
+          <p className="eyebrow">A wallet for AI agents · test network</p>
           <h1 className="display-xl mt-4 max-w-[20ch]">
-            A wallet your <RotatingWord words={["software", "AI agents", "apps", "workflows"]} intervalMs={2500} /> can <em>pay people</em> from.
+            A wallet your <RotatingWord words={["AI agents", "software", "apps", "workflows"]} intervalMs={2500} /> can <em>pay people</em> from.
           </h1>
           <p className="lede mt-6">
             Tiba pays on your behalf, within the limits you set, and only after two separate checks agree
