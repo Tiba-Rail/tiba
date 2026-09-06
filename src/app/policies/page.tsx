@@ -6,6 +6,7 @@ import { KillSwitchButton } from "./kill-switch-button";
 import { IdentityGateButton } from "./identity-gate-button";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Limits - Tiba" };
 
 function percent(spent: bigint, cap: bigint): number {
   if (cap <= 0n) return 0;
@@ -26,7 +27,7 @@ export default async function PoliciesPage() {
         <RouterHealthStrip />
         <div className="mx-auto max-w-7xl px-4 py-8">
           <h1 className="display-l">Nothing is set up yet</h1>
-          <p className="lede mt-2">This workspace has no paying program yet.</p>
+          <p className="lede mt-2">This wallet has no software attached yet.</p>
         </div>
       </main>
     );
@@ -38,11 +39,10 @@ export default async function PoliciesPage() {
       <RouterHealthStrip />
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 lg:px-8">
         <header className="flex flex-col gap-4">
-          <p className="eyebrow">Rules &amp; limits</p>
-          <h1 className="display-l mt-2">Limits the program cannot get past</h1>
+          <p className="eyebrow">Limits</p>
+          <h1 className="display-l mt-2">Spending limits</h1>
           <p className="lede">
-            Spending limits, the approved list, the emergency stop and the identity check. The
-            program can read them. Only a human can change them.
+            Set once by you. Your software can read these and never change them.
           </p>
         </header>
 
@@ -74,18 +74,18 @@ export default async function PoliciesPage() {
 
           {/* Approved people card */}
           <div className="card p-5">
-            <h2 className="title">Approved people</h2>
+            <h2 className="title">Saved recipients</h2>
             <div className="mt-5">
-              <p className="num display-l">{activeRecipientsCount} of {totalRecipientsCount} may be paid</p>
+              <p className="num display-l">{activeRecipientsCount} of {totalRecipientsCount} ready</p>
               <div className="mt-4">
-                <a href="/recipients" className="btn btn-ghost">Manage people →</a>
+                <a href="/recipients" className="btn btn-ghost">See recipients →</a>
               </div>
             </div>
           </div>
 
-          {/* Kill switch card */}
+          {/* Freeze card */}
           <div className="card p-5">
-            <h2 className="title">Kill switch</h2>
+            <h2 className="title">Freeze</h2>
             <div className="mt-5">
               <p className={agent.killSwitch ? "num display-l text-red-ink" : "num display-l"}>
                 {agent.killSwitch ? "ON — all payments refused" : "OFF"}
@@ -94,10 +94,10 @@ export default async function PoliciesPage() {
                 <KillSwitchButton current={agent.killSwitch} />
               </div>
               <p className="mt-4 text-sm text-muted">
-                While on, every payment is refused before any check runs.
+                While frozen, every payment is refused before any check runs.
               </p>
               <p className="mt-2 text-sm text-muted">
-                You can also do this from the <a href="/console" className="link">console</a>.
+                You can also do this from <a href="/console" className="link">Send</a>.
               </p>
             </div>
           </div>
@@ -115,8 +115,8 @@ export default async function PoliciesPage() {
                 <IdentityGateButton current={agent.requireRecipientKyc} />
               </div>
               <p className="mt-4 text-sm text-muted">
-                Uses the operator key typed in the Kill switch box. See who is checked under{" "}
-                <a href="/recipients" className="link">People</a>.
+                Uses the owner key typed in the Freeze box. See who is verified under{" "}
+                <a href="/recipients" className="link">Recipients</a>.
               </p>
             </div>
           </div>
