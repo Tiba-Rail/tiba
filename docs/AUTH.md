@@ -9,6 +9,7 @@ Set these in the Tiba Vercel project under **Settings → Environment Variables*
 ```text
 DATABASE_URL=<the existing Neon pooled connection string>
 AUTH_SECRET=<a long random value; generate with `openssl rand -base64 32`>
+AUTH_TRUST_HOST=true
 ```
 
 To enable Google, also set:
@@ -36,10 +37,10 @@ The remaining existing Tiba variables (`OPERATOR_TOKEN`, `SUI_NETWORK`, `SUI_PRI
 
    ```text
    http://localhost:3000/api/auth/callback/google
-   https://tiba-preview-REPLACE_WITH_VERCEL_DOMAIN.vercel.app/api/auth/callback/google
+   https://tiba-56j9qovlf-kroevasuperadmins-projects.vercel.app/api/auth/callback/google
    ```
 
-   Replace the second host with the deployed Tiba Vercel domain reported with this change. If Tiba has a stable production domain, add that exact callback too:
+   The deployed preview used for this change is `tiba-56j9qovlf-kroevasuperadmins-projects.vercel.app`. If Tiba has a stable production domain, add that exact callback too:
 
    ```text
    https://YOUR_TIBA_DOMAIN/api/auth/callback/google
@@ -58,10 +59,10 @@ Google redirects back to `/api/auth/callback/google`; do not use `/signin` as th
 
    ```text
    http://localhost:3000/api/auth/callback/github
-   https://tiba-preview-REPLACE_WITH_VERCEL_DOMAIN.vercel.app/api/auth/callback/github
+   https://tiba-56j9qovlf-kroevasuperadmins-projects.vercel.app/api/auth/callback/github
    ```
 
-   Replace the second host with the deployed Tiba Vercel domain reported with this change. A GitHub OAuth app accepts one callback URL, so use separate local and deployed apps when both environments need to work at the same time.
+   The deployed preview used for this change is `tiba-56j9qovlf-kroevasuperadmins-projects.vercel.app`. A GitHub OAuth app accepts one callback URL, so use separate local and deployed apps when both environments need to work at the same time.
 
 5. Create a client secret, then copy the app's **Client ID** into `AUTH_GITHUB_ID` and the secret into `AUTH_GITHUB_SECRET` in Vercel.
 
