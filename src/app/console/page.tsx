@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 import { ConsoleClient } from "./console-client";
 import { SiteNav } from "@/components/site-nav";
+import { LiveRefresh } from "@/components/live-refresh";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Send - Tiba" };
@@ -54,6 +55,7 @@ export default async function ConsolePage({
     return (
       <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="console" />
+      <LiveRefresh />
         <RouterHealthStrip />
         <div className="mx-auto max-w-7xl px-4 py-8">
           <h1 className="display-l">Nothing is set up yet</h1>

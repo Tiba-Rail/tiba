@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { decisionSentence } from "@/app/console/types";
 import { formatDollars } from "@/app/format";
 import { getSettlementAddress, getSettlementBalance } from "@/app/settlement";
+import { LiveRefresh } from "@/components/live-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,7 @@ export default async function AppHome({
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="app" />
+      <LiveRefresh />
       <div className="mx-auto flex max-w-3xl flex-col px-4 pb-16 pt-10 md:px-6 md:pt-14 lg:px-8">
 
         {/* Spendable today — the number */}

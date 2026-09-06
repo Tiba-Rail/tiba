@@ -7,6 +7,7 @@ import { channelTuple, type ChannelTuple } from "@/lib/adjudication-display";
 import { SiteNav } from "@/components/site-nav";
 import { decisionSentence, disagreementLine, explainDecision } from "@/app/console/types";
 import { recipientIdentityOk } from "@/lib/identity";
+import { LiveRefresh } from "@/components/live-refresh";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Receipt - Tiba" };
@@ -109,6 +110,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <LiveRefresh ms={4000} />
       <SiteNav current="" />
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 md:px-6 lg:px-8">
         <header className="flex flex-col gap-4 border-b border-line pb-6 md:flex-row md:items-end md:justify-between">
