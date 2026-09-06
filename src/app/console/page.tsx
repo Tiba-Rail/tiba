@@ -31,7 +31,9 @@ export default async function ConsolePage({
 
   const agent = agentId
     ? await prisma.agent.findUnique({ where: { id: agentId } })
-    : await prisma.agent.findFirst({ orderBy: { createdAt: "desc" } });
+    // Default to the original workspace so the demo is stable no matter how many
+    // workspaces sign up. Onboarding links carry ?agent=<id> to reach a new one.
+    : await prisma.agent.findFirst({ orderBy: { createdAt: "asc" } });
 
   const [recipients, workOrders, heldIntents] = await Promise.all([
     prisma.recipient.findMany({ orderBy: { createdAt: "asc" } }),
