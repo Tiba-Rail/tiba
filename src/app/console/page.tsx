@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { RouterHealthStrip } from "@/components/router-health-strip";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
@@ -21,9 +22,18 @@ function shortDate(date: Date): string {
   }).format(date);
 }
 
-export default async function ConsolePage() {
-  const [agent, recipients, workOrders, heldIntents] = await Promise.all([
-    prisma.agent.findFirst({ orderBy: { createdAt: "asc" } }),
+export default async function ConsolePage({
+  searchParams
+}: {
+  searchParams: Promise<{ agent?: string }>;
+}) {
+  const { agent: agentId } = await searchParams;
+
+  const agent = agentId
+    ? await prisma.agent.findUnique({ where: { id: agentId } })
+    : await prisma.agent.findFirst({ orderBy: { createdAt: "desc" } });
+
+  const [recipients, workOrders, heldIntents] = await Promise.all([
     prisma.recipient.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.workOrder.findMany({ include: { recipient: true }, orderBy: { createdAt: "desc" } }),
     prisma.payoutIntent.findMany({
@@ -46,6 +56,7 @@ export default async function ConsolePage() {
         <div className="mx-auto max-w-7xl px-4 py-8">
           <h1 className="display-l">Nothing is set up yet</h1>
           <p className="lede mt-2">This wallet has no software attached yet.</p>
+          <Link href="/start" className="btn btn-primary mt-6 inline-flex">Create a wallet</Link>
         </div>
       </main>
     );

@@ -241,7 +241,7 @@ export function StartClient() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Link href="/console" className="btn btn-primary">
+            <Link href={`/console?agent=${result.workspace_id}`} className="btn btn-primary">
               Send a payment →
             </Link>
             <Link href="/" className="btn btn-secondary">
