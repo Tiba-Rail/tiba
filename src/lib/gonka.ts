@@ -97,11 +97,14 @@ async function requestOnce(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const started = Date.now();
-  try {
-    const response = await fetcher(API_URL, {
+  // The router intermittently drops a connection or answers 5xx from some egress paths.
+  // One shot per model turned that into a held payment, so each call gets a short retry.
+  const attempt = async (): Promise<Response> => await fetcher(API_URL, {
       method: "POST",
       signal: controller.signal,
-      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}`, "X-Gonka-No-Fallback": "true" },
+      // Substitution is allowed: it is recorded per call and printed on the public receipt,
+      // so a saturated model degrades into a disclosure instead of an outage.
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
         messages: SCHEMA_FREE.has(model)
@@ -121,6 +124,21 @@ async function requestOnce(
         ...(SCHEMA_FREE.has(model) ? {} : { response_format: { type: "json_schema", json_schema: schema } })
       })
     });
+  try {
+    let response: Response | null = null;
+    let lastError: unknown = null;
+    for (let tries = 0; tries < 3; tries += 1) {
+      try {
+        response = await attempt();
+        if (response.status < 500) break;
+        lastError = new Error(`HTTP ${response.status}`);
+      } catch (error) {
+        lastError = error;
+        response = null;
+      }
+      if (tries < 2) await new Promise((r) => setTimeout(r, 350 * (tries + 1)));
+    }
+    if (!response) throw lastError ?? new Error('router unreachable');
     const latencyMs = Date.now() - started;
     const requestId = response.headers.get("x-request-id") ?? undefined;
     // Gonka substitutes a saturated model rather than failing the request, and says so
