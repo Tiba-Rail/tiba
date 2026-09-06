@@ -62,6 +62,14 @@ body {
   letter-spacing: -0.011em;
 }
 
+.site-nav-links {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.site-nav-links::-webkit-scrollbar {
+  display: none;
+}
+
 /* Editorial display — Instrument Serif, weight 400 only */
 .display-xl,
 .display-l,
@@ -142,6 +150,7 @@ pre {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  max-width: 100%;
   min-height: 2.75rem;
   padding: 0 1.25rem;
   border: 1px solid transparent;
@@ -151,6 +160,8 @@ pre {
   font-weight: 500;
   letter-spacing: -0.005em;
   line-height: 1;
+  overflow-wrap: anywhere;
+  text-align: center;
   transition:
     background-color 180ms cubic-bezier(0.215, 0.61, 0.355, 1),
     border-color 180ms cubic-bezier(0.215, 0.61, 0.355, 1),

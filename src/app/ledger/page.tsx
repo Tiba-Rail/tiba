@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { RouterHealthStrip } from "@/components/router-health-strip";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 import { channelTuple } from "@/lib/adjudication-display";
@@ -63,7 +62,6 @@ export default async function LedgerPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="ledger" />
-      <RouterHealthStrip />
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:px-8">
         <header className="mb-8">
           <p className="eyebrow">Activity</p>
@@ -76,7 +74,7 @@ export default async function LedgerPage() {
         </header>
 
         <section className="card">
-          <div className="overflow-x-auto">
+          <div className="max-w-full overflow-x-auto">
             <table className="w-full min-w-[980px] text-left text-sm">
               <thead className="border-b border-line eyebrow">
                 <tr>
@@ -111,14 +109,11 @@ export default async function LedgerPage() {
                     <td className="px-4 py-5 num text-right font-semibold">{microsToUsdc(intent.amountMicros)}</td>
                     <td className="px-4 py-5 text-sm">
                       <p>{explainDecision(intent.decisionClass, intent.reasonCode)}</p>
-                      <p className="num mt-1 text-xs text-muted">
-                        {intent.decisionClass === "PAID" ? "PAID" : intent.reasonCode ? `Reason code ${intent.reasonCode}` : "no reason recorded"}
-                      </p>
                       {intent.decisionClass !== "PAID" && renderAdjudicationDetails(intent.adjudications, intent.reasonCode)}
                     </td>
                     <td className="px-4 py-5 num text-xs text-muted">
-                      <p>A {requestIdFor(intent.adjudications, "artifact")}</p>
-                      <p>B {requestIdFor(intent.adjudications, "payer_record")}</p>
+                      <p className="break-all">A {requestIdFor(intent.adjudications, "artifact")}</p>
+                      <p className="break-all">B {requestIdFor(intent.adjudications, "payer_record")}</p>
                     </td>
                     <td className="px-4 py-5">
                       {intent.explorerUrl ? (

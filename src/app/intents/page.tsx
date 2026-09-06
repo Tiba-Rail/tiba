@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { RouterHealthStrip } from "@/components/router-health-strip";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 import { explainDecision } from "@/app/console/types";
@@ -40,10 +39,10 @@ function IntentGroup({ title, intents }: { title: string; intents: IntentRow[] }
             <Link
               key={intent.id}
               href={`/r/${intent.publicToken}`}
-              className="block px-5 py-4 hover:bg-[rgba(20,22,26,.03)]"
+              className="block min-w-0 px-5 py-4 hover:bg-[rgba(20,22,26,.03)]"
             >
               <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div>
+                <div className="min-w-0 break-words">
                   <p className="font-semibold">{intent.recipient.displayName}</p>
                   <p className="num text-xs text-muted">ID {intent.recipient.ref}</p>
                 </div>
@@ -86,7 +85,6 @@ export default async function IntentsPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="intents" />
-      <RouterHealthStrip />
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:px-8">
         <header className="mb-8">
           <p className="eyebrow">Payments</p>
