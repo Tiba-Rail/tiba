@@ -29,6 +29,7 @@ export type Budget = {
   capDay: string;
   spentHour: string;
   capHour: string;
+  capInvoice: string;
   dayPercent: number;
   hourPercent: number;
   killSwitch: boolean;
@@ -74,34 +75,171 @@ export function explainDecision(decisionClass: string, reasonCode: string | null
   }
 
   if (reasonCode?.startsWith("QUORUM_SPLIT")) {
-    if (reasonCode === "QUORUM_SPLIT:work_order_id") return "The two checks named different invoices, so Tiba refused.";
-    if (reasonCode === "QUORUM_SPLIT:amount_micros") return "The two checks named different amounts, so Tiba refused.";
-    if (reasonCode === "QUORUM_SPLIT:delivery_timestamp") return "The two checks gave different delivery dates, so Tiba refused.";
-    return "The two checks disagreed, so Tiba refused.";
+    if (reasonCode === "QUORUM_SPLIT:work_order_id") return "The two checks named different invoices.";
+    if (reasonCode === "QUORUM_SPLIT:amount_micros") return "The two checks named different amounts.";
+    if (reasonCode === "QUORUM_SPLIT:delivery_timestamp") return "The two checks gave different delivery dates.";
+    return "The two checks disagreed.";
   }
 
   switch (reasonCode) {
-    case "DAY_AMOUNT_CAP": return "This would take your software past its daily spending limit, so Tiba refused.";
-    case "HOUR_AMOUNT_CAP": return "This would take your software past its hourly spending limit, so Tiba refused.";
-    case "DAY_COUNT_CAP": return "Your software has already made its maximum number of payments today, so Tiba refused.";
-    case "HOUR_COUNT_CAP": return "Your software has already made its maximum number of payments this hour, so Tiba refused.";
-    case "TRANSACTION_CEILING": return "The amount is more than any single payment may be, so Tiba refused.";
-    case "WORK_ORDER_CEILING": return "The amount is more than this invoice allows, so Tiba refused.";
-    case "WORK_ORDER_EXPIRED": return "The invoice named has passed its deadline, so Tiba refused.";
-    case "WORK_ORDER_NOT_OPEN": return "The invoice named is closed, so Tiba refused.";
-    case "NO_OPEN_OBLIGATION": return "There is no invoice awaiting delivery matching this delivery note, so there was nothing to pay.";
-    case "RECIPIENT_NOT_FOUND": return "This recipient is not saved, so Tiba refused.";
-    case "RECIPIENT_INACTIVE": return "This recipient is saved but blocked, so Tiba refused.";
-    case "RECIPIENT_UNVERIFIED": return "This recipient's identity is not verified, and your limits require it, so Tiba refused.";
-    case "KILL_SWITCH": return "The wallet is frozen, so every payment is refused before any check runs.";
-    case "INVALID_AMOUNT": return "The amount in this request was not valid, so Tiba refused.";
-    case "INVALID_TIMESTAMP": return "A date in this request was not valid, so Tiba refused.";
+    case "DAY_AMOUNT_CAP": return "This would take your software past its daily spending limit.";
+    case "HOUR_AMOUNT_CAP": return "This would take your software past its hourly spending limit.";
+    case "DAY_COUNT_CAP": return "Your software has already made its maximum number of payments today.";
+    case "HOUR_COUNT_CAP": return "Your software has already made its maximum number of payments this hour.";
+    case "TRANSACTION_CEILING": return "The amount is more than any single payment may be.";
+    case "WORK_ORDER_CEILING": return "The amount is more than this invoice allows.";
+    case "WORK_ORDER_EXPIRED": return "The invoice named has passed its deadline.";
+    case "WORK_ORDER_NOT_OPEN": return "The invoice named is closed.";
+    case "NO_OPEN_OBLIGATION": return "No invoice awaiting delivery matches this delivery note.";
+    case "RECIPIENT_NOT_FOUND": return "This recipient is not saved.";
+    case "RECIPIENT_INACTIVE": return "This recipient is saved but blocked.";
+    case "RECIPIENT_UNVERIFIED": return "This recipient's identity is not verified, and your limits require it.";
+    case "KILL_SWITCH": return "The wallet is frozen.";
+    case "INVALID_AMOUNT": return "The amount in this request was not valid.";
+    case "INVALID_TIMESTAMP": return "A date in this request was not valid.";
     case "SETTLEMENT_FAILED":
     case "SUI_EXECUTION_FAILED":
       return "Both checks agreed and the limits passed, but the transfer itself failed. No money moved.";
     default:
       return "Refused before any money moved.";
   }
+}
+
+// Send result (YC_STUDY.md §4 step 5). The send response carries no per-check
+// detail, so the two check rows are derived from decisionClass + reasonCode.
+export type CheckRow = {
+  name: string;
+  mark: "pass" | "fail" | "pending" | "skip";
+  text: string;
+};
+
+const CHECK_1 = "Check 1 — the delivery note";
+const CHECK_2 = "Check 2 — your records";
+
+// Reason codes refused before either check runs.
+const PRE_CHECK_REFUSALS = new Set([
+  "KILL_SWITCH",
+  "RECIPIENT_NOT_FOUND",
+  "RECIPIENT_INACTIVE",
+  "RECIPIENT_UNVERIFIED",
+  "INVALID_AMOUNT",
+  "INVALID_TIMESTAMP"
+]);
+
+export function sendResultChecks(decisionClass: string, reasonCode: string | null): CheckRow[] {
+  if (decisionClass === "PAID") {
+    return [
+      { name: CHECK_1, mark: "pass", text: "Read the delivery note." },
+      { name: CHECK_2, mark: "pass", text: "Same invoice, same amount — agreed." }
+    ];
+  }
+
+  if (decisionClass === "AMBER") {
+    return [
+      { name: CHECK_1, mark: "pass", text: "Done." },
+      { name: CHECK_2, mark: "pending", text: explainDecision(decisionClass, reasonCode) }
+    ];
+  }
+
+  if (reasonCode?.startsWith("QUORUM_SPLIT")) {
+    const what =
+      reasonCode === "QUORUM_SPLIT:work_order_id" ? "a different invoice" :
+      reasonCode === "QUORUM_SPLIT:amount_micros" ? "a different amount" :
+      reasonCode === "QUORUM_SPLIT:delivery_timestamp" ? "a different delivery date" :
+      "a different answer";
+    return [
+      { name: CHECK_1, mark: "pass", text: "Read the delivery note." },
+      { name: CHECK_2, mark: "fail", text: `Named ${what} — the checks disagreed.` }
+    ];
+  }
+
+  if (reasonCode && PRE_CHECK_REFUSALS.has(reasonCode)) {
+    return [
+      { name: CHECK_1, mark: "skip", text: "Not run — refused first." },
+      { name: CHECK_2, mark: "skip", text: "Not run — refused first." }
+    ];
+  }
+
+  if (reasonCode === "SETTLEMENT_FAILED" || reasonCode === "SUI_EXECUTION_FAILED") {
+    return [
+      { name: CHECK_1, mark: "pass", text: "Agreed." },
+      { name: CHECK_2, mark: "pass", text: "Agreed — the transfer itself failed." }
+    ];
+  }
+
+  // Limit and invoice refusals: the checks ran, your limits refused.
+  return [
+    { name: CHECK_1, mark: "pass", text: "Read the delivery note." },
+    { name: CHECK_2, mark: "fail", text: explainDecision(decisionClass, reasonCode) }
+  ];
+}
+
+// Where a refusal can be fixed, as a quiet link — label + route, no narration.
+export function refusalNextStepLink(reasonCode: string | null): { label: string; href: string } | null {
+  switch (reasonCode) {
+    case "DAY_AMOUNT_CAP":
+    case "DAY_COUNT_CAP":
+    case "HOUR_AMOUNT_CAP":
+    case "HOUR_COUNT_CAP":
+    case "TRANSACTION_CEILING":
+      return { label: "Raise the limit", href: "/policies" };
+    case "WORK_ORDER_CEILING":
+      return { label: "Raise this invoice's maximum", href: "/work-orders" };
+    case "WORK_ORDER_EXPIRED":
+    case "WORK_ORDER_NOT_OPEN":
+    case "NO_OPEN_OBLIGATION":
+      return { label: "Fix the invoice", href: "/work-orders" };
+    case "RECIPIENT_NOT_FOUND":
+      return { label: "Save this recipient", href: "/recipients" };
+    case "RECIPIENT_INACTIVE":
+    case "RECIPIENT_UNVERIFIED":
+      return { label: "Check the recipient", href: "/recipients" };
+    case "KILL_SWITCH":
+      return { label: "Unfreeze the wallet", href: "/policies" };
+    default:
+      return null;
+  }
+}
+
+// Every refusal ends with what happens next.
+export function refusalNextStep(reasonCode: string | null): string {
+  switch (reasonCode) {
+    case "DAY_AMOUNT_CAP":
+    case "DAY_COUNT_CAP":
+    case "HOUR_AMOUNT_CAP":
+    case "HOUR_COUNT_CAP":
+    case "TRANSACTION_CEILING":
+      return "What next: raise the limit under Limits, or split the invoice.";
+    case "WORK_ORDER_CEILING":
+      return "What next: raise this invoice's maximum under Invoices, or split it.";
+    case "WORK_ORDER_EXPIRED":
+    case "WORK_ORDER_NOT_OPEN":
+    case "NO_OPEN_OBLIGATION":
+      return "What next: add or fix the invoice under Invoices.";
+    case "RECIPIENT_NOT_FOUND":
+      return "What next: save this recipient under Recipients.";
+    case "RECIPIENT_INACTIVE":
+    case "RECIPIENT_UNVERIFIED":
+      return "What next: check the recipient under Recipients.";
+    case "KILL_SWITCH":
+      return "What next: unfreeze the wallet under Limits.";
+    case "SETTLEMENT_FAILED":
+    case "SUI_EXECUTION_FAILED":
+      return "What next: try again — the checks passed, the transfer failed.";
+    default:
+      if (reasonCode?.startsWith("QUORUM_SPLIT")) {
+        return "What next: make sure the delivery note and your records name the same invoice and amount.";
+      }
+      return "What next: check the delivery note and try again.";
+  }
+}
+
+// Human reference printed on every result, e.g. TB-9F3K-04ZQ.
+export function humanReference(intentId: string | undefined): string | null {
+  if (!intentId) return null;
+  const clean = intentId.replace(/[^a-zA-Z0-9]/g, "");
+  if (clean.length < 8) return `TB-${clean.toUpperCase()}`;
+  return `TB-${clean.slice(0, 4).toUpperCase()}-${clean.slice(-4).toUpperCase()}`;
 }
 
 export function humanError(code: string | null | undefined): { text: string; code: string } {

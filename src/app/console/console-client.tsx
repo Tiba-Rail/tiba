@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAgentTools } from "./use-agent-tools";
+import { SendResult } from "./send-result";
+import { microsToUsdc, parseUsdcToMicros } from "@/lib/money";
 import type { Recipient, WorkOrder, HeldIntent, Budget, TestIntentResponse } from "./types";
 import { explainDecision, decisionWord, humanError } from "./types";
 
@@ -25,12 +27,43 @@ export function ConsoleClient({
   const [busy, setBusy] = useState<string | null>(null);
 
   // Payment form state
-  const [selectedRecipient, setSelectedRecipient] = useState(recipients.find((r) => r.ref === "translator-kl")?.ref ?? recipients[0]?.ref ?? "");
-  const [artifact, setArtifact] = useState("DELIVERY NOTE\nWork order: WO-13\nDelivered: 12 units, inspected and accepted.\nAmount due: 5.00 USDC\nCompleted: this afternoon, accepted on site\nSigned: site supervisor");
+  const [step, setStep] = useState(1);
+  const [selectedRecipient, setSelectedRecipient] = useState("");
+  const [selectedInvoice, setSelectedInvoice] = useState("");
+  const [recipientQuery, setRecipientQuery] = useState("");
+  const [artifact, setArtifact] = useState("");
   const [testResponse, setTestResponse] = useState<TestIntentResponse | null>(null);
+
+  const selectedRecipientObj = recipients.find((r) => r.ref === selectedRecipient);
+  const selectedInvoiceObj = workOrders.find((w) => w.ref === selectedInvoice);
+
+  function resetFlow() {
+    setStep(1);
+    setSelectedRecipient("");
+    setSelectedInvoice("");
+    setArtifact("");
+    setTestResponse(null);
+  }
+
+  function amountMicros(value: string): bigint {
+    const clean = value.replace(/\s*USDC\s*$/i, "").trim();
+    return parseUsdcToMicros(clean) ?? 0n;
+  }
 
   useEffect(() => {
     setToken(window.sessionStorage.getItem("tiba_operator_token") ?? "");
+
+    // ?demo=paid|refused|held renders a fabricated result for screenshots and
+    // walkthroughs. Local state only — nothing is sent anywhere.
+    const demo = new URLSearchParams(window.location.search).get("demo");
+    if (demo === "paid" || demo === "refused" || demo === "held") {
+      setTestResponse({
+        id: "demo0000-intent-0000-0000-000000000000",
+        decision: demo === "paid" ? "PAID" : demo === "held" ? "AMBER" : "RED",
+        reasonCode: demo === "paid" ? undefined : demo === "held" ? "HUMAN_REVIEW_REQUIRED" : "WORK_ORDER_CEILING",
+        publicToken: "demo"
+      });
+    }
   }, []);
 
   function saveToken(value: string) {
@@ -93,7 +126,6 @@ export function ConsoleClient({
     if (!response.ok) throw new Error(payload.error ?? "REQUEST_FAILED");
 
     setTestResponse(payload);
-    setMessage("Sent. Result below.");
     router.refresh();
 
     return payload;
@@ -171,9 +203,6 @@ export function ConsoleClient({
         <div>
           <p className="eyebrow">Send</p>
           <h1 className="display-l mt-2">Send a payment</h1>
-          <p className="lede mt-3">
-            Pick a delivery note, send it, and watch Tiba pay or refuse — and say why.
-          </p>
         </div>
         <label className="block w-full max-w-sm text-sm font-medium">
           Owner key
@@ -204,108 +233,215 @@ export function ConsoleClient({
         </div>
       )}
 
-      {/* Payment panel — added as the first card */}
-      <section className="card p-5">
-        <h2 className="title mb-4">New payment</h2>
-
-        <div className="space-y-4">
-          <label className="block text-sm font-medium">
-            Pay
-            <select
-              className={inputClass}
-              value={selectedRecipient}
-              onChange={(e) => setSelectedRecipient(e.target.value)}
-            >
-              {recipients.map((recipient) => (
-                <option key={recipient.ref} value={recipient.ref}>
-                  {recipient.displayName} ({recipient.ref})
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
-            {presetArtifacts.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                className="btn btn-secondary w-full min-w-0 aria-pressed:border-foreground aria-pressed:bg-foreground/5 aria-pressed:text-foreground md:w-auto"
-                aria-pressed={artifact === preset.body}
-                onClick={() => setArtifact(preset.body)}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-sm text-muted">
-            Tiba will pay the genuine note and refuse the other three.
-          </p>
-
-          <label className="block text-sm font-medium">
-            Delivery note
-            <textarea
-              className="field mt-1 font-mono text-xs"
-              rows={10}
-              value={artifact}
-              onChange={(e) => setArtifact(e.target.value)}
-            />
-          </label>
-
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={busy === "test-intent" || !token}
-            onClick={submitTestIntent}
-          >
-            {busy === "test-intent" ? "Checking… usually about 13 seconds, up to a minute" : "Send payment"}
-          </button>
-          {!token && (
-            <p className="text-sm text-muted">Enter the owner key above to send.</p>
-          )}
-
-          {testResponse && (
-            <div className="mt-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className={`pill ${
-                  testResponse.decision === "PAID" ? "pill-paid" :
-                  testResponse.decision === "AMBER" ? "pill-held" :
-                  "pill-refused"
-                }`}>
-                  {decisionWord(testResponse.decision)}
-                </span>
-              </div>
-
-              <p className="text-sm">{explainDecision(testResponse.decision, testResponse.reasonCode ?? null)}</p>
-              <div className="flex flex-wrap gap-2">
-                {testResponse.explorerUrl && (
-                  <a
-                    href={testResponse.explorerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-ghost"
-                  >
-                    View transaction
-                  </a>
-                )}
-                {testResponse.publicToken && (
-                  <a
-                    href={`/r/${testResponse.publicToken}`}
-                    className="btn btn-ghost"
-                  >
-                    Open receipt
-                  </a>
-                )}
-                <a
-                  href="/ledger"
-                  className="btn btn-ghost"
-                >
-                  See in activity
-                </a>
-              </div>
-            </div>
-          )}
+      {/* Send flow */}
+      <section className="py-2">
+        <div className="mb-6 flex items-baseline justify-between">
+          <h2 className="title">New payment</h2>
+          <span className="text-sm text-muted tabular-nums">Step {step} of 4</span>
         </div>
+
+        {testResponse ? (
+          <SendResult
+            result={testResponse}
+            recipientName={selectedRecipientObj?.displayName ?? selectedRecipient}
+            artifact={artifact}
+            onDone={resetFlow}
+          />
+        ) : (
+          <div className="space-y-5">
+            {step === 1 && (
+              <>
+                <label className="block">
+                  <span className="text-sm font-medium">Recipient</span>
+                  <input
+                    type="search"
+                    className="field mt-1"
+                    value={recipientQuery}
+                    onChange={(e) => setRecipientQuery(e.target.value)}
+                    placeholder="Search saved recipients"
+                  />
+                </label>
+
+                <div className="divide-y divide-line">
+                  {recipients
+                    .filter((r) =>
+                      r.displayName.toLowerCase().includes(recipientQuery.toLowerCase()) ||
+                      r.ref.toLowerCase().includes(recipientQuery.toLowerCase())
+                    )
+                    .map((recipient) => (
+                      <button
+                        key={recipient.ref}
+                        type="button"
+                        className="flex w-full items-baseline justify-between py-4 text-left"
+                        aria-pressed={selectedRecipient === recipient.ref}
+                        onClick={() => {
+                          setSelectedRecipient(recipient.ref);
+                          setSelectedInvoice("");
+                          setArtifact("");
+                          setStep(2);
+                        }}
+                      >
+                        <span className="font-medium">
+                          {recipient.displayName} <span className="num text-xs text-muted">{recipient.ref}</span>
+                        </span>
+                        <span className="text-sm text-muted">
+                          {recipient.active ? "Ready" : "Blocked"}
+                        </span>
+                      </button>
+                    ))}
+                </div>
+
+                <Link href="/recipients" className="btn btn-ghost inline-flex">
+                  + Add recipient
+                </Link>
+              </>
+            )}
+
+            {step === 2 && selectedRecipientObj && (
+              <>
+                <div className="mb-2">
+                  <p className="text-sm text-muted">Pay to</p>
+                  <p className="title">
+                    {selectedRecipientObj.displayName}{" "}
+                    <span className="num text-xs text-muted">{selectedRecipientObj.ref}</span>
+                  </p>
+                </div>
+
+                <p className="text-sm font-medium">Invoice</p>
+                <div className="divide-y divide-line">
+                  {workOrders
+                    .filter((w) => w.recipientRef === selectedRecipientObj.ref && w.status === "open")
+                    .map((workOrder) => {
+                      const over = amountMicros(workOrder.ceiling) > amountMicros(budget.capInvoice);
+                      return (
+                        <button
+                          key={workOrder.ref}
+                          type="button"
+                          className="w-full py-4 text-left"
+                          aria-pressed={selectedInvoice === workOrder.ref}
+                          onClick={() => {
+                            setSelectedInvoice(workOrder.ref);
+                            setStep(3);
+                          }}
+                        >
+                          <div className="flex items-baseline justify-between gap-3">
+                            <span className="font-medium tabular-nums">{workOrder.ceiling}</span>
+                            <span className="num text-xs text-muted">{workOrder.ref}</span>
+                          </div>
+                          <div className="mt-1 flex items-baseline justify-between gap-3 text-sm">
+                            <span className="text-muted">Due {workOrder.expiresAt}</span>
+                            {over ? (
+                              <span className="text-held">Over your {budget.capInvoice} per-invoice max</span>
+                            ) : (
+                              <span className="text-muted">Within per-invoice max</span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+
+                {workOrders.filter((w) => w.recipientRef === selectedRecipientObj.ref && w.status === "open").length === 0 && (
+                  <p className="text-sm text-muted">No invoices awaiting delivery for this recipient.</p>
+                )}
+
+                <div className="flex gap-3">
+                  <button type="button" className="btn btn-ghost" onClick={() => setStep(1)}>Back</button>
+                </div>
+              </>
+            )}
+
+            {step === 3 && selectedInvoiceObj && (
+              <>
+                <div className="mb-2">
+                  <p className="text-sm text-muted">Invoice</p>
+                  <p className="title">
+                    <span className="tabular-nums">{selectedInvoiceObj.ceiling}</span>{" "}
+                    <span className="num text-xs text-muted">{selectedInvoiceObj.ref}</span>
+                  </p>
+                </div>
+
+                <label className="block">
+                  <span className="text-sm font-medium">Note (optional)</span>
+                  <textarea
+                    className="field mt-1 min-h-[10rem] font-mono text-xs"
+                    rows={8}
+                    value={artifact}
+                    onChange={(e) => setArtifact(e.target.value)}
+                  />
+                </label>
+
+                <p className="eyebrow">Examples</p>
+                <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
+                  {presetArtifacts.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className="btn btn-secondary w-full min-w-0 md:w-auto"
+                      onClick={() => {
+                        setArtifact(preset.body);
+                        setStep(4);
+                      }}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-3">
+                  <button type="button" className="btn btn-ghost" onClick={() => setStep(2)}>Back</button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => setStep(4)}
+                    disabled={!artifact.trim()}
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            )}
+
+            {step === 4 && selectedRecipientObj && selectedInvoiceObj && (
+              <>
+                <p className="text-lg leading-relaxed">
+                  Pay {selectedRecipientObj.displayName} <span className="tabular-nums">{selectedInvoiceObj.ceiling}</span> against invoice <span className="num">{selectedInvoiceObj.ref}</span>.
+                </p>
+
+                <div className="text-sm text-muted">
+                  {amountMicros(selectedInvoiceObj.ceiling) > amountMicros(budget.capInvoice) ? (
+                    <p className="text-held">
+                      {selectedInvoiceObj.ceiling} is over your {budget.capInvoice} per-invoice max — Tiba will refuse this.
+                    </p>
+                  ) : (
+                    <p>
+                      Within limits: {selectedInvoiceObj.ceiling} ≤ {budget.capInvoice} per invoice · {microsToUsdc(amountMicros(budget.spentDay) + amountMicros(selectedInvoiceObj.ceiling))} of {budget.capDay} today after this.
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-primary w-full"
+                  disabled={busy === "test-intent" || !token}
+                  onClick={submitTestIntent}
+                >
+                  {busy === "test-intent" ? "Checking… usually about 13 seconds, up to a minute" : "Continue and Send"}
+                </button>
+                {!token && (
+                  <p className="text-sm text-muted">Owner key required</p>
+                )}
+                <p className="text-sm text-muted">
+                  Two independent checks must agree before a coin moves.
+                </p>
+
+                <div className="flex gap-3">
+                  <button type="button" className="btn btn-ghost" onClick={() => setStep(3)}>Back</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Agent Tools Card */}
@@ -396,9 +532,9 @@ export function ConsoleClient({
           >
             {budget.killSwitch ? "Unfreeze" : "Freeze wallet"}
           </button>
-          <p className="mt-3 text-sm text-muted">
-            While frozen, every payment is refused before any check runs.
-          </p>
+          {budget.killSwitch ? (
+            <p className="mt-3 text-sm text-muted">Frozen: all payments refused.</p>
+          ) : null}
         </div>
       </section>
 
@@ -421,7 +557,7 @@ export function ConsoleClient({
         </Panel>
       </section>
 
-      <Panel title="Needs your approval">
+      <Panel title="Needs your approval" id="approvals">
         {heldIntents.length === 0 ? (
           <p className="py-6 text-sm text-muted">Nothing waiting.</p>
         ) : (
@@ -469,9 +605,9 @@ function BudgetMeter({ label, spent, cap, percent }: { label: string; spent: str
   );
 }
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+function Panel({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
   return (
-    <section className="card p-5">
+    <section id={id} className="card p-5">
       <h2 className="title mb-4">{title}</h2>
       {children}
     </section>

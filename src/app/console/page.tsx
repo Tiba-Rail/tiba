@@ -62,6 +62,7 @@ export default async function ConsolePage() {
           capDay: microsToUsdc(agent.dayCapMicros),
           spentHour: microsToUsdc(agent.spentMicrosHour),
           capHour: microsToUsdc(agent.hourCapMicros),
+          capInvoice: microsToUsdc(agent.ceilingMicros),
           dayPercent: percent(agent.spentMicrosDay, agent.dayCapMicros),
           hourPercent: percent(agent.spentMicrosHour, agent.hourCapMicros),
           killSwitch: agent.killSwitch
