@@ -40,7 +40,7 @@ export default async function FundPage() {
             <p className="text-sm text-muted">
               Settlement address is not configured in this environment.
             </p>
-            <Link className="btn btn-secondary mt-4" href="/">
+            <Link className="btn btn-secondary mt-4" href="/app">
               Back to Home
             </Link>
           </div>
