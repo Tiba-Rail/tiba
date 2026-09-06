@@ -8,6 +8,7 @@ import {
   explainDecision,
   humanReference,
   refusalNextStep,
+  refusalNextStepLink,
   sendResultChecks
 } from "./types";
 
@@ -44,14 +45,15 @@ export function SendResult({
   const refused = !paid && !held;
 
   const headline = paid
-    ? "Both checks agreed — sent."
+    ? "Sent"
     : held
       ? "Needs your approval."
-      : "Checks disagreed — refused. Nothing moved.";
+      : "Refused";
   const headlineColor = paid ? "text-paid" : held ? "text-held" : "text-refused";
   const pillClass = paid ? "pill-paid" : held ? "pill-held" : "pill-refused";
 
   const checks = sendResultChecks(result.decision, result.reasonCode ?? null);
+  const nextStep = refused ? refusalNextStepLink(result.reasonCode ?? null) : null;
   const reference = humanReference(result.id);
   const receiptPath = result.publicToken ? `/r/${result.publicToken}` : null;
   const receiptUrl = receiptPath && typeof window !== "undefined"
@@ -103,17 +105,20 @@ export function SendResult({
 
       {refused && (
         <div className="mt-3 space-y-1">
-          <p>Nothing was sent. Your balance is unchanged.</p>
-          <p className="text-muted">{refusalNextStep(result.reasonCode ?? null)}</p>
-          {checks.every((c) => c.mark === "skip" || c.mark === "pass") && (
-            <p className="text-muted">{explainDecision(result.decision, result.reasonCode ?? null)}</p>
+          <p className="text-muted">{explainDecision(result.decision, result.reasonCode ?? null)}</p>
+          {nextStep ? (
+            <Link href={nextStep.href} className="link inline-block">
+              {nextStep.label} →
+            </Link>
+          ) : (
+            <p className="text-muted">{refusalNextStep(result.reasonCode ?? null)}</p>
           )}
         </div>
       )}
 
       {held && (
         <p className="mt-3 text-muted">
-          We&rsquo;ll show this in Activity as soon as it resolves.
+          {explainDecision(result.decision, result.reasonCode ?? null)}
         </p>
       )}
 

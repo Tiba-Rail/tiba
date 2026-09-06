@@ -95,9 +95,6 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
           <p className="eyebrow">Recipients</p>
           <h1 className="display-l mt-2">Saved recipients</h1>
         </div>
-        <p className="lede">
-          Your software can only send to people saved here.
-        </p>
       </header>
 
       {(message || error) && (
