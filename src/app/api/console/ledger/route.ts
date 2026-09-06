@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   // 1. Authorise with the operator token
-  if (!isOperatorRequest(request)) {
+  if (!await isOperatorRequest(request)) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
 

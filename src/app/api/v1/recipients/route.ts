@@ -9,7 +9,7 @@ function unauthorized() {
 }
 
 export async function GET(request: NextRequest) {
-  if (!isOperatorRequest(request)) return unauthorized();
+  if (!await isOperatorRequest(request)) return unauthorized();
   const recipients = await prisma.recipient.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json({
     recipients: recipients.map((recipient) => ({
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isOperatorRequest(request)) return unauthorized();
+  if (!await isOperatorRequest(request)) return unauthorized();
   let body: Record<string, unknown>;
   try {
     body = await request.json() as Record<string, unknown>;

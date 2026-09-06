@@ -16,6 +16,8 @@ model Agent {
   name              String
   apiKeyHash        String   @unique @map("api_key_hash")
   apiKeyPrefix      String   @map("api_key_prefix")
+  ownerTokenHash    String?  @unique @map("owner_token_hash")
+  ownerTokenPrefix  String?  @map("owner_token_prefix")
   ceilingMicros     BigInt   @map("ceiling_micros")
   hourCapMicros     BigInt   @map("hour_cap_micros")
   dayCapMicros      BigInt   @map("day_cap_micros")

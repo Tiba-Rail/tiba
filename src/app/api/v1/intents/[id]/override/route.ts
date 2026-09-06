@@ -28,7 +28,7 @@ async function pricingData() {
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  if (!isOperatorRequest(request)) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  if (!await isOperatorRequest(request)) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   const { id } = await context.params;
   const intent = await prisma.payoutIntent.findUnique({
     where: { id },
