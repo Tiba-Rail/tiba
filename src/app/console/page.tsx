@@ -5,6 +5,7 @@ import { ConsoleClient } from "./console-client";
 import { SiteNav } from "@/components/site-nav";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Send - Tiba" };
 
 function percent(spent: bigint, cap: bigint): number {
   if (cap <= 0n) return 0;
@@ -44,7 +45,7 @@ export default async function ConsolePage() {
         <RouterHealthStrip />
         <div className="mx-auto max-w-7xl px-4 py-8">
           <h1 className="display-l">Nothing is set up yet</h1>
-          <p className="lede mt-2">This workspace has no paying program yet.</p>
+          <p className="lede mt-2">This wallet has no software attached yet.</p>
         </div>
       </main>
     );

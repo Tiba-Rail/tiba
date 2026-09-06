@@ -54,7 +54,7 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
       });
       const payload = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "REQUEST_FAILED");
-      setMessage("Job added.");
+      setMessage("Invoice added.");
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "REQUEST_FAILED");
@@ -84,12 +84,12 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 md:px-6 lg:px-8">
       <header className="flex flex-col gap-4">
         <div>
-          <p className="eyebrow">Jobs</p>
-          <h1 className="display-l mt-2">What the program may pay for</h1>
+          <p className="eyebrow">Invoices</p>
+          <h1 className="display-l mt-2">Invoices you've approved</h1>
         </div>
         <p className="lede">
-          Every job that is still open for payment. Adding one here pays nobody. It only makes a
-          payment possible.
+          Your software can pay against these, up to the amount on each. It can never invent an
+          amount.
         </p>
       </header>
 
@@ -107,13 +107,13 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
       )}
 
       <section className="card p-5">
-        <h2 className="title mb-4">Open jobs</h2>
+        <h2 className="title mb-4">Awaiting delivery</h2>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] text-left text-sm">
             <thead className="eyebrow">
               <tr>
-                <th className="py-2">Job ID</th>
-                <th>Paid to</th>
+                <th className="py-2">Invoice</th>
+                <th>Recipient</th>
                 <th className="text-right">Maximum</th>
                 <th>Open until</th>
                 <th>Status</th>
@@ -122,7 +122,7 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
             <tbody className="divide-y divide-line">
               {workOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-6 text-muted">No jobs yet. Add the first one below.</td>
+                  <td colSpan={5} className="py-6 text-muted">No invoices yet. Add the first one below.</td>
                 </tr>
               ) : workOrders.map((workOrder) => (
                 <tr key={workOrder.ref}>
@@ -139,10 +139,10 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
       </section>
 
       <section className="card p-5">
-        <h2 className="title mb-4">Add a job</h2>
+        <h2 className="title mb-4">Add invoice</h2>
         <form onSubmit={registerWorkOrder} className="space-y-4">
           <label className="block text-sm font-medium">
-            Job ID (e.g. WO-14)
+            Invoice ID (e.g. WO-14)
             <input
               className={inputClass}
               name="ref"
@@ -154,7 +154,7 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
           </label>
 
           <label className="block text-sm font-medium">
-            Paid to
+            Recipient
             <select className={inputClass} name="recipient_ref" required>
               {recipients.map((recipient) => (
                 <option key={recipient.ref} value={recipient.ref}>
@@ -165,7 +165,7 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
           </label>
 
           <label className="block text-sm font-medium">
-            Maximum payment (USDC)
+            Maximum amount (USDC)
             <input
               className={inputClass}
               name="ceiling_usdc"
@@ -189,21 +189,21 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
           </label>
 
           <label className="block text-sm font-medium">
-            Who must confirm before paying
+            What must pass before paying
             <select className={inputClass} name="required_channels" defaultValue="both" required>
-              <option value="payer_record">The payer's record only</option>
+              <option value="payer_record">Your own records only</option>
               <option value="both">Both checks</option>
-              <option value="human">A human</option>
+              <option value="human">You</option>
             </select>
           </label>
 
           <label className="block text-sm font-medium">
-            What the job is
+            What the invoice is for
             <textarea className={inputClass} name="brief_text" rows={3} required />
           </label>
 
           <label className="block text-sm font-medium">
-            The payer's own record of this job (JSON)
+            Your own record of this invoice (JSON)
             <textarea
               className={inputClass}
               name="payer_record"
@@ -223,7 +223,7 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
               disabled={busy === "work-order"}
               aria-busy={busy === "work-order"}
             >
-              {busy === "work-order" ? "Adding…" : "Add job"}
+              {busy === "work-order" ? "Adding…" : "Add invoice"}
             </button>
 
             <OperatorTokenField />

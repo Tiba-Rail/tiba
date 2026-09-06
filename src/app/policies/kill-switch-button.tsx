@@ -72,7 +72,7 @@ export function KillSwitchButton({ current }: KillSwitchButtonProps) {
         aria-busy={busy}
         onClick={toggleKillSwitch}
       >
-        {busy ? "Saving…" : (current ? "Allow payments again" : "Stop all payments")}
+        {busy ? "Saving…" : (current ? "Unfreeze" : "Freeze wallet")}
       </button>
     </div>
   );

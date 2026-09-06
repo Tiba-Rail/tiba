@@ -5,6 +5,7 @@ import { SiteNav } from "@/components/site-nav";
 import { RouterHealthStrip } from "@/components/router-health-strip";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Invoices - Tiba" };
 
 function shortDate(date: Date): string {
   return new Intl.DateTimeFormat("en", {

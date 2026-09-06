@@ -20,7 +20,7 @@ export function DenialBanner({
       ].join(" ")}
     >
       <p className="eyebrow" style={{ color: "inherit" }}>
-        {isHeld ? "Held — waiting for a human" : "Refused — Tiba decided not to pay"}
+        {isHeld ? "Needs approval" : "Refused — Tiba decided not to pay"}
       </p>
       <p className="display-m mt-2" style={{ color: "var(--foreground)" }}>
         {explainDecision(decisionClass, reasonCode)}

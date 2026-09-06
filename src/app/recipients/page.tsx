@@ -4,6 +4,7 @@ import { SiteNav } from "@/components/site-nav";
 import { RouterHealthStrip } from "@/components/router-health-strip";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Recipients - Tiba" };
 
 function formatDate(date: Date | null): string | null {
   return date ? new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", year: "numeric" }).format(date) : null;

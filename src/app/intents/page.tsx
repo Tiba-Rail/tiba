@@ -6,6 +6,7 @@ import { explainDecision } from "@/app/console/types";
 import { SiteNav } from "@/components/site-nav";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Payments - Tiba" };
 
 interface IntentRow {
   id: string;
@@ -88,11 +89,10 @@ export default async function IntentsPage() {
       <RouterHealthStrip />
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:px-8">
         <header className="mb-8">
-          <p className="eyebrow">Payment attempts</p>
-          <h1 className="display-l mt-2">Every payment, start to finish</h1>
+          <p className="eyebrow">Payments</p>
+          <h1 className="display-l mt-2">Payments</h1>
           <p className="lede mt-4">
-            Every payment the program has tried to make, grouped by what happened. Open one to read
-            its receipt.
+            Every payment your software asked to make.
           </p>
         </header>
 
@@ -100,7 +100,7 @@ export default async function IntentsPage() {
           <IntentGroup title={`Paid (${paidIntents.length})`} intents={paidIntents} />
           <IntentGroup title={`Refused (${refusedIntents.length})`} intents={refusedIntents} />
           <IntentGroup title={`Approved but the transfer failed (${settlementFailedIntents.length})`} intents={settlementFailedIntents} />
-          <IntentGroup title={`Waiting for a human (${heldIntents.length})`} intents={heldIntents} />
+          <IntentGroup title={`Needs approval (${heldIntents.length})`} intents={heldIntents} />
         </div>
       </div>
     </main>

@@ -54,16 +54,16 @@ export default async function Home() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link className="btn btn-primary" href="/console">
-              Try a test payment
+              Send a payment
             </Link>
             <Link className="btn btn-secondary" href="/ledger">
-              See every decision
+              See activity
             </Link>
           </div>
         </header>
 
         <section className="mt-12 border-t border-line pt-12">
-          <p className="eyebrow">Measured on the test-network pilot</p>
+          <p className="eyebrow">Measured on the test network</p>
           <div className="mt-6 grid grid-cols-2 gap-8 md:grid-cols-4">
             <div>
               <p className="num display-l">20 / 20</p>
@@ -90,21 +90,21 @@ export default async function Home() {
             <li>
               <p className="num text-sm text-muted">01</p>
               <p className="lede mt-3">
-                A program acting for the payer submits a delivery note for a job.
+                Your software submits a delivery note for an invoice.
               </p>
             </li>
             <li>
               <p className="num text-sm text-muted">02</p>
               <p className="lede mt-3">
-                Two separate automated checks read it: one the delivery note, one the payer's own
-                record. Neither sees the other's answer.
+                Two separate automated checks read it: one the delivery note, one your own
+                records. Neither sees the other's answer.
               </p>
             </li>
             <li>
               <p className="num text-sm text-muted">03</p>
               <p className="lede mt-3">
-                Same job and same amount from both: paid. Otherwise: refused or held for a human, and
-                the receipt says why.
+                Same invoice and same amount from both: paid. Otherwise: refused or held for
+                approval, and the receipt says why.
               </p>
             </li>
           </ol>
@@ -114,20 +114,19 @@ export default async function Home() {
               the other — so it does not go through.
             </p>
             <p className="lede">
-              If a check cannot run, the payment is held for a human. Tiba never fills the gap with a
-              guess.
+              If a check cannot run, the payment is held for approval. Tiba never fills the gap with
+              a guess.
             </p>
             <p className="lede">
-              Around both checks sit limits a human sets and an agent can only read: a per-payment
-              ceiling, hourly and daily spending limits, an allowlist of who may be paid, and a kill
-              switch.
+              Around both checks sit limits you set and your software can only read: a per-payment
+              ceiling, hourly and daily spending limits, a list of saved recipients, and a freeze.
             </p>
             <p className="lede">Paid to the wallet you already have.</p>
           </div>
         </section>
 
         <section className="mt-12 border-t border-line pt-12">
-          <p className="eyebrow">A real example, from this pilot</p>
+          <p className="eyebrow">A real example</p>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             {refusedIntent ? (
               <div className="card p-5">
@@ -174,7 +173,7 @@ export default async function Home() {
               <div className="card p-5">
                 <span className="pill pill-paid">Paid</span>
                 <p className="mt-3 text-sm text-muted">
-                  No paid example yet. Send a test payment from the console.
+                  No paid example yet. Send a payment from Send.
                 </p>
               </div>
             )}

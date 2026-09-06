@@ -69,7 +69,7 @@ export function IdentityGateButton({ current }: IdentityGateButtonProps) {
         aria-busy={busy}
         onClick={toggle}
       >
-        {busy ? "Saving…" : (current ? "Stop requiring identity check" : "Require identity check")}
+        {busy ? "Saving…" : (current ? "Stop requiring verification" : "Require verification")}
       </button>
     </div>
   );

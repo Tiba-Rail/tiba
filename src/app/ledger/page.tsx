@@ -8,6 +8,7 @@ import { decisionWord, disagreementLine, explainDecision } from "@/app/console/t
 import { SiteNav } from "@/components/site-nav";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Activity - Tiba" };
 
 function formatTime(date: Date): string {
   return new Intl.DateTimeFormat("en", {
@@ -44,8 +45,8 @@ function renderAdjudicationDetails(
 
   return (
     <div className="mt-2 font-sans text-sm text-muted">
-      <p>Reader A (the delivery note) saw job {a.workOrderId}, {a.amount}.</p>
-      <p>Reader B (the payer's record) saw job {b.workOrderId}, {b.amount}.</p>
+      <p>Check 1 (the delivery note) saw invoice {a.workOrderId}, {a.amount}.</p>
+      <p>Check 2 (your own records) saw invoice {b.workOrderId}, {b.amount}.</p>
       <p className="mt-1">They disagreed, so Tiba refused.</p>
     </div>
   );
@@ -65,10 +66,13 @@ export default async function LedgerPage() {
       <RouterHealthStrip />
       <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 lg:px-8">
         <header className="mb-8">
-          <p className="eyebrow">History</p>
+          <p className="eyebrow">Activity</p>
           <h1 className="display-l mt-2">
-            Every decision
+            Every payment and every refusal
           </h1>
+          <p className="lede mt-4">
+            Refusals are shown beside payments, because a refusal is Tiba working.
+          </p>
         </header>
 
         <section className="card">
@@ -78,7 +82,7 @@ export default async function LedgerPage() {
                 <tr>
                   <th className="px-4 py-3">Result</th>
                   <th className="px-4 py-3">When</th>
-                  <th className="px-4 py-3">Paid to</th>
+                  <th className="px-4 py-3">To</th>
                   <th className="px-4 py-3 text-right">Amount</th>
                   <th className="px-4 py-3">Why</th>
                   <th className="px-4 py-3">Check references</th>
@@ -89,7 +93,7 @@ export default async function LedgerPage() {
                 {intents.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-12 text-center text-muted">
-                      Nothing yet. Send a test payment from the console and it will appear here.
+                      Nothing yet. Send a payment and it will appear here.
                     </td>
                   </tr>
                 ) : intents.map((intent) => (
