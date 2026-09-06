@@ -74,9 +74,11 @@ export async function POST(request: NextRequest) {
         apiKeyPrefix: agentKey.keyPrefix,
         ownerTokenHash: ownerKey.hash,
         ownerTokenPrefix: ownerKey.keyPrefix,
-        ceilingMicros: 25n * MICROS_PER_USDC,
-        hourCapMicros: 100n * MICROS_PER_USDC,
-        dayCapMicros: 250n * MICROS_PER_USDC,
+        // Every workspace settles from one shared testnet wallet, so a new signup gets
+        // enough room to try a payment and nowhere near enough to drain it.
+        ceilingMicros: 5n * MICROS_PER_USDC,
+        hourCapMicros: 10n * MICROS_PER_USDC,
+        dayCapMicros: 20n * MICROS_PER_USDC,
         hourCountCap: 5,
         dayCountCap: 20,
         killSwitch: false,
