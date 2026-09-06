@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/db";
-import { formatLatency } from "@/lib/money";
 
 function labelFor(model: string): string {
   if (model.toLowerCase().includes("kimi")) return "Kimi";
@@ -24,31 +23,21 @@ export async function RouterHealthStrip() {
   if (latest.length === 0) {
     return (
       <div className={stripClass}>
-        Checks · none run yet
+        Checks online {"\u00b7"} no checks yet
       </div>
     );
   }
-  return (
-    <div className={stripClass}>
-      <span className="inline-flex items-center gap-2">
-        Checks online
-      </span>
-      {latest.map((row) => (
-        <span key={row.id} className="inline-flex items-center gap-2">
-          <span className="text-muted">·</span>
-          {labelFor(row.model)} <StatusDot ok={row.ok} />
-          <span className="num">{formatLatency(row.latencyMs)}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
 
-function StatusDot({ ok }: { ok: boolean }) {
+  const slowestLatencyMs = latest.reduce(
+    (slowest, row) => Math.max(slowest, row.latencyMs),
+    0
+  );
+  const slowestSeconds = Math.round(slowestLatencyMs / 1000);
+  const modelNames = latest.map((row) => labelFor(row.model)).join(" \u00b7 ");
+
   return (
-    <span
-      aria-hidden="true"
-      className={ok ? "inline-block size-2 rounded-full bg-paid" : "inline-block size-2 rounded-full bg-red-ink"}
-    />
+    <div className={stripClass} title={modelNames}>
+      Checks online {"\u00b7"} about {slowestSeconds} s per check
+    </div>
   );
 }

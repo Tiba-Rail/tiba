@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { RouterHealthStrip } from "@/components/router-health-strip";
 import { SiteNav } from "@/components/site-nav";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
@@ -40,7 +39,6 @@ export default async function Home() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="" />
-      <RouterHealthStrip />
       <div className="mx-auto flex max-w-5xl flex-col gap-12 px-4 pb-16 pt-16 md:gap-16 md:px-6 md:pt-24 lg:px-8">
         <header>
           <p className="eyebrow">A wallet for software · test network</p>
@@ -49,7 +47,7 @@ export default async function Home() {
           </h1>
           <p className="lede mt-6">
             Tiba pays on your behalf, within the limits you set, and only after two separate checks agree
-            on the job and the amount. Anything else is refused or held for a human, and the receipt
+            on the invoice and the amount. Anything else is refused or held for approval, and the receipt
             says why.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -135,9 +133,6 @@ export default async function Home() {
                   {refusedDisagreement ??
                     "The two checks gave different answers, so Tiba refused."}
                 </p>
-                <p className="num mt-3 text-xs text-muted">
-                  Reason code {refusedIntent.reasonCode ?? "none recorded"}
-                </p>
                 <Link className="btn btn-ghost mt-3" href={`/r/${refusedIntent.publicToken}`}>
                   Open receipt →
                 </Link>
@@ -156,10 +151,10 @@ export default async function Home() {
                     View on test network
                   </a>
                 ) : (
-                  <p className="num mt-1 text-xs text-muted">{paidIntent.digest ?? "missing"}</p>
+                  <p className="num mt-1 break-all text-xs text-muted">{paidIntent.digest ?? "missing"}</p>
                 )}
                 <p className="eyebrow mt-4">Check references</p>
-                <p className="num mt-1 text-xs text-muted">
+                <p className="num mt-1 break-all text-xs text-muted">
                   A: {requestIdFor(paidIntent.adjudications, "artifact")} · B:{" "}
                   {requestIdFor(paidIntent.adjudications, "payer_record")}
                 </p>
