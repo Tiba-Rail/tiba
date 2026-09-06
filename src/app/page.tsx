@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RotatingWord } from "@/components/rotating-word";
 import { RouterHealthStrip } from "@/components/router-health-strip";
 import { SiteNav } from "@/components/site-nav";
 import { prisma } from "@/lib/db";
@@ -45,7 +46,7 @@ export default async function Home() {
         <header>
           <p className="eyebrow">A wallet for software · test network</p>
           <h1 className="display-xl mt-4 max-w-[20ch]">
-            A wallet your software can <em>pay people</em> from.
+            A wallet your <RotatingWord words={["software", "AI agents", "apps", "workflows"]} intervalMs={2500} /> can <em>pay people</em> from.
           </h1>
           <p className="lede mt-6">
             Tiba pays on your behalf, within the limits you set, and only after two separate checks agree
