@@ -102,9 +102,9 @@ async function requestOnce(
   const attempt = async (): Promise<Response> => await fetcher(API_URL, {
       method: "POST",
       signal: controller.signal,
-      // Substitution is allowed: it is recorded per call and printed on the public receipt,
-      // so a saturated model degrades into a disclosure instead of an outage.
-      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+      // No substitution: a swapped-in model answered differently and produced a FALSE refusal
+      // on a clean note. A held payment is recoverable; a wrong refusal is not.
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}`, "X-Gonka-No-Fallback": "true" },
       body: JSON.stringify({
         model,
         messages: SCHEMA_FREE.has(model)
@@ -127,7 +127,7 @@ async function requestOnce(
   try {
     let response: Response | null = null;
     let lastError: unknown = null;
-    for (let tries = 0; tries < 3; tries += 1) {
+    for (let tries = 0; tries < 2; tries += 1) {
       try {
         response = await attempt();
         if (response.status < 500) break;
@@ -136,7 +136,7 @@ async function requestOnce(
         lastError = error;
         response = null;
       }
-      if (tries < 2) await new Promise((r) => setTimeout(r, 350 * (tries + 1)));
+      if (tries < 1) await new Promise((r) => setTimeout(r, 300));
     }
     if (!response) throw lastError ?? new Error('router unreachable');
     const latencyMs = Date.now() - started;
