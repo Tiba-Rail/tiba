@@ -44,7 +44,17 @@ function parseContent(body: unknown): string | null {
   if (!body || typeof body !== "object") return null;
   const choices = (body as { choices?: Array<{ message?: { content?: unknown } }> }).choices;
   const content = choices?.[0]?.message?.content;
-  return typeof content === "string" ? content : null;
+  if (typeof content !== "string") return null;
+  // Models on the router started emitting <think> reasoning ahead of the JSON, even under a
+  // strict schema. Strip any reasoning wrapper and take the JSON object that follows, so a
+  // chatty model is a formatting quirk rather than an outage that holds every payment.
+  let text = content.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/<think>[\s\S]*$/i, "").trim();
+  if (!text.startsWith("{")) {
+    const first = text.indexOf("{");
+    const last = text.lastIndexOf("}");
+    if (first !== -1 && last > first) text = text.slice(first, last + 1);
+  }
+  return text.length > 0 ? text : null;
 }
 
 function isJsonForSchema(content: string, schema: JsonSchema): boolean {
@@ -87,11 +97,14 @@ async function requestOnce(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const started = Date.now();
-  try {
-    const response = await fetcher(API_URL, {
+  // The router intermittently drops a connection or answers 5xx from some egress paths.
+  // One shot per model turned that into a held payment, so each call gets a short retry.
+  const attempt = async (): Promise<Response> => await fetcher(API_URL, {
       method: "POST",
       signal: controller.signal,
-      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}`, "X-Gonka-No-Fallback": "true" },
+      // Substitution is allowed so a saturated model does not kill the call. It is recorded
+      // per adjudication, and the route refuses to blame the payer when models were swapped.
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
         messages: SCHEMA_FREE.has(model)
@@ -106,10 +119,26 @@ async function requestOnce(
             ]
           : messages,
         temperature: 0,
-        max_tokens: 256,
+        // Room for a reasoning preamble plus the JSON; parseContent strips the preamble.
+        max_tokens: 1400,
         ...(SCHEMA_FREE.has(model) ? {} : { response_format: { type: "json_schema", json_schema: schema } })
       })
     });
+  try {
+    let response: Response | null = null;
+    let lastError: unknown = null;
+    for (let tries = 0; tries < 2; tries += 1) {
+      try {
+        response = await attempt();
+        if (response.status < 500) break;
+        lastError = new Error(`HTTP ${response.status}`);
+      } catch (error) {
+        lastError = error;
+        response = null;
+      }
+      if (tries < 1) await new Promise((r) => setTimeout(r, 300));
+    }
+    if (!response) throw lastError ?? new Error('router unreachable');
     const latencyMs = Date.now() - started;
     const requestId = response.headers.get("x-request-id") ?? undefined;
     // Gonka substitutes a saturated model rather than failing the request, and says so

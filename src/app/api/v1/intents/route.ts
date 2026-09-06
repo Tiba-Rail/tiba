@@ -252,14 +252,22 @@ export async function POST(request: NextRequest) {
     payer_record: payerTuple ?? undefined
   });
 
+  // A disagreement is only the payer's fault if both channels ran the models we asked for.
+  // When the router substituted a model, a split cannot be attributed to the evidence, so the
+  // payment is held for a human instead of being refused. Never refuse on our own infrastructure.
+  const substituted = Boolean(artifactResult.fallback || payerResult.fallback);
+  const splitOnSubstitutedModels =
+    !reconciled.ok && reconciled.decisionClass === "RED" &&
+    String(reconciled.reasonCode ?? "").startsWith("QUORUM_SPLIT") && substituted;
+
   if (!reconciled.ok) {
     const pricing = await pricingData();
     const updated = await prisma.payoutIntent.update({
       where: { id: intent.id },
       data: {
-        status: reconciled.decisionClass === "AMBER" ? "held" : "refused",
-        decisionClass: reconciled.decisionClass,
-        reasonCode: reconciled.reasonCode,
+        status: reconciled.decisionClass === "AMBER" || splitOnSubstitutedModels ? "held" : "refused",
+        decisionClass: splitOnSubstitutedModels ? "AMBER" : reconciled.decisionClass,
+        reasonCode: splitOnSubstitutedModels ? "MODEL_SUBSTITUTED_SPLIT" : reconciled.reasonCode,
         ...pricing
       }
     });
