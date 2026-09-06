@@ -50,6 +50,7 @@ export function createWalletChallenge(addressValue: string): {
   nonce: string;
   message: string;
   cookieValue: string;
+  expiresAt: number;
   maxAge: number;
 } | null {
   const secret = authSecret();

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { WalletSignInButton } from "@/components/wallet-sign-in-button";
 
 type WorkspaceResult = {
   workspace_id: string;
@@ -113,10 +114,25 @@ export function StartClient() {
             No password, no email. One workspace, two keys, and a test payment ready to try.
           </p>
 
-          <form onSubmit={submit} className="mt-8 space-y-5">
+          <section className="card mt-8 p-5">
+            <p className="eyebrow">Keep access</p>
+            <h2 className="title mt-2">Sign in with your wallet</h2>
+            <p className="mt-2 text-sm text-muted">
+              Sign in first so you can return to this workspace without keeping another key.
+            </p>
+            <div className="mt-4">
+              <WalletSignInButton callbackUrl="/start" />
+            </div>
+            <a href="#workspace-form" className="btn btn-ghost mt-2 w-full">
+              or continue without signing in
+            </a>
+          </section>
+
+          <form id="workspace-form" onSubmit={submit} className="mt-8 space-y-5">
             <label className="block">
-              <span className="text-sm font-medium">Workspace name</span>
+              <span className="text-sm font-medium" id="workspace-name-label">Workspace name</span>
               <input
+                id="workspace-name"
                 className="field mt-1"
                 type="text"
                 value={name}
@@ -128,8 +144,9 @@ export function StartClient() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium">Sui testnet address (optional)</span>
+              <span className="text-sm font-medium" id="sui-address-label">Sui testnet address (optional)</span>
               <input
+                id="sui-address"
                 className="field mt-1 font-mono text-xs"
                 type="text"
                 value={suiAddress}

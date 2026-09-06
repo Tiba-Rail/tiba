@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Session } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Workspaces - Tiba" };
 
 export default async function WorkspacesPage() {
-  let session;
+  let session: Session | null = null;
   try {
     session = await auth();
   } catch {
@@ -20,8 +21,10 @@ export default async function WorkspacesPage() {
     redirect("/signin?callbackUrl=/workspaces");
   }
 
+  const userId = session.user.id;
+
   const workspaces = await prisma.agent.findMany({
-    where: { userId: session.user.id },
+    where: { userId },
     select: { id: true, name: true, rail: true, createdAt: true },
     orderBy: { createdAt: "desc" }
   });

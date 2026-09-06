@@ -44,7 +44,7 @@ export function FundClient({ address, shortAddress, qrSvg, balanceText }: FundCl
 
   async function handleDeposit() {
     if (!account) {
-      setError("Connect a wallet first.");
+      setError("Connect to deposit first.");
       return;
     }
 
@@ -78,7 +78,7 @@ export function FundClient({ address, shortAddress, qrSvg, balanceText }: FundCl
             <ConnectModal
               trigger={
                 <button type="button" className="btn btn-secondary">
-                  {account ? "Wallet connected" : "Connect wallet"}
+                  {account ? "Wallet ready to deposit" : "Connect to deposit"}
                 </button>
               }
             />

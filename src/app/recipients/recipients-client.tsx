@@ -153,7 +153,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
           <ConnectModal
             trigger={
               <button className="btn btn-secondary" type="button">
-                Connect wallet
+                {account ? "Using my wallet address" : "Use my wallet address"}
               </button>
             }
           />
@@ -199,7 +199,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
           {account && manualAddress === null && (
             <div className="-mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
               <span className="num">
-                Address from your connected wallet - {shortAddress}
+                Address from your selected wallet - {shortAddress}
               </span>
               <button
                 type="button"
@@ -225,7 +225,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
           </div>
         </form>
         <p className="mt-4 text-sm text-muted">
-          Get paid to the wallet you already have. Connect it and the address fills in - no copying. Works with Slush, Suiet, OKX, Bitget, Nightly, Backpack and other compatible wallets.
+          Get paid to the wallet you already have. Select it and the address fills in - no copying. Works with Slush, Suiet, OKX, Bitget, Nightly, Backpack and other compatible wallets.
         </p>
       </section>
     </div>
