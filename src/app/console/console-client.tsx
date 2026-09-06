@@ -203,9 +203,6 @@ export function ConsoleClient({
         <div>
           <p className="eyebrow">Send</p>
           <h1 className="display-l mt-2">Send a payment</h1>
-          <p className="lede mt-3">
-            Pick a delivery note, send it, and watch Tiba pay or refuse — and say why.
-          </p>
         </div>
         <label className="block w-full max-w-sm text-sm font-medium">
           Owner key
@@ -374,7 +371,7 @@ export function ConsoleClient({
                   />
                 </label>
 
-                <p className="text-sm text-muted">Pick a sample delivery note:</p>
+                <p className="eyebrow">Examples</p>
                 <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
                   {presetArtifacts.map((preset) => (
                     <button
@@ -390,10 +387,6 @@ export function ConsoleClient({
                     </button>
                   ))}
                 </div>
-
-                <p className="text-sm text-muted">
-                  Tiba will pay the genuine note and refuse the other three.
-                </p>
 
                 <div className="flex gap-3">
                   <button type="button" className="btn btn-ghost" onClick={() => setStep(2)}>Back</button>
@@ -436,7 +429,7 @@ export function ConsoleClient({
                   {busy === "test-intent" ? "Checking… usually about 13 seconds, up to a minute" : "Continue and Send"}
                 </button>
                 {!token && (
-                  <p className="text-sm text-muted">Enter the owner key above to send.</p>
+                  <p className="text-sm text-muted">Owner key required</p>
                 )}
                 <p className="text-sm text-muted">
                   Two independent checks must agree before a coin moves.
@@ -539,9 +532,9 @@ export function ConsoleClient({
           >
             {budget.killSwitch ? "Unfreeze" : "Freeze wallet"}
           </button>
-          <p className="mt-3 text-sm text-muted">
-            While frozen, every payment is refused before any check runs.
-          </p>
+          {budget.killSwitch ? (
+            <p className="mt-3 text-sm text-muted">Frozen: all payments refused.</p>
+          ) : null}
         </div>
       </section>
 

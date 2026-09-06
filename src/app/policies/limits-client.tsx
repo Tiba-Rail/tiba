@@ -37,7 +37,7 @@ export function LimitsClient({ agent, history }: LimitsClientProps) {
           />
           <LimitRow
             title="Freeze"
-            body="While frozen, every payment is refused before any check runs."
+            body={agent.killSwitch ? "Frozen: all payments refused." : "Not frozen."}
             control={<KillSwitchButton current={agent.killSwitch} />}
           />
           <LimitRow
