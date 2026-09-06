@@ -29,6 +29,7 @@ export type Budget = {
   capDay: string;
   spentHour: string;
   capHour: string;
+  capInvoice: string;
   dayPercent: number;
   hourPercent: number;
   killSwitch: boolean;
