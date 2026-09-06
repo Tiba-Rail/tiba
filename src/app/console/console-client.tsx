@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAgentTools } from "./use-agent-tools";
+import { SendResult } from "./send-result";
 import type { Recipient, WorkOrder, HeldIntent, Budget, TestIntentResponse } from "./types";
 import { explainDecision, decisionWord, humanError } from "./types";
 
@@ -31,6 +32,18 @@ export function ConsoleClient({
 
   useEffect(() => {
     setToken(window.sessionStorage.getItem("tiba_operator_token") ?? "");
+
+    // ?demo=paid|refused|held renders a fabricated result for screenshots and
+    // walkthroughs. Local state only — nothing is sent anywhere.
+    const demo = new URLSearchParams(window.location.search).get("demo");
+    if (demo === "paid" || demo === "refused" || demo === "held") {
+      setTestResponse({
+        id: "demo0000-intent-0000-0000-000000000000",
+        decision: demo === "paid" ? "PAID" : demo === "held" ? "AMBER" : "RED",
+        reasonCode: demo === "paid" ? undefined : demo === "held" ? "HUMAN_REVIEW_REQUIRED" : "WORK_ORDER_CEILING",
+        publicToken: "demo"
+      });
+    }
   }, []);
 
   function saveToken(value: string) {
@@ -93,7 +106,6 @@ export function ConsoleClient({
     if (!response.ok) throw new Error(payload.error ?? "REQUEST_FAILED");
 
     setTestResponse(payload);
-    setMessage("Sent. Result below.");
     router.refresh();
 
     return payload;
@@ -265,45 +277,12 @@ export function ConsoleClient({
           )}
 
           {testResponse && (
-            <div className="mt-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className={`pill ${
-                  testResponse.decision === "PAID" ? "pill-paid" :
-                  testResponse.decision === "AMBER" ? "pill-held" :
-                  "pill-refused"
-                }`}>
-                  {decisionWord(testResponse.decision)}
-                </span>
-              </div>
-
-              <p className="text-sm">{explainDecision(testResponse.decision, testResponse.reasonCode ?? null)}</p>
-              <div className="flex flex-wrap gap-2">
-                {testResponse.explorerUrl && (
-                  <a
-                    href={testResponse.explorerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-ghost"
-                  >
-                    View transaction
-                  </a>
-                )}
-                {testResponse.publicToken && (
-                  <a
-                    href={`/r/${testResponse.publicToken}`}
-                    className="btn btn-ghost"
-                  >
-                    Open receipt
-                  </a>
-                )}
-                <a
-                  href="/ledger"
-                  className="btn btn-ghost"
-                >
-                  See in activity
-                </a>
-              </div>
-            </div>
+            <SendResult
+              result={testResponse}
+              recipientName={recipients.find((r) => r.ref === selectedRecipient)?.displayName ?? selectedRecipient}
+              artifact={artifact}
+              onDone={() => setTestResponse(null)}
+            />
           )}
         </div>
       </section>

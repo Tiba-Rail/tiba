@@ -104,6 +104,116 @@ export function explainDecision(decisionClass: string, reasonCode: string | null
   }
 }
 
+// Send result (YC_STUDY.md §4 step 5). The send response carries no per-check
+// detail, so the two check rows are derived from decisionClass + reasonCode.
+export type CheckRow = {
+  name: string;
+  mark: "pass" | "fail" | "pending" | "skip";
+  text: string;
+};
+
+const CHECK_1 = "Check 1 — the delivery note";
+const CHECK_2 = "Check 2 — your records";
+
+// Reason codes refused before either check runs.
+const PRE_CHECK_REFUSALS = new Set([
+  "KILL_SWITCH",
+  "RECIPIENT_NOT_FOUND",
+  "RECIPIENT_INACTIVE",
+  "RECIPIENT_UNVERIFIED",
+  "INVALID_AMOUNT",
+  "INVALID_TIMESTAMP"
+]);
+
+export function sendResultChecks(decisionClass: string, reasonCode: string | null): CheckRow[] {
+  if (decisionClass === "PAID") {
+    return [
+      { name: CHECK_1, mark: "pass", text: "Read the delivery note." },
+      { name: CHECK_2, mark: "pass", text: "Same invoice, same amount — agreed." }
+    ];
+  }
+
+  if (decisionClass === "AMBER") {
+    return [
+      { name: CHECK_1, mark: "pass", text: "Done." },
+      { name: CHECK_2, mark: "pending", text: explainDecision(decisionClass, reasonCode) }
+    ];
+  }
+
+  if (reasonCode?.startsWith("QUORUM_SPLIT")) {
+    const what =
+      reasonCode === "QUORUM_SPLIT:work_order_id" ? "a different invoice" :
+      reasonCode === "QUORUM_SPLIT:amount_micros" ? "a different amount" :
+      reasonCode === "QUORUM_SPLIT:delivery_timestamp" ? "a different delivery date" :
+      "a different answer";
+    return [
+      { name: CHECK_1, mark: "pass", text: "Read the delivery note." },
+      { name: CHECK_2, mark: "fail", text: `Named ${what} — the checks disagreed.` }
+    ];
+  }
+
+  if (reasonCode && PRE_CHECK_REFUSALS.has(reasonCode)) {
+    return [
+      { name: CHECK_1, mark: "skip", text: "Not run — refused first." },
+      { name: CHECK_2, mark: "skip", text: "Not run — refused first." }
+    ];
+  }
+
+  if (reasonCode === "SETTLEMENT_FAILED" || reasonCode === "SUI_EXECUTION_FAILED") {
+    return [
+      { name: CHECK_1, mark: "pass", text: "Agreed." },
+      { name: CHECK_2, mark: "pass", text: "Agreed — the transfer itself failed." }
+    ];
+  }
+
+  // Limit and invoice refusals: the checks ran, your limits refused.
+  return [
+    { name: CHECK_1, mark: "pass", text: "Read the delivery note." },
+    { name: CHECK_2, mark: "fail", text: explainDecision(decisionClass, reasonCode) }
+  ];
+}
+
+// Every refusal ends with what happens next.
+export function refusalNextStep(reasonCode: string | null): string {
+  switch (reasonCode) {
+    case "DAY_AMOUNT_CAP":
+    case "DAY_COUNT_CAP":
+    case "HOUR_AMOUNT_CAP":
+    case "HOUR_COUNT_CAP":
+    case "TRANSACTION_CEILING":
+      return "What next: raise the limit under Limits, or split the invoice.";
+    case "WORK_ORDER_CEILING":
+      return "What next: raise this invoice's maximum under Invoices, or split it.";
+    case "WORK_ORDER_EXPIRED":
+    case "WORK_ORDER_NOT_OPEN":
+    case "NO_OPEN_OBLIGATION":
+      return "What next: add or fix the invoice under Invoices.";
+    case "RECIPIENT_NOT_FOUND":
+      return "What next: save this recipient under Recipients.";
+    case "RECIPIENT_INACTIVE":
+    case "RECIPIENT_UNVERIFIED":
+      return "What next: check the recipient under Recipients.";
+    case "KILL_SWITCH":
+      return "What next: unfreeze the wallet under Limits.";
+    case "SETTLEMENT_FAILED":
+    case "SUI_EXECUTION_FAILED":
+      return "What next: try again — the checks passed, the transfer failed.";
+    default:
+      if (reasonCode?.startsWith("QUORUM_SPLIT")) {
+        return "What next: make sure the delivery note and your records name the same invoice and amount.";
+      }
+      return "What next: check the delivery note and try again.";
+  }
+}
+
+// Human reference printed on every result, e.g. TB-9F3K-04ZQ.
+export function humanReference(intentId: string | undefined): string | null {
+  if (!intentId) return null;
+  const clean = intentId.replace(/[^a-zA-Z0-9]/g, "");
+  if (clean.length < 8) return `TB-${clean.toUpperCase()}`;
+  return `TB-${clean.slice(0, 4).toUpperCase()}-${clean.slice(-4).toUpperCase()}`;
+}
+
 export function humanError(code: string | null | undefined): { text: string; code: string } {
   const map: Record<string, string> = {
     UNAUTHORIZED: "Wrong owner key.",
