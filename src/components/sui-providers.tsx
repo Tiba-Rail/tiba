@@ -16,7 +16,11 @@ export function SuiProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
-        <WalletProvider autoConnect>{children}</WalletProvider>
+        {/* slushWallet registers the Slush WEB wallet, so phones with no browser
+            extension still get a wallet in the list. Extensions keep working. */}
+        <WalletProvider autoConnect slushWallet={{ name: "Tiba" }}>
+          {children}
+        </WalletProvider>
       </SuiClientProvider>
     </QueryClientProvider>
   );
