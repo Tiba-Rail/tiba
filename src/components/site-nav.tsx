@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Wordmark } from "./wordmark";
+import { prisma } from "@/lib/db";
 
 interface SiteNavProps {
   current: string;
 }
 
-export function SiteNav({ current }: SiteNavProps) {
+export async function SiteNav({ current }: SiteNavProps) {
   const links = [
     { key: "", label: "Home", href: "/" },
     { key: "console", label: "Send", href: "/console" },
@@ -15,28 +16,37 @@ export function SiteNav({ current }: SiteNavProps) {
     { key: "policies", label: "Limits", href: "/policies" }
   ];
 
+  const agent = await prisma.agent.findFirst({ orderBy: { createdAt: "asc" } });
+
   return (
-    <nav className="border-b border-line">
-      <div className="mx-auto max-w-7xl px-4 md:flex md:h-14 md:items-center md:justify-between md:px-6 lg:px-8">
-        <div className="flex h-14 items-center md:h-auto">
-          <Wordmark />
+    <div className="w-full">
+      {agent?.killSwitch && (
+        <div className="bg-refused py-2 text-center text-sm font-medium text-surface">
+          This wallet is frozen. Every payment is refused.
         </div>
-        <div className="site-nav-links -mx-4 flex w-[calc(100%+2rem)] shrink-0 gap-4 overflow-x-auto px-4 pb-3 text-sm md:mx-0 md:w-auto md:gap-6 md:overflow-visible md:px-0 md:pb-0">
-          {links.map((link) => (
-            <Link
-              key={link.key}
-              href={link.href}
-              className={
-                current === link.key
-                  ? "font-medium text-foreground transition-colors duration-150"
-                  : "text-muted transition-colors duration-150 hover:text-foreground"
-              }
-            >
-              {link.label}
-            </Link>
-          ))}
+      )}
+      <nav className="border-b border-line">
+        <div className="mx-auto max-w-7xl px-4 md:flex md:h-14 md:items-center md:justify-between md:px-6 lg:px-8">
+          <div className="flex h-14 items-center md:h-auto">
+            <Wordmark />
+          </div>
+          <div className="site-nav-links -mx-4 flex w-[calc(100%+2rem)] shrink-0 gap-4 overflow-x-auto px-4 pb-3 text-sm md:mx-0 md:w-auto md:gap-6 md:overflow-visible md:px-0 md:pb-0">
+            {links.map((link) => (
+              <Link
+                key={link.key}
+                href={link.href}
+                className={
+                  current === link.key
+                    ? "font-medium text-foreground transition-colors duration-150"
+                    : "text-muted transition-colors duration-150 hover:text-foreground"
+                }
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 }
