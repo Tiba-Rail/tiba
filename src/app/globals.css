@@ -284,3 +284,17 @@ pre {
     animation-duration: 0ms !important;
   }
 }
+
+/* Hero: the cycling noun. Colour is the action tone; the fade re-runs each swap via the key change. */
+.rotating-word {
+  color: var(--action);
+  display: inline-block;
+  animation: rotating-word-in 420ms ease-out;
+}
+@keyframes rotating-word-in {
+  from { opacity: 0; transform: translateY(0.12em); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rotating-word { animation: none; }
+}

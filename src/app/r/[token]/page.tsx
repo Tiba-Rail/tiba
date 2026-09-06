@@ -138,7 +138,6 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
           <Fact
             label="Why"
             value={explainDecision(intent.decisionClass, intent.reasonCode)}
-            detail={paid ? undefined : `Reason code ${intent.reasonCode ?? "none recorded"}`}
           />
           <Fact
             label="Left to spend today (live)"

@@ -6,7 +6,7 @@
 
 ### [0:00] Cold open
 **Screen:** Title card over the Send page, idle on invoice WO-13.
-**Say:** "Tiba is a wallet for software. It pays people on your behalf, within your limits — and every time it does, it can prove why. Upwork alone moved four billion dollars to freelancers last year, and McKinsey expects software agents to mediate up to five trillion in commerce by twenty thirty. Yet every one of those payments still waits for a human to click approve — or moves on blind trust."
+**Say:** "Tiba is a wallet for AI agents. It pays people on your behalf, within your limits — and every time it does, it can prove why. Upwork alone moved four billion dollars to freelancers last year, and McKinsey expects software agents to mediate up to five trillion in commerce by twenty thirty. Yet every one of those payments still waits for a human to click approve — or moves on blind trust."
 
 ### [0:20] The rule
 **Screen:** Send page: spending limits, saved recipients, freeze.
