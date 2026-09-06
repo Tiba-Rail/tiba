@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
@@ -36,6 +37,13 @@ function detectRail(): "mock" | "sui" {
 }
 
 export async function POST(request: NextRequest) {
+  let userId: string | undefined;
+  try {
+    userId = (await auth())?.user?.id;
+  } catch {
+    // Anonymous onboarding remains available when auth has not been configured.
+  }
+
   const ip = clientIp(request);
   const limit = rateLimit(ip);
   if (!limit.ok) {
@@ -83,7 +91,8 @@ export async function POST(request: NextRequest) {
         dayCountCap: 20,
         killSwitch: false,
         requireRecipientKyc: false,
-        rail: detectRail()
+        rail: detectRail(),
+        ...(userId ? { userId } : {})
       }
     });
 

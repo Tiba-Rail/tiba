@@ -99,7 +99,15 @@ export function StartClient() {
     <div className="mx-auto max-w-2xl px-4 py-8 md:px-6 lg:px-8">
       {!result ? (
         <>
-          <p className="eyebrow">Start</p>
+          <div className="flex items-center justify-between gap-4">
+            <p className="eyebrow">Start</p>
+            <Link
+              href="/workspaces"
+              className="text-sm font-medium text-action transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action"
+            >
+              Your workspaces
+            </Link>
+          </div>
           <h1 className="display-l mt-3">Create your wallet</h1>
           <p className="lede mt-3">
             No password, no email. One workspace, two keys, and a test payment ready to try.
