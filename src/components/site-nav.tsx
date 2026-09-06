@@ -7,9 +7,9 @@ interface SiteNavProps {
 
 export function SiteNav({ current }: SiteNavProps) {
   const links = [
+    { key: "", label: "Home", href: "/" },
     { key: "console", label: "Send", href: "/console" },
     { key: "ledger", label: "Activity", href: "/ledger" },
-    { key: "intents", label: "Payments", href: "/intents" },
     { key: "work-orders", label: "Invoices", href: "/work-orders" },
     { key: "recipients", label: "Recipients", href: "/recipients" },
     { key: "policies", label: "Limits", href: "/policies" }

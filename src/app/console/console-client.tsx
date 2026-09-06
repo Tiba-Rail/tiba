@@ -400,7 +400,7 @@ export function ConsoleClient({
         </Panel>
       </section>
 
-      <Panel title="Needs your approval">
+      <Panel title="Needs your approval" id="approvals">
         {heldIntents.length === 0 ? (
           <p className="py-6 text-sm text-muted">Nothing waiting.</p>
         ) : (
@@ -448,9 +448,9 @@ function BudgetMeter({ label, spent, cap, percent }: { label: string; spent: str
   );
 }
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+function Panel({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
   return (
-    <section className="card p-5">
+    <section id={id} className="card p-5">
       <h2 className="title mb-4">{title}</h2>
       {children}
     </section>
