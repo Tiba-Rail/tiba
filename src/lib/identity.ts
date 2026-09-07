@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { terminal3FromEnv } from "./identity-terminal3.ts";
 
 /**
  * Identity / compliance (eKYC) provider abstraction. One more input to the
@@ -7,7 +8,13 @@ import { createHash } from "node:crypto";
  */
 export interface IdentityProvider {
   name: string;
-  verify(input: { recipientRef: string; displayName: string; suiAddress: string }): Promise<{
+  verify(input: {
+    recipientRef: string;
+    displayName: string;
+    suiAddress: string;
+    /** The recipient's Terminal 3 identity, when they have one. Providers that do not use it ignore it. */
+    t3nDid?: string | null;
+  }): Promise<{
     decision: "verified" | "failed" | "review";
     checkId: string;
     expiresAt: Date | null;
@@ -44,8 +51,14 @@ export class MockIdentityProvider implements IdentityProvider {
   }
 }
 
-// IDENTITY_PROVIDER is reserved for real providers (e.g. "persona", "sumsub").
-// Only the mock exists today; an unknown value falls through to it.
+// IDENTITY_PROVIDER selects the real provider. "terminal3" asks Terminal 3 whether
+// the recipient has delegated Tiba's agent the right to read their KYC status.
+// An unknown value, or terminal3 without an agent key configured, falls through to
+// the mock rather than failing open on a payment decision.
 export function getIdentityProvider(): IdentityProvider {
+  if (process.env.IDENTITY_PROVIDER === "terminal3") {
+    const t3 = terminal3FromEnv();
+    if (t3) return t3;
+  }
   return new MockIdentityProvider();
 }

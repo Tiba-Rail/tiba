@@ -21,7 +21,8 @@
     "eval": "node scripts/eval.mjs",
     "sui:smoke": "node scripts/sui-smoke.mjs",
     "a2a:proof": "node scripts/a2a-proof.mjs",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "t3:demo": "node scripts/t3-identity-demo.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
@@ -31,6 +32,7 @@
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.3.0",
     "@tanstack/react-query": "5.102.8",
+    "@terminal3/t3n-sdk": "5.2.0",
     "better-sqlite3": "^12.6.2",
     "next": "^16.3.3",
     "next-auth": "^5.0.0-beta.32",

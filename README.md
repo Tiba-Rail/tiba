@@ -108,6 +108,78 @@ For the demo, when `SUI_USDC_TYPE` is unset, Tiba treats `1` payout micro-unit a
 `1` MIST and transfers SUI. Once testnet USDC is funded, set `SUI_USDC_TYPE` to the
 Circle testnet USDC coin type.
 
+## Terminal 3 Identity
+
+Tiba refuses to pay a recipient it cannot verify. Terminal 3 is the provider that
+answers the question.
+
+Tiba runs an org-owned agent on Terminal 3. A recipient who wants to be paid grants
+that agent exactly one function on their own identity contract: `kyc-status` on
+`tee:user/contracts`, time-boxed. Before releasing a payout, Tiba asks Terminal 3,
+as the agent, whether that grant exists. The answer is enforced on Terminal 3's
+side, so a recipient who never delegated to Tiba cannot be marked verified by
+anything Tiba does locally.
+
+    npm run t3:demo
+
+One command. Every step below runs live against the Terminal 3 testnet, and a rerun
+produces fresh sequence numbers and hashes from the node:
+
+1. Operator authentication (WASM handshake plus Ethereum signature)
+2. Org and org-owned agent provisioning
+3. A one-function, one-hour delegation grant
+4. Proof of that grant asked as the agent, with its own opaque api key: one call it
+   is allowed to make (`kyc-status`, authorised) and one it is not (`otp-request`,
+   refused). Same key, same contract, two different answers.
+5. `Terminal3IdentityProvider` (`src/lib/identity-terminal3.ts`), the same class the
+   `/api/v1/recipients/:ref/verify` route uses in production, run against a real
+   recipient from Tiba's database
+6. The same provider against a recipient who delegated nothing, and one with no
+   Terminal 3 identity at all. Both refuse.
+7. The org's append-only, hash-stamped activity log pulled back from Terminal 3
+
+To point the running app at it, set `IDENTITY_PROVIDER=terminal3` and
+`T3_AGENT_API_KEY`. The account private key is not one of them. It is used only by
+`npm run t3:demo` to provision, and never reaches the server.
+
+### What is real and what is a stand-in
+
+Real: authentication, org and agent creation, the grant, both delegation checks, the
+refusals, the activity log, and the recipient, which is read from Tiba's own Postgres.
+
+Stand-in: the recipient's Terminal 3 identity is the operator's own DID. This is a
+platform constraint, not a shortcut. `tee:user::kyc-status` is self-only on this SDK.
+The signature takes no target-DID parameter and there is no agent-registry equivalent
+for a third party's KYC, so the only path for a real recipient is for them to hold
+their own Terminal 3 account. Rather than fabricate a verified answer for someone who
+was never checked, Tiba proves the delegation, which is the part it can actually
+prove, and stores only that.
+
+Tiba therefore never reads the KYC value. It records that Terminal 3 confirmed a live
+delegation, with a short expiry, so the stored verdict cannot outlive the grant it was
+based on.
+
+### Platform boundaries found live, not guessed
+
+- `invoke()`, the agent's stateless api-key call path, is restricted to `z:` tenant
+  contracts. A raw call against `tee:user/contracts` returns 400,
+  `"invoke is restricted to z: (tenant) contracts"`. Publishing a Tiba tenant contract
+  that calls into `tee:` from inside the TEE is the next step for a fully session-free
+  agent path.
+- The SDK is pinned to `5.2.0`. Version `5.10.0` throws `"Trust manifest is malformed"`
+  because it requires an `rtmr1_allowlist` this testnet cluster does not publish.
+- `authenticate()`, `createOrganisation()` and `createAgent()` return a `Did` object,
+  not a string. Passing one into a string parameter serialises it as a nested map and
+  the node returns `"parse input: invalid type: map, expected a string"`. Every call
+  site coerces with `String()` first.
+- `getActivityLog()` refuses once the caller belongs to more than one organisation and
+  offers no scoping parameter, so the demo cleans up stray orgs from crashed runs.
+- The session-based `client.checkDelegation()` cannot prove an agent's scope. From the
+  owner's session it answers "would I be allowed to do this for myself", which is
+  trivially true. The real per-agent check is `discoverCheckDelegation()` called with
+  the agent's own api key, and it is the one that returns false for an ungranted
+  function.
+
 ## Setup
 
 1. Install dependencies: `npm install`

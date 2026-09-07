@@ -17,7 +17,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
     result = await provider.verify({
       recipientRef: recipient.ref,
       displayName: recipient.displayName,
-      suiAddress: recipient.suiAddress
+      suiAddress: recipient.suiAddress,
+      t3nDid: recipient.t3nDid
     });
   } catch {
     return NextResponse.json({ error: "IDENTITY_PROVIDER_UNAVAILABLE" }, { status: 502 });

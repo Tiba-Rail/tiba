@@ -10,3 +10,4 @@ tsconfig.tsbuildinfo
 scripts/free-disk.ps1
 
 .vercel
+scripts/.t3-agent-state.json

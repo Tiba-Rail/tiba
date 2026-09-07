@@ -105,6 +105,8 @@ model Recipient {
   kycCheckId  String?  @map("kyc_check_id")
   kycVerifiedAt DateTime? @map("kyc_verified_at")
   kycExpiresAt  DateTime? @map("kyc_expires_at")
+  // Terminal 3 identity, set when a recipient links one. Null for everyone else.
+  t3nDid        String?   @map("t3n_did")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
