@@ -22,7 +22,7 @@
     "sui:smoke": "node scripts/sui-smoke.mjs",
     "a2a:proof": "node scripts/a2a-proof.mjs",
     "postinstall": "prisma generate",
-    "t3:demo": "node scripts/t3-identity-demo.mjs"
+    "t3:demo": "node --no-warnings scripts/t3-identity-demo.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
