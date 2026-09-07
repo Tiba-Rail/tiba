@@ -108,6 +108,17 @@ line(`    "can I call otp-request?" -> authorised: ${denied.authorised}`);
 line(`    Same key, same contract, two different answers. Terminal 3 enforces the scope, not Tiba.`);
 
 // ---------------------------------------------------------------------------
+say("Know Your Agent: asking Terminal 3 to identify the caller, using nothing but its key");
+const { whoIsThisAgent } = await import("../src/lib/identity-terminal3.ts");
+const who = await whoIsThisAgent(apiKey, baseUrl);
+line(`    Terminal 3 says this key belongs to: ${who?.did}`);
+line(`    accountable organisation:            ${who?.organisations?.[0]}`);
+line(`    Tiba did not issue this key and cannot forge that answer. Revoke the agent on`);
+line(`    Terminal 3 and this stops resolving even though Tiba's own database still lists it.`);
+const stranger = await whoIsThisAgent("not-a-real-agent-key", baseUrl);
+line(`    a made-up key resolves to: ${stranger === null ? "null, refused" : JSON.stringify(stranger)}`);
+
+// ---------------------------------------------------------------------------
 say("Running Tiba's own identity provider against a recipient from Tiba's payout queue");
 let recipient = null;
 try {

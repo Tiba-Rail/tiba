@@ -34,3 +34,11 @@ test("terminal3FromEnv returns null when no agent key is configured", () => {
     if (saved !== undefined) process.env.T3_AGENT_API_KEY = saved;
   }
 });
+
+// Know Your Agent must fail closed. An unreachable node, a revoked key or a garbage
+// key all have to come back null, because the caller treats null as "refuse". If this
+// ever threw instead, a crash in the identity check could be mistaken for a pass.
+test("whoIsThisAgent returns null rather than throwing when Terminal 3 cannot answer", async () => {
+  const { whoIsThisAgent } = await import("../src/lib/identity-terminal3.ts");
+  assert.equal(await whoIsThisAgent("garbage-key", "http://127.0.0.1:1"), null);
+});

@@ -131,12 +131,18 @@ produces fresh sequence numbers and hashes from the node:
 4. Proof of that grant asked as the agent, with its own opaque api key: one call it
    is allowed to make (`kyc-status`, authorised) and one it is not (`otp-request`,
    refused). Same key, same contract, two different answers.
-5. `Terminal3IdentityProvider` (`src/lib/identity-terminal3.ts`), the same class the
+5. Know Your Agent. `whoIsThisAgent()` hands Terminal 3 nothing but the caller's
+   opaque key and gets back which agent it is and which organisation is accountable
+   for it. Tiba did not issue that key and cannot forge the answer, so unlike Tiba's
+   own api-key check this proves something to a third party. A made-up key resolves
+   to null, and the caller treats null as a refusal. Revoke the agent on Terminal 3
+   and it stops resolving even while Tiba's own database still lists it.
+6. `Terminal3IdentityProvider` (`src/lib/identity-terminal3.ts`), the same class the
    `/api/v1/recipients/:ref/verify` route uses in production, run against a real
    recipient from Tiba's database
-6. The same provider against a recipient who delegated nothing, and one with no
+7. The same provider against a recipient who delegated nothing, and one with no
    Terminal 3 identity at all. Both refuse.
-7. The org's append-only, hash-stamped activity log pulled back from Terminal 3
+8. The org's append-only, hash-stamped activity log pulled back from Terminal 3
 
 To point the running app at it, set `IDENTITY_PROVIDER=terminal3` and
 `T3_AGENT_API_KEY`. The account private key is not one of them. It is used only by

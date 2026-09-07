@@ -88,6 +88,40 @@ export class Terminal3IdentityProvider implements IdentityProvider {
   }
 }
 
+/**
+ * Know Your Agent.
+ *
+ * Tiba's own agent auth answers "is this api key in my database". That is a
+ * question Tiba asks itself, so it proves nothing to anyone else. This asks
+ * Terminal 3 instead: hand over nothing but the caller's opaque key and get back
+ * who that agent is and which organisation is accountable for it.
+ *
+ * Useful precisely because Tiba did not issue the key and cannot forge the answer.
+ * An agent that was revoked on Terminal 3's side stops resolving here even though
+ * Tiba's own database still lists it.
+ */
+export async function whoIsThisAgent(
+  apiKey: string,
+  baseUrl = process.env.T3_NODE_URL || "https://cn-api.sg.testnet.t3n.terminal3.io"
+): Promise<{ did: string; organisations: string[]; owner: string | null } | null> {
+  const { discoverWhoami } = await loadSdk();
+  try {
+    const r = (await discoverWhoami({ baseUrl, apiKey })) as {
+      did?: unknown; organisations?: unknown; owner?: unknown;
+    };
+    if (!r || typeof r.did !== "string") return null;
+    return {
+      did: r.did,
+      organisations: Array.isArray(r.organisations) ? r.organisations.map(String) : [],
+      owner: typeof r.owner === "string" ? r.owner : null
+    };
+  } catch {
+    // An unknown, revoked or expired key is a "no", not a crash. The caller
+    // refuses on null; it must never be able to read this as a yes.
+    return null;
+  }
+}
+
 /** Returns null when Terminal 3 is not configured, so the caller can fall back. */
 export function terminal3FromEnv(): Terminal3IdentityProvider | null {
   const apiKey = process.env.T3_AGENT_API_KEY;
