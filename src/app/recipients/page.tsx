@@ -21,7 +21,8 @@ export default async function RecipientsPage() {
         recipients={recipients.map((recipient) => ({
           ref: recipient.ref,
           displayName: recipient.displayName,
-          suiAddress: recipient.suiAddress,
+          suiAddress: recipient.suiAddress ?? "",
+          solanaAddress: recipient.solanaAddress,
           active: recipient.active,
           kycStatus: recipient.kycStatus,
           kycProvider: recipient.kycProvider,

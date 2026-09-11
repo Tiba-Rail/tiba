@@ -1,14 +1,22 @@
+import { defaultChain, type Chain } from "@/lib/rails";
+import { getSolanaUsdcBalance, solanaTreasuryAddress } from "@/lib/rails/solana";
+
 const TESTNET_GRAPHQL_URL = "https://graphql.testnet.sui.io/graphql";
 
 
 const SUI_TYPE_ARG = "0x2::sui::SUI";
 
-export function getSettlementAddress(): string | null {
+/** Treasury address for a chain, default SETTLEMENT_CHAIN. */
+export function getSettlementAddress(chain: Chain = defaultChain()): string | null {
+  if (chain === "solana") return solanaTreasuryAddress();
   const address = process.env.SUI_ADDRESS?.trim();
   return address ? address : null;
 }
 
-export async function getSettlementBalance(address: string): Promise<bigint> {
+/** Treasury balance in micros. Solana: USDC token account, 0n only if it does not exist yet. */
+export async function getSettlementBalance(address: string, chain: Chain = defaultChain()): Promise<bigint> {
+  if (chain === "solana") return getSolanaUsdcBalance(address);
+
   const coinType = process.env.SUI_USDC_TYPE?.trim() || SUI_TYPE_ARG;
   // JSON-RPC on public fullnodes is deprecated and now answers "Method not found", which made
   // every balance read silently return zero. Read it over GraphQL, the transport settlement uses.

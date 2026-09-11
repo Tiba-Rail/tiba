@@ -17,7 +17,7 @@ export function demoReplenishRefs(env: NodeJS.ProcessEnv = process.env): string[
   return raw.split(",").map((r) => r.trim()).filter(Boolean);
 }
 
-/** Each demo payment spends real testnet SUI, so cap how often one ref may recycle. */
+/** Each demo payment spends real test-network funds, so cap how often one ref may recycle. */
 export const DEMO_REPLENISH_DAILY_CAP = 40;
 
 /**

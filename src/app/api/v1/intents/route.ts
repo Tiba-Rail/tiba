@@ -21,6 +21,8 @@ function response(intent: PublicIntent) {
     decision_class: intent.decisionClass,
     reason_code: intent.reasonCode,
     digest: intent.digest,
+    signature: intent.signature,
+    chain: intent.chain,
     explorer_url: intent.explorerUrl,
     public_token: intent.publicToken
   });

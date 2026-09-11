@@ -8,6 +8,7 @@ import { SiteNav } from "@/components/site-nav";
 import { decisionSentence, disagreementLine, explainDecision } from "@/app/console/types";
 import { recipientIdentityOk } from "@/lib/identity";
 import { LiveRefresh } from "@/components/live-refresh";
+import { chainName, chainOf } from "@/app/format";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Receipt - Tiba" };
@@ -72,7 +73,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
       "DAY_AMOUNT_CAP", "DAY_COUNT_CAP", "HOUR_AMOUNT_CAP", "HOUR_COUNT_CAP",
       "TRANSACTION_CEILING", "WORK_ORDER_CEILING", "WORK_ORDER_EXPIRED",
       "WORK_ORDER_NOT_OPEN", "NO_OPEN_OBLIGATION", "RECIPIENT_INACTIVE",
-      "RECIPIENT_NOT_FOUND", "KILL_SWITCH", "RECIPIENT_UNVERIFIED",
+      "RECIPIENT_NOT_FOUND", "KILL_SWITCH", "RECIPIENT_UNVERIFIED", "RECIPIENT_NO_CHAIN_ADDRESS",
       "INVALID_AMOUNT", "INVALID_TIMESTAMP"
     ];
 
@@ -104,9 +105,17 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   // Determine settlement status
   function getSettlementStatus(decisionClass: string, reasonCode: string | null): string {
     if (decisionClass === "PAID") return "Yes";
-    if (reasonCode === "SETTLEMENT_FAILED" || reasonCode === "SUI_EXECUTION_FAILED") return "Tried and failed";
+    if (
+      reasonCode === "SETTLEMENT_FAILED" ||
+      reasonCode === "SUI_EXECUTION_FAILED" ||
+      reasonCode === "SOLANA_EXECUTION_FAILED"
+    ) return "Tried and failed";
+    // RECIPIENT_NO_CHAIN_ADDRESS is refused before any debit, so it falls through to "Not tried".
     return "Not tried";
   }
+
+  // Old intents have no stored chain and settled on Sui.
+  const network = `${chainName(chainOf(intent.chain))} test network`;
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -250,8 +259,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                 <td className="py-3 px-3">{getSettlementStatus(intent.decisionClass, intent.reasonCode)}</td>
                 <td className="py-3 px-3">
                   {intent.explorerUrl ? (
-                    <a href={intent.explorerUrl} className="link num break-all text-xs">
-                      {intent.digest} — view on Sui test network
+                    <a href={intent.explorerUrl} className="link num break-all text-xs" target="_blank" rel="noopener noreferrer">
+                      {intent.digest} — view on the {network}
                     </a>
                   ) : (
                     "No transfer happened, so there is no transaction record."

@@ -3,14 +3,18 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ConnectModal, useCurrentAccount } from "@mysten/dapp-kit";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { OperatorTokenField } from "@/components/operator-token-field";
 import { humanError } from "@/app/console/types";
 import { OpenInSlush } from "@/components/open-in-slush";
+import { isSolanaAddress, isSuiAddress, shortAddress } from "@/app/format";
 
 interface Recipient {
   ref: string;
   displayName: string;
   suiAddress: string;
+  solanaAddress?: string | null;
   active: boolean;
   kycStatus: string;
   kycProvider: string | null;
@@ -24,6 +28,49 @@ function kycPill(status: string): { className: string; label: string } {
   return { className: "pill pill-held", label: "Not verified" };
 }
 
+// Every saved address once, labelled by its format (the server may pass a coalesced value).
+function savedWallets(recipient: Recipient): { chain: string; address: string }[] {
+  const addresses = [recipient.solanaAddress, recipient.suiAddress].filter((a): a is string => Boolean(a));
+  return [...new Set(addresses)].map((address) => ({ chain: isSuiAddress(address) ? "Sui" : "Solana", address }));
+}
+
+interface AddressFieldProps {
+  label: string;
+  name: string;
+  value: string;
+  connected: string;
+  fromWallet: boolean;
+  onChange: (value: string | null) => void;
+}
+
+// `fromWallet` is true while the field still shows the connected wallet's address.
+function AddressField({ label, name, value, connected, fromWallet, onChange }: AddressFieldProps) {
+  return (
+    <>
+      <label className="block text-sm font-medium">
+        {label}
+        <input
+          className="field mt-1"
+          name={name}
+          type="text"
+          autoComplete="off"
+          spellCheck={false}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </label>
+      {connected && fromWallet && (
+        <div className="-mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
+          <span className="num">Address from your connected wallet - {shortAddress(connected)}</span>
+          <button type="button" className="link" onClick={() => onChange("")}>
+            Use a different address
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 interface RecipientsClientProps {
   recipients: Recipient[];
 }
@@ -33,13 +80,17 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const account = useCurrentAccount();
-  const [manualAddress, setManualAddress] = useState<string | null>(null);
+  const suiAccount = useCurrentAccount();
+  const { publicKey } = useWallet();
+  const { setVisible: openSolanaModal } = useWalletModal();
+  // null = follow the connected wallet; a string = what the user typed.
+  const [manualSui, setManualSui] = useState<string | null>(null);
+  const [manualSolana, setManualSolana] = useState<string | null>(null);
 
-  const walletAddress = manualAddress ?? account?.address ?? "";
-  const shortAddress = account
-    ? `${account.address.slice(0, 6)}…${account.address.slice(-4)}`
-    : "";
+  const connectedSui = suiAccount?.address ?? "";
+  const connectedSolana = publicKey?.toBase58() ?? "";
+  const suiValue = manualSui ?? connectedSui;
+  const solanaValue = manualSolana ?? connectedSolana;
 
   async function post(path: string, body: Record<string, unknown>, busyLabel: string, success = "Recipient saved.") {
     setBusy(busyLabel);
@@ -72,15 +123,33 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
 
   async function registerRecipient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const sui = suiValue.trim();
+    const solana = solanaValue.trim();
+
+    // A recipient needs at least one address; each one given must look right for its chain.
+    const invalid =
+      !sui && !solana ? "RECIPIENT_NO_CHAIN_ADDRESS" :
+      solana && !isSolanaAddress(solana) ? "INVALID_SOLANA_ADDRESS" :
+      sui && !isSuiAddress(sui) ? "INVALID_SUI_ADDRESS" :
+      null;
+    if (invalid) {
+      setMessage(null);
+      setError(invalid);
+      return;
+    }
+
     await post("/api/v1/recipients", {
       ref: form.get("ref"),
       display_name: form.get("display_name"),
-      sui_address: form.get("sui_address"),
+      ...(sui ? { sui_address: sui } : {}),
+      ...(solana ? { solana_address: solana } : {}),
       active: true
     }, "recipient");
-    event.currentTarget.reset();
-    setManualAddress(null);
+    formElement.reset();
+    setManualSui(null);
+    setManualSolana(null);
   }
 
   async function verifyIdentity(ref: string) {
@@ -125,7 +194,11 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
                 </span>
               </div>
               <p className="num mt-1 text-xs text-muted">ID {recipient.ref}</p>
-              <p className="num mt-2 break-all text-xs text-muted">Wallet {recipient.suiAddress}</p>
+              {savedWallets(recipient).map((wallet) => (
+                <p key={wallet.address} className="num mt-2 break-all text-xs text-muted">
+                  {wallet.chain} wallet {wallet.address}
+                </p>
+              ))}
               <div className="mt-3 flex flex-wrap items-start gap-3 border-t border-line pt-3">
                 <span className={kycPill(recipient.kycStatus).className}>{kycPill(recipient.kycStatus).label}</span>
                 <span className="min-w-0 flex-1 break-words text-xs text-muted">
@@ -151,14 +224,19 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
       <section className="card p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="title">Add recipient</h2>
-          <ConnectModal
-            trigger={
-              <button className="btn btn-secondary" type="button">
-                Use my wallet address
-              </button>
-            }
-          />
-          <OpenInSlush className="btn btn-secondary" />
+          <div className="flex flex-wrap items-center gap-3">
+            <button className="btn btn-secondary" type="button" onClick={() => openSolanaModal(true)}>
+              Use my Solana wallet
+            </button>
+            <ConnectModal
+              trigger={
+                <button className="btn btn-secondary" type="button">
+                  Use my Sui wallet
+                </button>
+              }
+            />
+            <OpenInSlush className="btn btn-secondary" />
+          </div>
         </div>
         <form onSubmit={registerRecipient} className="space-y-4">
           <label className="block text-sm font-medium">
@@ -185,33 +263,23 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
             />
           </label>
 
-          <label className="block text-sm font-medium">
-            Wallet address (test network)
-            <input
-              className={inputClass}
-              name="sui_address"
-              type="text"
-              autoComplete="off"
-              spellCheck={false}
-              required
-              value={walletAddress}
-              onChange={(event) => setManualAddress(event.target.value)}
-            />
-          </label>
-          {account && manualAddress === null && (
-            <div className="-mt-2 flex flex-wrap items-center gap-3 text-xs text-muted">
-              <span className="num">
-                Address from your connected wallet - {shortAddress}
-              </span>
-              <button
-                type="button"
-                className="link"
-                onClick={() => setManualAddress("")}
-              >
-                Use a different address
-              </button>
-            </div>
-          )}
+          <AddressField
+            label="Solana wallet address (devnet)"
+            name="solana_address"
+            value={solanaValue}
+            connected={connectedSolana}
+            fromWallet={manualSolana === null}
+            onChange={setManualSolana}
+          />
+
+          <AddressField
+            label="Sui wallet address (testnet)"
+            name="sui_address"
+            value={suiValue}
+            connected={connectedSui}
+            fromWallet={manualSui === null}
+            onChange={setManualSui}
+          />
 
           <div className="flex flex-wrap items-start gap-4">
             <button
@@ -227,7 +295,7 @@ export function RecipientsClient({ recipients }: RecipientsClientProps) {
           </div>
         </form>
         <p className="mt-4 text-sm text-muted">
-          Get paid to the wallet you already have. Connect it and the address fills in - no copying. Works with Slush, Suiet, OKX, Bitget, Nightly, Backpack and other compatible wallets.
+          Get paid to the wallet you already have. Connect it and the address fills in - no copying. Phantom or Solflare fill the Solana address; Slush, Suiet, OKX, Bitget, Nightly, Backpack and other Sui wallets fill the Sui address. Save either or both: a recipient with a Solana address is paid on Solana, otherwise on Sui.
         </p>
       </section>
     </div>

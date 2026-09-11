@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
+import { SolanaProviders } from "@/components/solana-providers";
 import { SuiProviders } from "@/components/sui-providers";
 import "./globals.css";
 
@@ -25,7 +26,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${inter.variable} ${jetbrains.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <SuiProviders>{children}</SuiProviders>
+        {/* Both chains until Sui is retired: each recipient is paid on the chain of its saved address. */}
+        <SuiProviders>
+          <SolanaProviders>{children}</SolanaProviders>
+        </SuiProviders>
       </body>
     </html>
   );

@@ -12,7 +12,7 @@ import {
 } from "@/lib/prompts";
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
 import { reconcile, type DecisionTuple, type RequiredChannels } from "@/lib/reconcile";
-import { PayoutRailError, payoutRail } from "@/lib/rails";
+import { chainForRecipient, executionFailedCode, PayoutRailError, payoutRail, settledChain } from "@/lib/rails";
 import { replenishDemoWorkOrder } from "@/lib/demo-replenish";
 
 export type PublicIntent = {
@@ -23,6 +23,9 @@ export type PublicIntent = {
   digest: string | null;
   explorerUrl: string | null;
   publicToken: string;
+  chain: string | null;
+  /** Same value as digest: the transaction id on whichever chain settled. */
+  signature: string | null;
 };
 
 type IntentBody = {
@@ -43,6 +46,7 @@ function toPublicIntent(intent: {
   digest: string | null;
   explorerUrl: string | null;
   publicToken: string;
+  chain: string | null;
 }): PublicIntent {
   return {
     id: intent.id,
@@ -51,7 +55,9 @@ function toPublicIntent(intent: {
     reasonCode: intent.reasonCode,
     digest: intent.digest,
     explorerUrl: intent.explorerUrl,
-    publicToken: intent.publicToken
+    publicToken: intent.publicToken,
+    chain: intent.chain,
+    signature: intent.digest
   };
 }
 
@@ -152,6 +158,19 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
     });
     return toPublicIntent(denied);
   }
+
+  // Chain per recipient: a saved Solana address pays on Solana, else Sui. Refuse before any
+  // inference or debit when there is nowhere to send the money.
+  const target = chainForRecipient(recipient);
+  if (!target) {
+    const pricing = await pricingData();
+    const denied = await prisma.payoutIntent.update({
+      where: { id: intent.id },
+      data: { status: "refused", decisionClass: "RED", reasonCode: "RECIPIENT_NO_CHAIN_ADDRESS", ...pricing }
+    });
+    return toPublicIntent(denied);
+  }
+  const chain = settledChain(agent.rail, target.chain);
 
   const artifactMessages: GonkaMessage[] = [
     { role: "system", content: artifactSystemPrompt },
@@ -308,13 +327,13 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
         });
       }
 
-      const receipt = await payoutRail(agent.rail).send({
-        recipientAddress: recipient.suiAddress,
+      const receipt = await payoutRail(agent.rail, target.chain).send({
+        recipientAddress: target.address,
         amountMicros: reconciled.tuple.amountMicros,
         intentId: intent.id
       });
       if (!receipt.digest || !receipt.explorerUrl) {
-        throw new PayoutRailError("SUI_EXECUTION_FAILED", "Settlement did not return a digest.");
+        throw new PayoutRailError(executionFailedCode(target.chain), "Settlement did not return a digest.");
       }
 
       return tx.payoutIntent.update({
@@ -326,6 +345,7 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
           decisionClass: "PAID",
           digest: receipt.digest,
           explorerUrl: receipt.explorerUrl,
+          chain,
           ...pricing
         }
       });
@@ -345,6 +365,7 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
         reasonCode: "SETTLEMENT_FAILED",
         digest: null,
         explorerUrl: null,
+        chain,
         ...pricing
       }
     });

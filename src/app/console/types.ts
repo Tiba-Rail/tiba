@@ -2,6 +2,7 @@ export type Recipient = {
   ref: string;
   displayName: string;
   suiAddress: string;
+  solanaAddress?: string | null;
   active: boolean;
 };
 
@@ -97,8 +98,10 @@ export function explainDecision(decisionClass: string, reasonCode: string | null
     case "KILL_SWITCH": return "The wallet is frozen.";
     case "INVALID_AMOUNT": return "The amount in this request was not valid.";
     case "INVALID_TIMESTAMP": return "A date in this request was not valid.";
+    case "RECIPIENT_NO_CHAIN_ADDRESS": return "Recipient has no saved wallet address.";
     case "SETTLEMENT_FAILED":
     case "SUI_EXECUTION_FAILED":
+    case "SOLANA_EXECUTION_FAILED":
       return "Both checks agreed and the limits passed, but the transfer itself failed. No money moved.";
     default:
       return "Refused before any money moved.";
@@ -122,6 +125,7 @@ const PRE_CHECK_REFUSALS = new Set([
   "RECIPIENT_NOT_FOUND",
   "RECIPIENT_INACTIVE",
   "RECIPIENT_UNVERIFIED",
+  "RECIPIENT_NO_CHAIN_ADDRESS",
   "INVALID_AMOUNT",
   "INVALID_TIMESTAMP"
 ]);
@@ -160,7 +164,7 @@ export function sendResultChecks(decisionClass: string, reasonCode: string | nul
     ];
   }
 
-  if (reasonCode === "SETTLEMENT_FAILED" || reasonCode === "SUI_EXECUTION_FAILED") {
+  if (reasonCode === "SETTLEMENT_FAILED" || reasonCode === "SUI_EXECUTION_FAILED" || reasonCode === "SOLANA_EXECUTION_FAILED") {
     return [
       { name: CHECK_1, mark: "pass", text: "Agreed." },
       { name: CHECK_2, mark: "pass", text: "Agreed — the transfer itself failed." }
@@ -194,6 +198,8 @@ export function refusalNextStepLink(reasonCode: string | null): { label: string;
     case "RECIPIENT_INACTIVE":
     case "RECIPIENT_UNVERIFIED":
       return { label: "Check the recipient", href: "/recipients" };
+    case "RECIPIENT_NO_CHAIN_ADDRESS":
+      return { label: "Add a wallet address", href: "/recipients" };
     case "KILL_SWITCH":
       return { label: "Unfreeze the wallet", href: "/policies" };
     default:
@@ -221,10 +227,13 @@ export function refusalNextStep(reasonCode: string | null): string {
     case "RECIPIENT_INACTIVE":
     case "RECIPIENT_UNVERIFIED":
       return "What next: check the recipient under Recipients.";
+    case "RECIPIENT_NO_CHAIN_ADDRESS":
+      return "What next: save a Solana or Sui wallet address for this recipient under Recipients.";
     case "KILL_SWITCH":
       return "What next: unfreeze the wallet under Limits.";
     case "SETTLEMENT_FAILED":
     case "SUI_EXECUTION_FAILED":
+    case "SOLANA_EXECUTION_FAILED":
       return "What next: try again — the checks passed, the transfer failed.";
     default:
       if (reasonCode?.startsWith("QUORUM_SPLIT")) {
@@ -253,6 +262,9 @@ export function humanError(code: string | null | undefined): { text: string; cod
     NOT_OVERRIDABLE: "This one cannot be approved.",
     ALREADY_PAID: "Already paid.",
     RECIPIENT_NOT_FOUND: "That recipient is not saved.",
+    RECIPIENT_NO_CHAIN_ADDRESS: "Add a Solana or Sui wallet address.",
+    INVALID_SOLANA_ADDRESS: "That is not a valid Solana address.",
+    INVALID_SUI_ADDRESS: "That is not a valid Sui address (0x followed by up to 64 hex characters).",
     INVALID_PAYER_RECORD_JSON: "Your record is not valid JSON.",
     INVALID_TIMESTAMP: "The date is not valid.",
     IDENTITY_PROVIDER_UNAVAILABLE: "The identity-check service is unavailable. Try again later.",

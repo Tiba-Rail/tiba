@@ -3,31 +3,47 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { ConnectModal, useCurrentAccount, useSignPersonalMessage } from "@mysten/dapp-kit";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import type { SignInProvider } from "@/lib/auth-providers";
 import { OpenInSlush } from "@/components/open-in-slush";
+import { defaultPublicChain, shortAddress } from "@/app/format";
+
+type Challenge = { address: string; nonce: string; message: string };
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
 
 // Wallet sign-in is the front door. The server issues a nonce, the wallet signs it,
 // the server verifies the signature against the address and opens a session.
 export function SignInClient({ providers, callbackUrl }: { providers: SignInProvider[]; callbackUrl: string }) {
   const account = useCurrentAccount();
-  const { mutateAsync: signMessage } = useSignPersonalMessage();
+  const { mutateAsync: signSuiMessage } = useSignPersonalMessage();
+  const solana = useWallet();
+  const { setVisible: openSolanaModal } = useWalletModal();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function withWallet() {
-    if (!account) return;
+  async function withWallet(
+    provider: "sui-wallet" | "solana-wallet",
+    address: string,
+    signMessage: (message: string) => Promise<string>
+  ) {
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/auth/wallet/nonce", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ address: account.address })
+        body: JSON.stringify({ address })
       });
       if (!res.ok) throw new Error("Could not start wallet sign-in.");
-      const challenge = (await res.json()) as { address: string; nonce: string; message: string };
-      const { signature } = await signMessage({ message: new TextEncoder().encode(challenge.message) });
-      const result = await signIn("sui-wallet", {
+      const challenge = (await res.json()) as Challenge;
+      const signature = await signMessage(challenge.message);
+      const result = await signIn(provider, {
         address: challenge.address,
         nonce: challenge.nonce,
         message: challenge.message,
@@ -45,20 +61,63 @@ export function SignInClient({ providers, callbackUrl }: { providers: SignInProv
     }
   }
 
+  function withSui() {
+    if (!account) return;
+    void withWallet("sui-wallet", account.address, async (message) => {
+      const { signature } = await signSuiMessage({ message: new TextEncoder().encode(message) });
+      return signature;
+    });
+  }
+
+  function withSolana() {
+    const { publicKey, signMessage } = solana;
+    if (!publicKey) return;
+    if (!signMessage) {
+      setError("This wallet cannot sign a message. Try Phantom or Solflare.");
+      return;
+    }
+    void withWallet("solana-wallet", publicKey.toBase58(), async (message) =>
+      toBase64(await signMessage(new TextEncoder().encode(message)))
+    );
+  }
+
+  const solanaFirst = defaultPublicChain === "solana";
+  const solanaAddress = solana.publicKey?.toBase58();
+
+  const solanaBlock = providers.includes("solana-wallet") ? (
+    solanaAddress ? (
+      <button key="solana" type="button" className={`btn ${solanaFirst ? "btn-primary" : "btn-secondary"} w-full`} onClick={withSolana} disabled={busy}>
+        {busy ? "Confirm in wallet…" : `Continue as ${shortAddress(solanaAddress)} (Solana)`}
+      </button>
+    ) : (
+      <button key="solana" type="button" className={`btn ${solanaFirst ? "btn-primary" : "btn-secondary"} w-full`} onClick={() => openSolanaModal(true)}>
+        Continue with a Solana wallet
+      </button>
+    )
+  ) : null;
+
+  const suiBlock = account ? (
+    <button key="sui" type="button" className={`btn ${solanaFirst ? "btn-secondary" : "btn-primary"} w-full`} onClick={withSui} disabled={busy}>
+      {busy ? "Confirm in wallet…" : `Continue as ${shortAddress(account.address)} (Sui)`}
+    </button>
+  ) : (
+    <div key="sui" className="flex flex-col gap-3">
+      <ConnectModal
+        trigger={
+          <button type="button" className={`btn ${solanaFirst ? "btn-secondary" : "btn-primary"} w-full`}>
+            Continue with a Sui wallet
+          </button>
+        }
+      />
+      <OpenInSlush />
+    </div>
+  );
+
   const social = providers.filter((p): p is "google" | "github" => p === "google" || p === "github");
 
   return (
     <div className="mt-8 flex max-w-sm flex-col gap-3">
-      {account ? (
-        <button type="button" className="btn btn-primary w-full" onClick={withWallet} disabled={busy}>
-          {busy ? "Confirm in wallet…" : `Continue as ${account.address.slice(0, 6)}…${account.address.slice(-4)}`}
-        </button>
-      ) : (
-        <>
-          <ConnectModal trigger={<button type="button" className="btn btn-primary w-full">Continue with your wallet</button>} />
-          <OpenInSlush />
-        </>
-      )}
+      {solanaFirst ? [solanaBlock, suiBlock] : [suiBlock, solanaBlock]}
 
       {social.length > 0 ? (
         <>

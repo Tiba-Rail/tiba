@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getGnkUsdRate } from "@/lib/gonka-pricing";
 import { isOperatorRequest } from "@/lib/operator-auth";
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
-import { PayoutRailError, payoutRail } from "@/lib/rails";
+import { chainForRecipient, executionFailedCode, PayoutRailError, payoutRail, settledChain } from "@/lib/rails";
 
 export const runtime = "nodejs";
 
@@ -66,6 +66,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       recipientId: intent.recipientId
     }
   });
+  const target = chainForRecipient(intent.recipient);
+  if (!target) {
+    const updated = await prisma.payoutIntent.update({
+      where: { id: intent.id },
+      data: { status: "refused", decisionClass: "RED", reasonCode: "RECIPIENT_NO_CHAIN_ADDRESS", ...pricing }
+    });
+    return NextResponse.json({ id: updated.id, decision_class: updated.decisionClass, reason_code: updated.reasonCode });
+  }
+  const chain = settledChain(intent.agent.rail, target.chain);
+
   const now = new Date();
   const before = evaluateBeforeDebit({
     agent: intent.agent as AgentLimits,
@@ -128,13 +138,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           }
         });
       }
-      const receipt = await payoutRail(intent.agent.rail).send({
-        recipientAddress: intent.recipient.suiAddress,
+      const receipt = await payoutRail(intent.agent.rail, target.chain).send({
+        recipientAddress: target.address,
         amountMicros: tuple.amountMicros,
         intentId: intent.id
       });
       if (!receipt.digest || !receipt.explorerUrl) {
-        throw new PayoutRailError("SUI_EXECUTION_FAILED", "Settlement did not return a digest.");
+        throw new PayoutRailError(executionFailedCode(target.chain), "Settlement did not return a digest.");
       }
       return tx.payoutIntent.update({
         where: { id: intent.id },
@@ -146,10 +156,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           workOrderId: workOrder!.id,
           digest: receipt.digest,
           explorerUrl: receipt.explorerUrl,
+          chain,
           ...pricing
         }
       });
-    });
+    }, { timeout: 120_000 });
   } catch {
     updated = await prisma.payoutIntent.update({
       where: { id: intent.id },
@@ -161,6 +172,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         workOrderId: workOrder?.id,
         digest: null,
         explorerUrl: null,
+        chain,
         ...pricing
       }
     });
@@ -172,6 +184,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     reason_code: updated.reasonCode,
     amount_micros: updated.amountMicros.toString(),
     digest: updated.digest,
+    signature: updated.digest,
+    chain: updated.chain,
     explorer_url: updated.explorerUrl
   });
 }

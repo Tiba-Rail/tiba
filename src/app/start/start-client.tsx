@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { chainName, defaultPublicChain } from "@/app/format";
 
 type WorkspaceResult = {
   workspace_id: string;
@@ -13,14 +14,19 @@ type WorkspaceResult = {
   owner_key_prefix: string;
   recipient_ref: string;
   work_order_ref: string;
-  sui_address: string;
+  sui_address: string | null;
+  solana_address?: string | null;
 };
+
+// New workspaces put their demo recipient on the deployment's default chain.
+const ADDRESS_KEY = defaultPublicChain === "solana" ? "solana_address" : "sui_address";
+const CHAIN = chainName(defaultPublicChain);
 
 type Tab = "curl" | "mcp" | "telegram";
 
 export function StartClient() {
   const [name, setName] = useState("");
-  const [suiAddress, setSuiAddress] = useState("");
+  const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<WorkspaceResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +42,7 @@ export function StartClient() {
       const response = await fetch("/api/v1/workspaces", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, sui_address: suiAddress || undefined })
+        body: JSON.stringify({ name, [ADDRESS_KEY]: address.trim() || undefined })
       });
       const payload = await response.json().catch(() => ({ error: "UNKNOWN" })) as { error?: string } & Partial<WorkspaceResult>;
       if (!response.ok) {
@@ -92,7 +98,9 @@ export function StartClient() {
     : "";
 
   const telegramSnippet = result
-    ? `Open @tibapay_bot in Telegram and send this one message:\n\n/connect ${result.agent_key} ${result.owner_key}\n\nThen try: pay 0x<sui address> 1 USDC`
+    ? `Open @tibapay_bot in Telegram and send this one message:\n\n/connect ${result.agent_key} ${result.owner_key}\n\nThen try: ${
+        defaultPublicChain === "solana" ? "pay <your Solana address> 1 USDC" : "pay 0x<sui address> 1 USDC"
+      }`
     : "";
 
   return (
@@ -128,12 +136,12 @@ export function StartClient() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium">Wallet address for settlement (optional)</span>
+              <span className="text-sm font-medium">{CHAIN} wallet address for settlement (optional)</span>
               <input
                 className="field mt-1 font-mono text-xs"
                 type="text"
-                value={suiAddress}
-                onChange={(e) => setSuiAddress(e.target.value)}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
                 placeholder={typeof window !== "undefined" ? "Defaults to the deployment address" : ""}
                 autoComplete="off"
                 spellCheck={false}

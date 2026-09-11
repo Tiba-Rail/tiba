@@ -85,7 +85,7 @@ export default async function ConsolePage({
         recipients={recipients.map((recipient) => ({
           ref: recipient.ref,
           displayName: recipient.displayName,
-          suiAddress: recipient.suiAddress,
+          suiAddress: recipient.solanaAddress ?? recipient.suiAddress ?? "",
           active: recipient.active
         }))}
         workOrders={workOrders.map((workOrder) => ({

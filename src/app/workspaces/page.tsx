@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { SiteNav } from "@/components/site-nav";
+import { chainOf } from "@/app/format";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Workspaces - Tiba" };
@@ -25,6 +26,8 @@ export default async function WorkspacesPage() {
     select: { id: true, name: true, rail: true, createdAt: true },
     orderBy: { createdAt: "desc" }
   });
+  // A stored rail "sui" means live; each payment then follows the recipient's saved chain.
+  const liveLabel = chainOf(process.env.SETTLEMENT_CHAIN) === "solana" ? "Solana devnet" : "Sui testnet";
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -53,7 +56,7 @@ export default async function WorkspacesPage() {
                 <div>
                   <h2 className="title">{workspace.name}</h2>
                   <p className="mt-1 text-sm text-muted">
-                    {workspace.rail === "sui" ? "Sui testnet" : "Demo rail"} · Created {workspace.createdAt.toLocaleDateString("en")}
+                    {workspace.rail === "sui" ? liveLabel : "Demo rail"} · Created {workspace.createdAt.toLocaleDateString("en")}
                   </p>
                 </div>
                 <Link

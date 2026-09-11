@@ -1,6 +1,9 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, createPublicKey, randomBytes, timingSafeEqual, verify } from "node:crypto";
+import { PublicKey } from "@solana/web3.js";
 
 export const WALLET_NONCE_COOKIE = "tiba_wallet_nonce";
+// DER header of an Ed25519 SubjectPublicKeyInfo; node:crypto has no raw 32-byte key loader.
+const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 const CHALLENGE_TTL_SECONDS = 5 * 60;
 
 type ChallengePayload = {
@@ -25,14 +28,44 @@ function sign(value: string, secret: string): string {
   return createHmac("sha256", secret).update(value).digest("base64url");
 }
 
+// Branch on format BEFORE any lowercasing: base58 (Solana) is case-sensitive.
 function canonicalAddress(value: string): string | null {
-  const address = value.trim().toLowerCase();
-  if (!/^0x[0-9a-f]{1,64}$/.test(address)) return null;
-  return `0x${address.slice(2).padStart(64, "0")}`;
+  const trimmed = value.trim();
+  if (/^0x/i.test(trimmed)) {
+    const address = trimmed.toLowerCase();
+    if (!/^0x[0-9a-f]{1,64}$/.test(address)) return null;
+    return `0x${address.slice(2).padStart(64, "0")}`;
+  }
+  try {
+    return new PublicKey(trimmed).toBase58();
+  } catch {
+    return null;
+  }
 }
 
 export function normalizeWalletAddress(value: string): string | null {
   return canonicalAddress(value);
+}
+
+export function walletChain(canonical: string): "sui" | "solana" {
+  return canonical.startsWith("0x") ? "sui" : "solana";
+}
+
+// Solana wallets sign the raw message bytes with the account's ed25519 key.
+// `signature` is the 64-byte signature, base64-encoded by the browser.
+export function verifySolanaSignature(address: string, message: string, signature: string): boolean {
+  try {
+    const bytes = Buffer.from(signature, "base64");
+    if (bytes.length !== 64) return false;
+    const key = createPublicKey({
+      key: Buffer.concat([ED25519_SPKI_PREFIX, new PublicKey(address).toBuffer()]),
+      format: "der",
+      type: "spki"
+    });
+    return verify(null, Buffer.from(message, "utf8"), key, bytes);
+  } catch {
+    return false;
+  }
 }
 
 export function walletMessage(payload: Pick<ChallengePayload, "address" | "nonce">): string {
