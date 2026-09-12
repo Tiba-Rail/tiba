@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { DenialBanner } from "@/components/denial-banner";
 import { formatLatency, microsToUsdc } from "@/lib/money";
 import { prisma } from "@/lib/db";
-import { channelTuple, type ChannelTuple } from "@/lib/adjudication-display";
+import { auditView, channelTuple, modelLabel, onNebius, type ChannelTuple } from "@/lib/adjudication-display";
 import { SiteNav } from "@/components/site-nav";
 import { decisionSentence, disagreementLine, explainDecision } from "@/app/console/types";
 import { recipientIdentityOk } from "@/lib/identity";
@@ -50,6 +50,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   const channelATuple = channelTuple(adjudicationsByChannel.get("artifact")?.tupleJson);
   const channelBTuple = channelTuple(adjudicationsByChannel.get("payer_record")?.tupleJson);
   const disagreement = disagreementLine(intent.reasonCode, channelATuple, channelBTuple);
+  const auditRow = adjudicationsByChannel.get("auditor");
+  const audit = auditView(auditRow?.tupleJson);
 
   // Determine channel match status
   function getChannelMatchStatus(tupleA: ChannelTuple, tupleB: ChannelTuple): string {
@@ -173,76 +175,59 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                 <td className="py-3 px-3">Check 1 — read the delivery note</td>
                 <td className="py-3 px-3">{getChannelMatchStatus(channelATuple, channelBTuple)}</td>
                 <td className="py-3 px-3">
-                  {adjudicationsByChannel.get("artifact") ? (
-                    <div className="text-sm">
-                      <div className="break-all">Model used: {adjudicationsByChannel.get("artifact")?.model}</div>
-                      {adjudicationsByChannel.get("artifact")?.fallback ? (
-                        <div style={{ color: "var(--held)" }}>
-                          The reading service (Gonka) swapped in a different model for this reader:{" "}
-                          <span className="num break-all text-xs">{adjudicationsByChannel.get("artifact")?.fallback}</span>
-                        </div>
-                      ) : null}
-                      <div>
-                        Reference (Gonka request ID):{" "}
-                        {adjudicationsByChannel.get("artifact")?.requestId ? (
-                          <a
-                            className="link num inline-block max-w-full break-all text-xs"
-                            href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("artifact")?.requestId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {adjudicationsByChannel.get("artifact")?.requestId}
-                          </a>
-                        ) : (
-                          "missing"
-                        )}
-                      </div>
-                      <div>Took: <span className="num">{formatLatency(adjudicationsByChannel.get("artifact")?.latencyMs)}</span></div>
-                    </div>
-                  ) : (
-                    "This check was not run."
-                  )}
+                  <CheckDetail row={adjudicationsByChannel.get("artifact")} />
                 </td>
               </tr>
               <tr className="border-b border-line">
                 <td className="py-3 px-3">Check 2 — read your own records</td>
                 <td className="py-3 px-3">{getChannelMatchStatus(channelBTuple, channelATuple)}</td>
                 <td className="py-3 px-3">
-                  {adjudicationsByChannel.get("payer_record") ? (
-                    <div className="text-sm">
-                      <div className="break-all">Model used: {adjudicationsByChannel.get("payer_record")?.model}</div>
-                      {adjudicationsByChannel.get("payer_record")?.fallback ? (
-                        <div style={{ color: "var(--held)" }}>
-                          The reading service (Gonka) swapped in a different model for this reader:{" "}
-                          <span className="num break-all text-xs">{adjudicationsByChannel.get("payer_record")?.fallback}</span>
-                        </div>
-                      ) : null}
-                      <div>
-                        Reference (Gonka request ID):{" "}
-                        {adjudicationsByChannel.get("payer_record")?.requestId ? (
-                          <a
-                            className="link num inline-block max-w-full break-all text-xs"
-                            href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("payer_record")?.requestId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {adjudicationsByChannel.get("payer_record")?.requestId}
-                          </a>
-                        ) : (
-                          "missing"
-                        )}
-                      </div>
-                      <div>Took: <span className="num">{formatLatency(adjudicationsByChannel.get("payer_record")?.latencyMs)}</span></div>
-                    </div>
-                  ) : (
-                    "This check was not run."
-                  )}
+                  <CheckDetail row={adjudicationsByChannel.get("payer_record")} />
                 </td>
               </tr>
               <tr className="border-b border-line">
                 <td className="py-3 px-3">Did both checks agree?</td>
                 <td className="py-3 px-3">{getAgreementStatus(channelATuple, channelBTuple)}</td>
                 <td className="py-3 px-3">{disagreement || "—"}</td>
+              </tr>
+              <tr className="border-b border-line">
+                <td className="py-3 px-3">Check 3 — web check on a new recipient</td>
+                <td className="py-3 px-3">{audit ? (audit.verdict === "clear" ? "Clear" : "Held") : "Not run"}</td>
+                <td className="py-3 px-3">
+                  {auditRow && audit ? (
+                    <div className="text-sm">
+                      <div className="break-all">
+                        Auditor: {modelLabel(auditRow.model)}, searching the web with Tavily ({audit.toolCalls}{" "}
+                        {audit.toolCalls === 1 ? "search" : "searches"})
+                      </div>
+                      <ul className="mt-1 list-disc pl-5">
+                        {audit.reasons.map((reason, index) => (
+                          <li key={index}>{reason}</li>
+                        ))}
+                      </ul>
+                      {audit.sources.length > 0 ? (
+                        <div className="mt-1">
+                          Sources:{" "}
+                          {audit.sources.map((source, index) => (
+                            <span key={source.url}>
+                              {index > 0 ? " · " : ""}
+                              <a className="link break-all text-xs" href={source.url} target="_blank" rel="noopener noreferrer nofollow">
+                                {source.title}
+                              </a>
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      <div>
+                        Reference (Nebius request ID):{" "}
+                        {auditRow.requestId ? <span className="num break-all text-xs">{auditRow.requestId}</span> : "missing"}
+                      </div>
+                      <div>Took: <span className="num">{formatLatency(auditRow.latencyMs)}</span></div>
+                    </div>
+                  ) : (
+                    "Runs only before Tiba's first payment to a recipient."
+                  )}
+                </td>
               </tr>
               <tr className="border-b border-line">
                 <td className="py-3 px-3">Your limits</td>
@@ -272,6 +257,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
           </div>
         </section>
 
+        {/* GNK pricing only applies to checks that ran on GonkaRouter. */}
+        {intent.adjudications.some((row) => onNebius(row.model)) ? null : (
         <section className="grid gap-4 md:grid-cols-2">
           <div className="card p-5">
             <h2 className="title">Verification cost (GNK/USD)</h2>
@@ -287,6 +274,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
             )}
           </div>
         </section>
+        )}
 
         <Link
           className="btn btn-ghost w-fit"
@@ -296,6 +284,51 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
         </Link>
       </div>
     </main>
+  );
+}
+
+type CheckRow = { model: string; fallback: string | null; requestId: string | null; latencyMs: number };
+
+function CheckDetail({ row }: { row?: CheckRow }) {
+  if (!row) return <>This check was not run.</>;
+  const nebius = onNebius(row.model);
+  return (
+    <div className="text-sm">
+      <div className="break-all">Model used: {modelLabel(nebius && row.fallback ? row.fallback : row.model)}</div>
+      {row.fallback ? (
+        <div style={{ color: "var(--held)" }}>
+          {nebius ? (
+            <>
+              Asked for <span className="num break-all text-xs">{row.model}</span>, which Nebius Token Factory did not serve,
+              so this check ran on the model above.
+            </>
+          ) : (
+            <>
+              The reading service (Gonka) swapped in a different model for this reader:{" "}
+              <span className="num break-all text-xs">{row.fallback}</span>
+            </>
+          )}
+        </div>
+      ) : null}
+      <div>
+        Reference ({nebius ? "Nebius request ID" : "Gonka request ID"}):{" "}
+        {!row.requestId ? (
+          "missing"
+        ) : nebius ? (
+          <span className="num inline-block max-w-full break-all text-xs">{row.requestId}</span>
+        ) : (
+          <a
+            className="link num inline-block max-w-full break-all text-xs"
+            href={`https://api.gonkarouter.io/v1/receipts/${row.requestId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {row.requestId}
+          </a>
+        )}
+      </div>
+      <div>Took: <span className="num">{formatLatency(row.latencyMs)}</span></div>
+    </div>
   );
 }
 
