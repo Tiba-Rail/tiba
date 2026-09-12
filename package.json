@@ -22,6 +22,7 @@
     "sui:smoke": "node scripts/sui-smoke.mjs",
     "solana:smoke": "node scripts/solana-smoke.mjs",
     "a2a:proof": "node scripts/a2a-proof.mjs",
+    "nebius:models": "node scripts/nebius-models.mjs",
     "postinstall": "prisma generate",
     "t3:demo": "node --no-warnings scripts/t3-identity-demo.mjs"
   },

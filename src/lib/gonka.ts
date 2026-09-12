@@ -40,7 +40,7 @@ function sha256(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
-function parseContent(body: unknown): string | null {
+export function parseContent(body: unknown): string | null {
   if (!body || typeof body !== "object") return null;
   const choices = (body as { choices?: Array<{ message?: { content?: unknown } }> }).choices;
   const content = choices?.[0]?.message?.content;
@@ -57,7 +57,7 @@ function parseContent(body: unknown): string | null {
   return text.length > 0 ? text : null;
 }
 
-function isJsonForSchema(content: string, schema: JsonSchema): boolean {
+export function isJsonForSchema(content: string, schema: JsonSchema): boolean {
   try {
     const parsed: unknown = JSON.parse(content);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;

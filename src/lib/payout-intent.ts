@@ -3,6 +3,7 @@ import type { Agent, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getGnkUsdRate } from "@/lib/gonka-pricing";
 import { runGonka, fingerprintPrompt, fingerprintResponse, type GonkaMessage, type GonkaResult } from "@/lib/gonka";
+import { nemotronModels, readerProvider, runNebius } from "@/lib/nebius";
 import { recipientIdentityOk } from "@/lib/identity";
 import {
   artifactDecisionSchema,
@@ -105,6 +106,8 @@ async function pricingData() {
 }
 
 export async function processPayoutIntent(agent: Agent, body: IntentBody): Promise<PublicIntent> {
+  // Throws on a mistyped READER_PROVIDER, before any intent is written.
+  const provider = readerProvider();
   const existing = await prisma.payoutIntent.findUnique({ where: { idempotencyKey: body.idempotency_key } });
   if (existing) return toPublicIntent(existing);
 
@@ -199,12 +202,20 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
     }
   ];
 
+  const runReader = provider === "nebius" ? runNebius : runGonka;
   const [artifactRun, payerRun] = await Promise.allSettled([
-    runGonka({ channel: "artifact", messages: artifactMessages, schema: artifactDecisionSchema }),
-    runGonka({ channel: "payer_record", messages: payerMessages, schema: payerRecordDecisionSchema })
+    runReader({ channel: "artifact", messages: artifactMessages, schema: artifactDecisionSchema }),
+    runReader({ channel: "payer_record", messages: payerMessages, schema: payerRecordDecisionSchema })
   ]);
-  const artifactResult = artifactRun.status === "fulfilled" ? artifactRun.value : unavailable("moonshotai/Kimi-K2.6");
-  const payerResult = payerRun.status === "fulfilled" ? payerRun.value : unavailable("deepseek-ai/DeepSeek-V4-Flash-0731");
+  for (const run of [artifactRun, payerRun]) {
+    if (run.status === "rejected") console.error("[tiba] reader check failed:", run.reason);
+  }
+  const artifactResult = artifactRun.status === "fulfilled"
+    ? artifactRun.value
+    : unavailable(provider === "nebius" ? nemotronModels().super : "moonshotai/Kimi-K2.6");
+  const payerResult = payerRun.status === "fulfilled"
+    ? payerRun.value
+    : unavailable(provider === "nebius" ? nemotronModels().nano : "deepseek-ai/DeepSeek-V4-Flash-0731");
 
   await prisma.adjudication.createMany({
     data: [
