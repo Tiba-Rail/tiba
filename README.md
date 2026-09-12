@@ -38,6 +38,47 @@ turns disagreement - the case a single model hides - into a refusal.
 That is only practical if several frontier models sit behind one endpoint at low cost, which
 is what GonkaRouter is. The router is load-bearing here, not a swapped base URL.
 
+## Nebius x NVIDIA Global AI Hackathon
+
+With `NEBIUS_API_KEY` set, every model call runs on Nebius Token Factory
+(`https://api.tokenfactory.nebius.com/v1/`, OpenAI-compatible) using NVIDIA Nemotron open
+models. Each check asks a different model.
+
+- **Check 1, the delivery note** (`src/lib/nebius.ts`): NVIDIA Nemotron 3 Nano Omni when the
+  note carries an image (an image link or a `data:image/...` URI goes in as an image part, so
+  the model reads the photo of the invoice itself), otherwise NVIDIA Nemotron 3 Super 120B A12B.
+- **Check 2, the payer's own records** (`src/lib/nebius.ts`): NVIDIA Nemotron 3 Nano 30B A3B.
+  It never sees the delivery note.
+- Both checks request `response_format: json_schema`, the answer is validated in code, and
+  one retry is allowed (`json_object` if the schema form is refused, a repair prompt if the
+  JSON is wrong, or the same call after a 5xx/429/network drop).
+- **Check 3, the first-payment auditor** (`src/lib/auditor.ts`): an agent on Nemotron 3 Super
+  with one OpenAI-style tool, `tavily_search`, which calls the Tavily Search API
+  (`POST https://api.tavily.com/search`). Before Tiba pays a recipient it has never paid, the
+  auditor searches the web for the payee and the invoice's claims, looks for scam or
+  impersonation reports and for prompt-injection text inside the invoice, and returns `clear`
+  or `hold` with reasons and the sources it read (only URLs the searches returned). It runs
+  beside checks 1 and 2, is capped at 3 searches and 30 seconds, and can only hold a payment,
+  never approve one. A timeout, a bad answer or a missing key also holds. A held payment can
+  still be approved by a human from the console.
+- **Receipts** (`/r/<token>`) name the model per check as "NVIDIA <model> on Nebius Token
+  Factory" with the provider request id, and show the auditor's verdict, reasons and source links.
+
+To run it:
+
+1. Put `NEBIUS_API_KEY` and `TAVILY_API_KEY` in `.env`, next to the settings in Setup below.
+2. `npm run nebius:models` lists the model ids the key can call. The defaults are
+   `nvidia/nemotron-3-super-120b-a12b`, `nvidia/nemotron-3-nano-30b-a3b` and
+   `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning`. Only the Super id is published, so set
+   `NEBIUS_MODEL_NANO` / `NEBIUS_MODEL_OMNI` if the list shows other ids. A default id that
+   returns 404 runs on Super instead, and the receipt says so.
+3. `npm run build && npm start`, then submit an intent to `POST /api/v1/intents`.
+
+Env vars: `NEBIUS_API_KEY`, `TAVILY_API_KEY`, `READER_PROVIDER` (`nebius` or `gonka`; when
+unset, `nebius` if `NEBIUS_API_KEY` is set), and optional `NEBIUS_MODEL_SUPER`,
+`NEBIUS_MODEL_NANO`, `NEBIUS_MODEL_OMNI`, `NEBIUS_REASONING_EFFORT`. `READER_PROVIDER=gonka`
+restores the GonkaRouter readers (Kimi, DeepSeek) and turns the auditor off.
+
 ## Live
 
 **https://tiba-omega.vercel.app** — production deployment on Vercel (Solana devnet USDC, GonkaRouter).
