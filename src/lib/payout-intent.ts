@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getGnkUsdRate } from "@/lib/gonka-pricing";
 import { runGonka, fingerprintPrompt, fingerprintResponse, type GonkaMessage, type GonkaResult } from "@/lib/gonka";
 import { nemotronModels, readerProvider, runNebius } from "@/lib/nebius";
+import { auditMessages, auditPayee, type Audit, type AuditInput } from "@/lib/auditor";
 import { recipientIdentityOk } from "@/lib/identity";
 import {
   artifactDecisionSchema,
@@ -202,10 +203,27 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
     }
   ];
 
+  // Third gate: before Tiba's first payment to a recipient, the Nemotron auditor researches the
+  // payee and the invoice on the web (Tavily). It runs beside the readers and can only hold.
+  // Nebius mode only; the Gonka fallback keeps its original two-check behaviour.
+  const firstPayment =
+    provider === "nebius" &&
+    (await prisma.payoutIntent.count({ where: { recipientId: recipient.id, decisionClass: "PAID" } })) === 0;
+  const auditInput: AuditInput = {
+    payee: { name: recipient.displayName, ref: recipient.ref, wallet: target.address, chain: target.chain },
+    invoice: body.artifact,
+    workOrders: openWorkOrders.map((workOrder) => ({
+      id: workOrder.ref,
+      brief: workOrder.briefText ?? "",
+      ceiling_micros: workOrder.ceilingMicros.toString()
+    }))
+  };
+
   const runReader = provider === "nebius" ? runNebius : runGonka;
-  const [artifactRun, payerRun] = await Promise.allSettled([
+  const [artifactRun, payerRun, auditRun] = await Promise.allSettled([
     runReader({ channel: "artifact", messages: artifactMessages, schema: artifactDecisionSchema }),
-    runReader({ channel: "payer_record", messages: payerMessages, schema: payerRecordDecisionSchema })
+    runReader({ channel: "payer_record", messages: payerMessages, schema: payerRecordDecisionSchema }),
+    firstPayment ? auditPayee(auditInput) : Promise.resolve(null)
   ]);
   for (const run of [artifactRun, payerRun]) {
     if (run.status === "rejected") console.error("[tiba] reader check failed:", run.reason);
@@ -216,6 +234,11 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
   const payerResult = payerRun.status === "fulfilled"
     ? payerRun.value
     : unavailable(provider === "nebius" ? nemotronModels().nano : "deepseek-ai/DeepSeek-V4-Flash-0731");
+  const audit: Audit | null = !firstPayment
+    ? null
+    : auditRun.status === "fulfilled" && auditRun.value
+      ? auditRun.value
+      : { verdict: "hold", reasons: ["The auditor crashed, so the payment is held."], sources: [], model: nemotronModels().super, toolCalls: 0, latencyMs: 0, ok: false };
 
   await prisma.adjudication.createMany({
     data: [
@@ -246,7 +269,22 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
         latencyMs: payerResult.latencyMs,
         tupleJson: tupleJson(payerResult),
         ok: payerResult.ok
-      }
+      },
+      ...(audit
+        ? [{
+            intentId: intent.id,
+            channel: "auditor",
+            model: audit.model,
+            requestId: audit.requestId,
+            promptSha: fingerprintPrompt(auditMessages(auditInput)),
+            responseSha: fingerprintResponse(audit.content),
+            inputTokens: audit.inputTokens,
+            outputTokens: audit.outputTokens,
+            latencyMs: audit.latencyMs,
+            tupleJson: { verdict: audit.verdict, reasons: audit.reasons, sources: audit.sources, tool_calls: audit.toolCalls },
+            ok: audit.ok
+          }]
+        : [])
     ]
   });
 
@@ -307,6 +345,17 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
     const updated = await prisma.payoutIntent.update({
       where: { id: intent.id },
       data: { status: "refused", decisionClass: "RED", reasonCode: before.reasonCode, ...pricing }
+    });
+    return toPublicIntent(updated);
+  }
+
+  // The auditor never approves: it can only turn a payment that would go through into a hold
+  // (a failed audit holds too). A human can still approve it from the console.
+  if (audit?.verdict === "hold") {
+    const pricing = await pricingData();
+    const updated = await prisma.payoutIntent.update({
+      where: { id: intent.id },
+      data: { status: "held", decisionClass: "AMBER", reasonCode: "AUDITOR_HOLD", amountMicros: reconciled.tuple.amountMicros, ...pricing }
     });
     return toPublicIntent(updated);
   }

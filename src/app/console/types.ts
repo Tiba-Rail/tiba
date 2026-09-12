@@ -71,6 +71,7 @@ export function explainDecision(decisionClass: string, reasonCode: string | null
       case "MISSING_REQUIRED_CHANNEL": return "Your own records could not be read, so the payment is held for approval.";
       case "SCHEMA_INVALID": return "A check returned an unreadable answer, so the payment is held for approval.";
       case "REQUEST_REJECTED": return "The reading service turned the request away, so the payment is held for approval.";
+      case "AUDITOR_HOLD": return "First payment to this recipient, and the web check did not clear it, so the payment is held for approval.";
       default: return "Held for approval.";
     }
   }
