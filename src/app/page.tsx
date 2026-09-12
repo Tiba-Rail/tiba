@@ -13,12 +13,15 @@ function requestIdFor(adjudications: Array<{ channel: string; requestId: string 
   return adjudications.find((row) => row.channel === channel)?.requestId ?? "missing";
 }
 
+// Pinned to the 11 Sep devnet payout of 0.01 USDC to recipient sol-test-0911. The newest PAID row
+// was a treasury self-pay test that moved the money back into the payer's own account.
+const EXAMPLE_PAID_INTENT_ID = "0e4d1636-dad4-4369-8fde-1e4d1fa57fc3";
+
 export default async function Home() {
   const [paidIntent, refusedIntent] = await Promise.all([
-    prisma.payoutIntent.findFirst({
-      where: { decisionClass: "PAID" },
-      include: { adjudications: { orderBy: { createdAt: "asc" } } },
-      orderBy: { createdAt: "desc" }
+    prisma.payoutIntent.findUnique({
+      where: { id: EXAMPLE_PAID_INTENT_ID },
+      include: { adjudications: { orderBy: { createdAt: "asc" } } }
     }),
     prisma.payoutIntent.findFirst({
       where: { decisionClass: "RED" },
@@ -63,7 +66,7 @@ export default async function Home() {
         </header>
 
         <section className="border-t border-line pt-12">
-          <p className="eyebrow">Measured on the test network</p>
+          <p className="eyebrow">Eval of an earlier build, 29 Aug 2026, on a mock settlement rail. Not live figures.</p>
           <div className="mt-6 grid grid-cols-2 gap-8 md:grid-cols-4">
             <div>
               <p className="num display-l">20 / 20</p>
@@ -74,12 +77,12 @@ export default async function Home() {
               <p className="eyebrow mt-2">tampered notes refused</p>
             </div>
             <div>
-              <p className="num display-l">0</p>
+              <p className="num display-l">0 / 20</p>
               <p className="eyebrow mt-2">false refusals</p>
             </div>
             <div>
-              <p className="num display-l">~13 s</p>
-              <p className="eyebrow mt-2">per decision</p>
+              <p className="num display-l">13 s</p>
+              <p className="eyebrow mt-2">mean per decision</p>
             </div>
           </div>
         </section>
@@ -144,8 +147,8 @@ export default async function Home() {
               <div className="card p-5">
                 <span className="pill pill-paid">Paid</span>
                 <p className="mt-3 text-sm">
-                  <span className="num">{microsToUsdc(paidIntent.amountMicros)}</span> — test
-                  transfer, no real money moved
+                  <span className="num">{microsToUsdc(paidIntent.amountMicros)}</span> sent to a
+                  separate recipient wallet on the test network. No real money moved.
                 </p>
                 <p className="eyebrow mt-4">Transaction</p>
                 {paidIntent.explorerUrl ? (
