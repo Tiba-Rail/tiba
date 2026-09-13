@@ -8,6 +8,7 @@ import { SiteNav } from "@/components/site-nav";
 import { decisionSentence, disagreementLine, explainDecision } from "@/app/console/types";
 import { recipientIdentityOk } from "@/lib/identity";
 import { LiveRefresh } from "@/components/live-refresh";
+import { receiptNetwork } from "@/app/format";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Receipt - Tiba" };
@@ -111,7 +112,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
     return "Not tried";
   }
 
-  const network = "Solana devnet";
+  const network = receiptNetwork(intent.chain);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
