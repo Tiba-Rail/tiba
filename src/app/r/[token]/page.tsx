@@ -8,7 +8,7 @@ import { SiteNav } from "@/components/site-nav";
 import { decisionSentence, disagreementLine, explainDecision } from "@/app/console/types";
 import { recipientIdentityOk } from "@/lib/identity";
 import { LiveRefresh } from "@/components/live-refresh";
-import { receiptNetwork } from "@/app/format";
+import { receiptNetwork } from "@/lib/receipt-network";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Receipt - Tiba" };
