@@ -8,7 +8,7 @@ export async function getSettlementBalance(address: string): Promise<bigint> {
   try {
     const rpc = process.env.SOLANA_RPC_URL?.trim() || "https://api.devnet.solana.com";
     const connection = new Connection(rpc, "confirmed");
-    const result = await connection.getTokenAccountsByOwner(new PublicKey(address), {
+    const result = await connection.getParsedTokenAccountsByOwner(new PublicKey(address), {
       mint: new PublicKey(process.env.SOLANA_USDC_MINT?.trim() || "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
     });
     return result.value.reduce((total, account) => total + BigInt(account.account.data.parsed.info.tokenAmount.amount), 0n);
