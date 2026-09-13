@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getGnkUsdRate } from "@/lib/gonka-pricing";
-import { isOperatorRequest } from "@/lib/operator-auth";
+import { resolveOperatorAgent } from "@/lib/operator-auth";
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
 import { chainForRecipient, executionFailedCode, PayoutRailError, payoutRail, settledChain } from "@/lib/rails";
 
@@ -28,10 +28,11 @@ async function pricingData() {
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  if (!await isOperatorRequest(request)) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  const operator = await resolveOperatorAgent(request);
+  if (!operator) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   const { id } = await context.params;
-  const intent = await prisma.payoutIntent.findUnique({
-    where: { id },
+  const intent = await prisma.payoutIntent.findFirst({
+    where: { id, agentId: operator.id },
     include: { agent: true, recipient: true, adjudications: true }
   });
   if (!intent) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });

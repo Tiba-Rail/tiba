@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isOperatorRequest } from "@/lib/operator-auth";
+import { resolveOperatorAgent } from "@/lib/operator-auth";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 
@@ -7,13 +7,15 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   // 1. Authorise with the operator token
-  if (!await isOperatorRequest(request)) {
+  const agent = await resolveOperatorAgent(request);
+  if (!agent) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
 
   try {
     // 2. Fetch the 20 most recent payout intents
     const payoutIntents = await prisma.payoutIntent.findMany({
+      where: { agentId: agent.id },
       include: {
         recipient: true
       },
