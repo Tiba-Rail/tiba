@@ -31,11 +31,6 @@ function sign(value: string, secret: string): string {
 // Branch on format BEFORE any lowercasing: base58 (Solana) is case-sensitive.
 function canonicalAddress(value: string): string | null {
   const trimmed = value.trim();
-  if (/^0x/i.test(trimmed)) {
-    const address = trimmed.toLowerCase();
-    if (!/^0x[0-9a-f]{1,64}$/.test(address)) return null;
-    return `0x${address.slice(2).padStart(64, "0")}`;
-  }
   try {
     return new PublicKey(trimmed).toBase58();
   } catch {
@@ -45,10 +40,6 @@ function canonicalAddress(value: string): string | null {
 
 export function normalizeWalletAddress(value: string): string | null {
   return canonicalAddress(value);
-}
-
-export function walletChain(canonical: string): "sui" | "solana" {
-  return canonical.startsWith("0x") ? "sui" : "solana";
 }
 
 // Solana wallets sign the raw message bytes with the account's ed25519 key.

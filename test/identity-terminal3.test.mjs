@@ -9,7 +9,7 @@ test("a recipient with no Terminal 3 identity is refused, without calling out", 
   const provider = new Terminal3IdentityProvider("unused-key", "http://127.0.0.1:1", 3600);
   for (const t3nDid of [null, undefined, ""]) {
     const result = await provider.verify({
-      recipientRef: "someone", displayName: "Someone", suiAddress: "0x0", t3nDid
+      recipientRef: "someone", displayName: "Someone", walletAddress: "wallet", t3nDid
     });
     assert.equal(result.decision, "failed");
     assert.equal(result.expiresAt, null);
@@ -18,9 +18,9 @@ test("a recipient with no Terminal 3 identity is refused, without calling out", 
 
 test("check ids are stable per recipient and differ between recipients", async () => {
   const provider = new Terminal3IdentityProvider("unused-key", "http://127.0.0.1:1", 3600);
-  const one = await provider.verify({ recipientRef: "a", displayName: "A", suiAddress: "0x0", t3nDid: null });
-  const again = await provider.verify({ recipientRef: "a", displayName: "A", suiAddress: "0x0", t3nDid: null });
-  const other = await provider.verify({ recipientRef: "b", displayName: "B", suiAddress: "0x0", t3nDid: null });
+  const one = await provider.verify({ recipientRef: "a", displayName: "A", walletAddress: "wallet", t3nDid: null });
+  const again = await provider.verify({ recipientRef: "a", displayName: "A", walletAddress: "wallet", t3nDid: null });
+  const other = await provider.verify({ recipientRef: "b", displayName: "B", walletAddress: "wallet", t3nDid: null });
   assert.equal(one.checkId, again.checkId);
   assert.notEqual(one.checkId, other.checkId);
 });

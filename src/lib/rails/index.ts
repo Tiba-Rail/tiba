@@ -18,11 +18,7 @@ export interface PayoutRail {
 export type PayoutRailErrorCode =
   | "UNSUPPORTED_RAIL"
   | "INVALID_PAYOUT"
-  | "RECIPIENT_NO_CHAIN_ADDRESS"
-  | "SUI_NETWORK_NOT_TESTNET"
-  | "SUI_PRIVATE_KEY_MISSING"
-  | "SUI_ADDRESS_MISMATCH"
-  | "SUI_EXECUTION_FAILED"
+  | "RECIPIENT_NEEDS_SOLANA_ADDRESS"
   | "SOLANA_NETWORK_NOT_DEVNET"
   | "SOLANA_PRIVATE_KEY_MISSING"
   | "SOLANA_ADDRESS_MISMATCH"
@@ -42,33 +38,27 @@ export function isPayoutRailError(error: unknown): error is PayoutRailError {
   return error instanceof PayoutRailError;
 }
 
-export type Chain = "sui" | "solana";
+export type Chain = "solana";
 
-/** The chain a recipient is paid on: a saved Solana address wins, else Sui, else none. "" counts as absent. */
-export function chainForRecipient(recipient: { solanaAddress: string | null; suiAddress: string | null }): { chain: Chain; address: string } | null {
+/** Solana is the only settlement path. A blank address is refused before evaluation or debit. */
+export function chainForRecipient(recipient: { solanaAddress: string | null }): { chain: Chain; address: string } | null {
   const solana = recipient.solanaAddress?.trim();
   if (solana) return { chain: "solana", address: solana };
-  const sui = recipient.suiAddress?.trim();
-  if (sui) return { chain: "sui", address: sui };
   return null;
 }
 
-/** SETTLEMENT_CHAIN, default sui. Only for new-recipient/workspace defaults and the treasury display. */
+/** Solana devnet is the only supported settlement chain. */
 export function defaultChain(): Chain {
-  const value = process.env.SETTLEMENT_CHAIN?.trim() || "sui";
-  if (value === "sui" || value === "solana") return value;
-  throw new PayoutRailError("UNSUPPORTED_RAIL", `Unsupported SETTLEMENT_CHAIN: ${value}`);
+  return "solana";
 }
 
 /** Execution-failure code for a chain, so a missing digest reports the chain that was tried. */
 export function executionFailedCode(chain: Chain): PayoutRailErrorCode {
-  return chain === "solana" ? "SOLANA_EXECUTION_FAILED" : "SUI_EXECUTION_FAILED";
+  return "SOLANA_EXECUTION_FAILED";
 }
 
-function mockRail(chain: Chain): PayoutRail {
-  const explorerUrl = (digest: string) => chain === "solana"
-    ? `https://explorer.solana.com/tx/${digest}?cluster=devnet`
-    : `https://explorer.sui.io/txblock/${digest}?network=testnet`;
+function mockRail(): PayoutRail {
+  const explorerUrl = (digest: string) => `https://explorer.solana.com/tx/${digest}?cluster=devnet`;
   return {
     async send(request) {
       const digest = `mock-testnet-${request.intentId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20)}`;
@@ -82,18 +72,7 @@ function mockRail(chain: Chain): PayoutRail {
   };
 }
 
-export type RailName = "mock" | Chain;
-
-const suiRailLoader: PayoutRail = {
-  async send(request) {
-    const { suiRail } = await import("./sui.ts");
-    return suiRail.send(request);
-  },
-  async batch(requests) {
-    const { suiRail } = await import("./sui.ts");
-    return suiRail.batch(requests);
-  }
-};
+export type RailName = "mock" | "solana" | "legacy";
 
 const solanaRailLoader: PayoutRail = {
   async send(request) {
@@ -107,8 +86,8 @@ const solanaRailLoader: PayoutRail = {
 };
 
 export const rails: Record<RailName, PayoutRail> = {
-  mock: mockRail("sui"),
-  sui: suiRailLoader,
+  mock: mockRail(),
+  legacy: solanaRailLoader,
   solana: solanaRailLoader
 };
 
@@ -117,15 +96,14 @@ function isMock(name: string): boolean {
 }
 
 /**
- * The stored agent rail "sui" means "live": the chain comes from the recipient (chainForRecipient).
- * Without a chain, a live rail name is taken literally.
+ * Legacy live agents now settle on Solana too. No recipient-specific rail selection remains.
  */
 export function payoutRail(name: string, chain?: Chain): PayoutRail {
-  if (isMock(name)) return mockRail(chain ?? "sui");
-  if (name !== "sui" && name !== "solana") {
+  if (isMock(name)) return mockRail();
+  if (name !== "legacy" && name !== "solana") {
     throw new PayoutRailError("UNSUPPORTED_RAIL", `Unsupported rail: ${name}`);
   }
-  return rails[chain ?? name];
+  return rails[chain ?? "solana"];
 }
 
 /** Value for PayoutIntent.chain: "mock" when the mock rail settles, else the recipient's chain. */

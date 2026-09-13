@@ -128,7 +128,7 @@ try {
   line(`    (database not reachable: ${e.message.split("\n")[0]})`);
 }
 if (!recipient) {
-  recipient = { ref: "TIBA-0091", displayName: "Ali Hassan (contractor invoice)", suiAddress: "0x0", t3nDid: null };
+  recipient = { ref: "TIBA-0091", displayName: "Ali Hassan (contractor invoice)", walletAddress: "wallet", t3nDid: null };
   line(`    no recipient in the database, using a stand-in so the decision path still runs`);
 }
 // tee:user::kyc-status is self-only, so the only live identity this sandbox can be
@@ -142,7 +142,7 @@ const { Terminal3IdentityProvider } = await import("../src/lib/identity-terminal
 const provider = new Terminal3IdentityProvider(apiKey, baseUrl, 3600);
 const verdict = await provider.verify({
   recipientRef: recipient.ref, displayName: recipient.displayName,
-  suiAddress: recipient.suiAddress, t3nDid,
+  walletAddress: recipient.walletAddress, t3nDid,
 });
 line(`    provider "${provider.name}" returned: ${JSON.stringify(verdict)}`);
 
@@ -153,12 +153,12 @@ say("The same provider, on a recipient who never delegated anything to Tiba");
 // it is the one an attacker would want to pass.
 const strangerDid = "did:t3n:0000000000000000000000000000000000000000";
 const strangerVerdict = await provider.verify({
-  recipientRef: "unknown-payee", displayName: "Unlinked payee", suiAddress: "0x0", t3nDid: strangerDid,
+  recipientRef: "unknown-payee", displayName: "Unlinked payee", walletAddress: "wallet", t3nDid: strangerDid,
 });
 line(`    ${strangerDid}`);
 line(`    provider returned: ${JSON.stringify(strangerVerdict)}`);
 const noIdentity = await provider.verify({
-  recipientRef: "no-identity", displayName: "Payee with no Terminal 3 identity", suiAddress: "0x0", t3nDid: null,
+  recipientRef: "no-identity", displayName: "Payee with no Terminal 3 identity", walletAddress: "wallet", t3nDid: null,
 });
 line(`    a payee with no Terminal 3 identity at all: ${JSON.stringify(noIdentity)}`);
 

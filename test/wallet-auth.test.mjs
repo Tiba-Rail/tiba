@@ -6,8 +6,7 @@ import {
   createWalletChallenge,
   normalizeWalletAddress,
   verifySolanaSignature,
-  verifyWalletChallenge,
-  walletChain
+  verifyWalletChallenge
 } from "../src/lib/wallet-auth.ts";
 
 process.env.AUTH_SECRET = "test-secret";
@@ -19,12 +18,10 @@ function solanaKeypair() {
   return { address: new PublicKey(raw).toBase58(), privateKey };
 }
 
-test("0x addresses are lowercased and padded; base58 keeps its case", () => {
-  assert.equal(normalizeWalletAddress("0xABC"), `0x${"0".repeat(61)}abc`);
+test("Solana wallet addresses are normalized without changing base58 case", () => {
   const mint = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
   assert.equal(normalizeWalletAddress(` ${mint} `), mint);
-  assert.equal(walletChain(mint), "solana");
-  assert.equal(walletChain(normalizeWalletAddress("0x1")), "sui");
+  assert.equal(normalizeWalletAddress("0x1"), null);
   assert.equal(normalizeWalletAddress("not-an-address"), null);
 });
 

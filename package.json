@@ -19,7 +19,6 @@
     "demo:record": "node scripts/record-demo.mjs",
     "e2e": "node scripts/e2e.mjs",
     "eval": "node scripts/eval.mjs",
-    "sui:smoke": "node scripts/sui-smoke.mjs",
     "solana:smoke": "node scripts/solana-smoke.mjs",
     "a2a:proof": "node scripts/a2a-proof.mjs",
     "postinstall": "prisma generate",
@@ -27,8 +26,6 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
-    "@mysten/dapp-kit": "1.1.17",
-    "@mysten/sui": "2.27.1",
     "@prisma/adapter-better-sqlite3": "^7.3.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.3.0",

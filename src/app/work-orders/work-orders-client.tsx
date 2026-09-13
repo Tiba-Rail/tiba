@@ -8,7 +8,7 @@ import { humanError, workOrderStatusWord } from "@/app/console/types";
 interface Recipient {
   ref: string;
   displayName: string;
-  suiAddress: string;
+  solanaAddress: string | null;
   active: boolean;
 }
 

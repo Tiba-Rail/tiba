@@ -1,0 +1,1 @@
+ALTER TYPE "Rail" ADD VALUE IF NOT EXISTS 'solana';

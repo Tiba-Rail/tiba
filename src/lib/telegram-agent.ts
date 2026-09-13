@@ -13,7 +13,6 @@ const GROQ_MODEL = process.env.GROQ_MODEL ?? "openai/gpt-oss-120b";
 const DEFAULT_AGENT_KEY = process.env.TIBA_AGENT_KEY ?? "";
 const DEFAULT_OWNER_KEY = process.env.OPERATOR_TOKEN ?? "";
 
-const SUI_ADDRESS = /0x[0-9a-fA-F]{64}/;
 const SOLANA_ADDRESS = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/;
 const PAYMENT_WORDS = /(pay|send|transfer|settle|invoice|wo-?\d+)/i;
 
@@ -33,8 +32,7 @@ const ALIASES: Record<string, string> = {
   democreator: "creator-lagos",
   creator: "creator-lagos",
   lagos: "creator-lagos",
-  ali: "ali-sui",
-  alisui: "ali-sui"
+  ali: "ali"
 };
 
 type Keys = { agentKey: string; ownerKey: string; own: boolean };
@@ -93,13 +91,11 @@ async function ownerPost(keys: Keys, path: string, body: unknown): Promise<{ ok:
 }
 
 async function ensureRecipient(keys: Keys, address: string, name?: string): Promise<string> {
-  const isSui = address.startsWith("0x");
-  // Base58 is case-sensitive, so a Solana ref keeps its case.
-  const ref = isSui ? `r-${address.slice(2, 10).toLowerCase()}` : `r-${address.slice(0, 10)}`;
+  const ref = `r-${address.slice(0, 10)}`;
   const { ok, json } = await ownerPost(keys, "/api/v1/recipients", {
     ref,
     display_name: name || `Wallet ${address.slice(0, 6)}…${address.slice(-4)}`,
-    [isSui ? "sui_address" : "solana_address"]: address
+    solana_address: address
   });
   if (ok || /exists|unique|P2002/i.test(JSON.stringify(json))) return ref;
   throw new Error(`could not save recipient: ${JSON.stringify(json).slice(0, 120)}`);
@@ -129,13 +125,12 @@ const TOOLS = [
     function: {
       name: "pay_address",
       description:
-        "Pay a wallet address directly (a Solana address or a 0x... Sui address the user pasted). Use this whenever the message contains a wallet address. Pass exactly one of solana_address or sui_address.",
+        "Pay a Solana wallet address directly. Use this whenever the message contains a wallet address.",
       parameters: {
         type: "object",
         required: ["amount_usdc"],
         properties: {
           solana_address: { type: "string", description: "the base58 Solana address to pay" },
-          sui_address: { type: "string", description: "the 0x... Sui address to pay" },
           amount_usdc: { type: "number", description: "amount in USDC" },
           name: { type: "string", description: "who this is, if the user said" },
           purpose: { type: "string", description: "what the payment is for, if the user said" }
@@ -251,11 +246,9 @@ async function pay(chatId: string, keys: Keys, recipientRef: string, workOrderRe
   const receipt = result.publicToken ? `\nReceipt: ${baseUrl()}/r/${result.publicToken}` : "";
   if (result.status === "settled") {
     const paid = intent ? usd(intent.amountMicros.toString()) : amountUsdc.toFixed(2);
-    // Old intents have no stored chain and settled on Sui.
-    const chain = intent?.chain === "solana" ? "Solana" : "Sui";
     await send(
       chatId,
-      `Both agree. Limits passed.\nPaid ${paid} USDC to ${recipientRef}.${result.digest ? `\n${chain}: ${result.digest}` : ""}${receipt}`
+      `Both agree. Limits passed.\nPaid ${paid} USDC to ${recipientRef}.${result.digest ? `\nSolana: ${result.digest}` : ""}${receipt}`
     );
   } else if (String(result.reasonCode ?? "").startsWith("QUORUM_SPLIT")) {
     await send(chatId, `The two checks disagree. Nothing moved.${receipt}`);
@@ -312,7 +305,7 @@ export async function handleTelegramMessage(chatId: string, text: string): Promi
       [
         "Tell me who to pay.",
         "  pay the KL translator for invoice WO-13",
-        "  pay <solana address> 1 USDC   (a 0x Sui address also works)",
+        "  pay <solana address> 1 USDC",
         "",
         "/connect <agent key> <owner key> to use your own wallet",
         "/whoami to see which wallet is in use"
@@ -322,7 +315,7 @@ export async function handleTelegramMessage(chatId: string, text: string): Promi
   }
 
   const keys = await keysFor(chatId);
-  const looksLikePayment = PAYMENT_WORDS.test(trimmed) || SUI_ADDRESS.test(trimmed) || solanaAddressIn(trimmed) !== null;
+  const looksLikePayment = PAYMENT_WORDS.test(trimmed) || solanaAddressIn(trimmed) !== null;
 
   let decided;
   try {
@@ -343,12 +336,9 @@ export async function handleTelegramMessage(chatId: string, text: string): Promi
   if (decided.call.name === "pay_address") {
     const args = decided.call.args;
     const address =
-      solanaAddressIn(String(args.solana_address ?? "")) ??
-      String(args.sui_address ?? "").match(SUI_ADDRESS)?.[0] ??
-      solanaAddressIn(trimmed) ??
-      trimmed.match(SUI_ADDRESS)?.[0];
+      solanaAddressIn(String(args.solana_address ?? "")) ?? solanaAddressIn(trimmed);
     if (!address) {
-      await send(chatId, "I need a full wallet address: a Solana address, or a Sui address (0x followed by 64 characters).");
+      await send(chatId, "I need a full Solana wallet address.");
       return;
     }
     const amount = Number(args.amount_usdc) || 0;

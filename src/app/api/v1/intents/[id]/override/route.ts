@@ -70,7 +70,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!target) {
     const updated = await prisma.payoutIntent.update({
       where: { id: intent.id },
-      data: { status: "refused", decisionClass: "RED", reasonCode: "RECIPIENT_NO_CHAIN_ADDRESS", ...pricing }
+      data: { status: "refused", decisionClass: "RED", reasonCode: "RECIPIENT_NEEDS_SOLANA_ADDRESS", ...pricing }
     });
     return NextResponse.json({ id: updated.id, decision_class: updated.decisionClass, reason_code: updated.reasonCode });
   }

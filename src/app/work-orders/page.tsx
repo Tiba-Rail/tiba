@@ -44,7 +44,7 @@ export default async function WorkOrdersPage() {
         recipients={recipients.map((recipient) => ({
           ref: recipient.ref,
           displayName: recipient.displayName,
-          suiAddress: recipient.solanaAddress ?? recipient.suiAddress ?? "",
+          solanaAddress: recipient.solanaAddress,
           active: recipient.active
         }))}
       />

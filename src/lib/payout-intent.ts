@@ -159,14 +159,14 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
     return toPublicIntent(denied);
   }
 
-  // Chain per recipient: a saved Solana address pays on Solana, else Sui. Refuse before any
+  // Refuse before any
   // inference or debit when there is nowhere to send the money.
   const target = chainForRecipient(recipient);
   if (!target) {
     const pricing = await pricingData();
     const denied = await prisma.payoutIntent.update({
       where: { id: intent.id },
-      data: { status: "refused", decisionClass: "RED", reasonCode: "RECIPIENT_NO_CHAIN_ADDRESS", ...pricing }
+      data: { status: "refused", decisionClass: "RED", reasonCode: "RECIPIENT_NEEDS_SOLANA_ADDRESS", ...pricing }
     });
     return toPublicIntent(denied);
   }

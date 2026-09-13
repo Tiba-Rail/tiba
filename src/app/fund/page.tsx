@@ -9,7 +9,6 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Add funds - Tiba" };
 
 export default async function FundPage() {
-  // The default chain's treasury (settlement.ts decides which one) backs the manual-send panel.
   const address = getSettlementAddress();
   const balanceMicros = address ? await getSettlementBalance(address) : 0n;
   // Rendered on the server so the settlement address never leaves this deployment.
@@ -31,12 +30,11 @@ export default async function FundPage() {
 
         {address ? (
           <FundClient
-            chain={address.startsWith("0x") ? "sui" : "solana"}
+            chain="solana"
             address={address}
             shortAddress={shortAddress(address)}
             qrSvg={qrSvg}
             balanceText={formatDollars(balanceMicros)}
-            suiAddress={process.env.SUI_ADDRESS?.trim() || null}
             solanaAddress={process.env.SOLANA_ADDRESS?.trim() || null}
           />
         ) : (

@@ -17,7 +17,7 @@ test("identity gate passes only an unexpired verified verdict", () => {
 
 test("mock provider fails only refs ending in -fail", async () => {
   const provider = new MockIdentityProvider();
-  const input = { displayName: "x", suiAddress: "0x1" };
+  const input = { displayName: "x", walletAddress: "wallet" };
   assert.equal((await provider.verify({ ...input, recipientRef: "acme-fail" })).decision, "failed");
   assert.equal((await provider.verify({ ...input, recipientRef: "rafail-design" })).decision, "verified");
 });

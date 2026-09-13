@@ -17,7 +17,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
     result = await provider.verify({
       recipientRef: recipient.ref,
       displayName: recipient.displayName,
-      suiAddress: recipient.solanaAddress ?? recipient.suiAddress ?? "",
+      walletAddress: recipient.solanaAddress ?? "",
       t3nDid: recipient.t3nDid
     });
   } catch {

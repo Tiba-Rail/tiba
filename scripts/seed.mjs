@@ -6,11 +6,11 @@ const { prisma } = await import("../src/lib/db.ts");
 const apiKey = process.env.SEED_AGENT_KEY ?? "tiba_testnet_demo_key";
 const apiKeySource = process.env.SEED_AGENT_KEY ? "SEED_AGENT_KEY" : "default_demo_key";
 const apiKeyHash = createHash("sha256").update(apiKey).digest("hex");
-const agentRail = process.env.SEED_AGENT_RAIL === "mock" ? "mock" : "sui";
+const agentRail = process.env.SEED_AGENT_RAIL === "mock" ? "mock" : "solana";
 const seededAt = new Date("2026-08-29T00:00:00.000Z");
 const expiresAt = new Date("2026-09-30T00:00:00.000Z");
-const defaultRecipientAddress = "0xb91e5bd8be3c828e329c2e4368f6f8abb9ec6e1ba53d9f8966b8369027224bef";
-const demoRecipientAddress = process.env.SEED_RECIPIENT_SUI_ADDRESS ?? process.env.SUI_ADDRESS ?? defaultRecipientAddress;
+const defaultRecipientAddress = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
+const demoRecipientAddress = process.env.SEED_RECIPIENT_SOLANA_ADDRESS ?? process.env.SOLANA_ADDRESS ?? defaultRecipientAddress;
 
 await prisma.adjudication.deleteMany();
 await prisma.artifact.deleteMany();
@@ -44,7 +44,7 @@ const creator = await prisma.recipient.create({
     id: "recipient-creator-lagos",
     ref: "creator-lagos",
     displayName: "Demo Creator",
-    suiAddress: demoRecipientAddress,
+    solanaAddress: demoRecipientAddress,
     active: true,
     kycStatus: "verified",
     kycProvider: "seed",
@@ -59,7 +59,7 @@ const translator = await prisma.recipient.create({
     id: "recipient-translator-kl",
     ref: "translator-kl",
     displayName: "KL Translator",
-    suiAddress: demoRecipientAddress,
+    solanaAddress: demoRecipientAddress,
     active: true,
     kycStatus: "verified",
     kycProvider: "seed",
@@ -72,9 +72,9 @@ const translator = await prisma.recipient.create({
 const ali = await prisma.recipient.create({
   data: {
     id: "recipient-e2e-ali",
-    ref: "ali-sui",
+    ref: "ali",
     displayName: "Ali",
-    suiAddress: demoRecipientAddress,
+    solanaAddress: demoRecipientAddress,
     active: true,
     kycStatus: "verified",
     kycProvider: "seed",
@@ -158,7 +158,7 @@ await prisma.workOrder.createMany({
       recipientId: ali.id,
       ref: "WO-E2E-1",
       ceilingMicros: 2_000_000n,
-      briefText: "Pay Ali exactly 0.002 SUI when the delivery note says WO-E2E-1 was delivered.",
+      briefText: "Pay Ali exactly 2.00 USDC when the delivery note says WO-E2E-1 was delivered.",
       payerRecord: {
         approved_amount_micros: "2000000",
         delivery_timestamp: "2026-08-29T08:00:00.000Z",

@@ -56,7 +56,7 @@ export class Terminal3IdentityProvider implements IdentityProvider {
     this.ttlSeconds = ttlSeconds;
   }
 
-  async verify(input: { recipientRef: string; displayName: string; suiAddress: string; t3nDid?: string | null }) {
+  async verify(input: { recipientRef: string; displayName: string; walletAddress: string; t3nDid?: string | null }) {
     // No Terminal 3 identity on file means there is nothing to ask about. This is
     // a refusal, not an error: Tiba pays on proof, and there is no proof here.
     if (!input.t3nDid) {

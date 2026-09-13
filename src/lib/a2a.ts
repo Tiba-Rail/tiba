@@ -111,7 +111,7 @@ export function agentCard(origin: string) {
         id: "authorize_and_settle_payout",
         name: "Authorize and settle a work-order payout",
         description:
-          "Send a DataPart { recipient_ref, artifact } where artifact is the delivery-note text for an open work order. Tiba runs two isolated verification channels, applies spending policy, and settles on Solana devnet or Sui testnet, whichever chain the recipient's saved address is on. Outcomes in the `decision` artifact: PAID (settled, with digest and explorer_url), REFUSED (channels disagreed or policy failed; reason_code says why), or HELD (a human must review). Every outcome has a public receipt_url.",
+          "Send a DataPart { recipient_ref, artifact } where artifact is the delivery-note text for an open work order. Tiba runs two isolated verification channels, applies spending policy, and settles on Solana devnet. Outcomes in the `decision` artifact: PAID (settled, with digest and explorer_url), REFUSED (channels disagreed or policy failed; reason_code says why), or HELD (a human must review). Every outcome has a public receipt_url.",
         tags: ["payments", "verification", "stablecoin"],
         examples: [
           "{\"recipient_ref\":\"translator-kl\",\"artifact\":\"DELIVERY NOTE\\nWork order: WO-13\\nDelivered: translation of 4 product documents, reviewed and accepted.\\nAmount due: 5.00 USDC\\nSigned: project lead\"}"

@@ -69,11 +69,8 @@ test("Solana transaction has one memo plus an ATA create and a transfer per payo
   assert.deepEqual(rest.map((ix) => ix.programId.toBase58()), [ataProgram, tokenProgram, ataProgram, tokenProgram]);
 });
 
-test("chainForRecipient picks Solana, then Sui, then null, and treats empty as absent", () => {
-  const sui = "0xb91e5bd8be3c828e329c2e4368f6f8abb9ec6e1ba53d9f8966b8369027224bef";
-  assert.deepEqual(chainForRecipient({ solanaAddress: RECIPIENT, suiAddress: sui }), { chain: "solana", address: RECIPIENT });
-  assert.deepEqual(chainForRecipient({ solanaAddress: null, suiAddress: sui }), { chain: "sui", address: sui });
-  assert.deepEqual(chainForRecipient({ solanaAddress: "", suiAddress: sui }), { chain: "sui", address: sui });
-  assert.equal(chainForRecipient({ solanaAddress: "", suiAddress: "" }), null);
-  assert.equal(chainForRecipient({ solanaAddress: null, suiAddress: null }), null);
+test("chainForRecipient requires a Solana address", () => {
+  assert.deepEqual(chainForRecipient({ solanaAddress: RECIPIENT }), { chain: "solana", address: RECIPIENT });
+  assert.equal(chainForRecipient({ solanaAddress: "" }), null);
+  assert.equal(chainForRecipient({ solanaAddress: null }), null);
 });

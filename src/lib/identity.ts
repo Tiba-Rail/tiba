@@ -11,7 +11,7 @@ export interface IdentityProvider {
   verify(input: {
     recipientRef: string;
     displayName: string;
-    suiAddress: string;
+    walletAddress: string;
     /** The recipient's Terminal 3 identity, when they have one. Providers that do not use it ignore it. */
     t3nDid?: string | null;
   }): Promise<{
@@ -40,9 +40,9 @@ export function recipientIdentityOk(
 export class MockIdentityProvider implements IdentityProvider {
   name = "mock";
 
-  async verify(input: { recipientRef: string; displayName: string; suiAddress: string }) {
+  async verify(input: { recipientRef: string; displayName: string; walletAddress: string }) {
     const decision = input.recipientRef.endsWith("-fail") ? "failed" as const : "verified" as const;
-    const digest = createHash("sha256").update(`${input.recipientRef}:${input.suiAddress}`).digest("hex");
+    const digest = createHash("sha256").update(`${input.recipientRef}:${input.walletAddress}`).digest("hex");
     return {
       decision,
       checkId: `mock-${digest.slice(0, 16)}`,

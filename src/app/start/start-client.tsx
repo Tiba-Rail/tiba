@@ -14,12 +14,10 @@ type WorkspaceResult = {
   owner_key_prefix: string;
   recipient_ref: string;
   work_order_ref: string;
-  sui_address: string | null;
-  solana_address?: string | null;
+  solana_address: string | null;
 };
 
-// New workspaces put their demo recipient on the deployment's default chain.
-const ADDRESS_KEY = defaultPublicChain === "solana" ? "solana_address" : "sui_address";
+const ADDRESS_KEY = "solana_address";
 const CHAIN = chainName(defaultPublicChain);
 
 type Tab = "curl" | "mcp" | "telegram";
@@ -99,7 +97,7 @@ export function StartClient() {
 
   const telegramSnippet = result
     ? `Open @tibapay_bot in Telegram and send this one message:\n\n/connect ${result.agent_key} ${result.owner_key}\n\nThen try: ${
-        defaultPublicChain === "solana" ? "pay <your Solana address> 1 USDC" : "pay 0x<sui address> 1 USDC"
+        "pay <your Solana address> 1 USDC"
       }`
     : "";
 

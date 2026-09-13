@@ -1,45 +1,17 @@
-import { defaultChain, type Chain } from "@/lib/rails";
-import { getSolanaUsdcBalance, solanaTreasuryAddress } from "@/lib/rails/solana";
+import { Connection, PublicKey } from "@solana/web3.js";
 
-const TESTNET_GRAPHQL_URL = "https://graphql.testnet.sui.io/graphql";
-
-
-const SUI_TYPE_ARG = "0x2::sui::SUI";
-
-/** Treasury address for a chain, default SETTLEMENT_CHAIN. */
-export function getSettlementAddress(chain: Chain = defaultChain()): string | null {
-  if (chain === "solana") return solanaTreasuryAddress();
-  const address = process.env.SUI_ADDRESS?.trim();
-  return address ? address : null;
+export function getSettlementAddress(): string | null {
+  return process.env.SOLANA_ADDRESS?.trim() || null;
 }
 
-/** Treasury balance in micros. Solana: USDC token account, 0n only if it does not exist yet. */
-export async function getSettlementBalance(address: string, chain: Chain = defaultChain()): Promise<bigint> {
-  if (chain === "solana") return getSolanaUsdcBalance(address);
-
-  const coinType = process.env.SUI_USDC_TYPE?.trim() || SUI_TYPE_ARG;
-  // JSON-RPC on public fullnodes is deprecated and now answers "Method not found", which made
-  // every balance read silently return zero. Read it over GraphQL, the transport settlement uses.
-  const query = `{ address(address: "${address}") { balance(coinType: "${coinType}") { totalBalance } } }`;
-
+export async function getSettlementBalance(address: string): Promise<bigint> {
   try {
-    const response = await fetch(TESTNET_GRAPHQL_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ query }),
-      cache: "no-store"
+    const rpc = process.env.SOLANA_RPC_URL?.trim() || "https://api.devnet.solana.com";
+    const connection = new Connection(rpc, "confirmed");
+    const result = await connection.getTokenAccountsByOwner(new PublicKey(address), {
+      mint: new PublicKey(process.env.SOLANA_USDC_MINT?.trim() || "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
     });
-    if (!response.ok) return 0n;
-
-    const payload = (await response.json()) as {
-      data?: { address?: { balance?: { totalBalance?: string } | null } | null } | null;
-    };
-
-    const total = payload.data?.address?.balance?.totalBalance;
-    if (!total) return 0n;
-    const raw = BigInt(total);
-    const isSui = coinType === SUI_TYPE_ARG;
-    return isSui ? raw / 1_000n : raw;
+    return result.value.reduce((total, account) => total + BigInt(account.account.data.parsed.info.tokenAmount.amount), 0n);
   } catch {
     return 0n;
   }

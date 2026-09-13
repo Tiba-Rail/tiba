@@ -8,7 +8,8 @@ datasource db {
 
 enum Rail {
   mock
-  sui
+  legacy @map("sui")
+  solana
 }
 
 model Agent {
@@ -98,8 +99,8 @@ model Recipient {
   id          String   @id @default(uuid())
   ref         String   @unique
   displayName String   @map("display_name")
-  suiAddress  String?  @map("sui_address")
-  // Set for recipients paid on Solana. A saved Solana address wins over a Sui one.
+  legacyAddress  String?  @map("sui_address")
+  // Retains pre-Solana-only records without making them payable.
   solanaAddress String? @map("solana_address")
   active      Boolean  @default(true)
   kycStatus   String   @default("unverified") @map("kyc_status")
@@ -151,7 +152,7 @@ model PayoutIntent {
   idempotencyKey   String   @unique @map("idempotency_key")
   digest           String?
   explorerUrl      String?  @map("explorer_url")
-  // Chain that settled (or was tried): "sui" | "solana" | "mock". Null on old rows reads as Sui.
+  // Chain that settled (or was tried): "solana" | "mock". Old rows keep their stored history.
   chain            String?  @map("chain")
   gnkUsd           String?  @map("gnk_usd")
   pricingUpdatedAt DateTime? @map("pricing_updated_at")
