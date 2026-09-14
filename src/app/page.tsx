@@ -13,7 +13,7 @@ export default async function Home() {
         <header>
           <p className="eyebrow">A wallet for AI agents · test network</p>
           <h1 className="display-xl mt-4 max-w-[20ch]">
-            A wallet for <RotatingWord words={["AI agents", "your agent"]} intervalMs={2500} />.
+            A wallet your <RotatingWord words={["AI agents", "software", "apps", "workflows"]} intervalMs={2500} /> can <em>pay people</em> from.
           </h1>
           <p className="lede mt-6">
             You give your agent a signed permission slip; it acts and pays only within it; you get a
