@@ -1,0 +1,96 @@
+{
+  "type": "tiba.receipt",
+  "version": "0.1",
+  "id": "receipt:c553beba-c4d7-4dd5-9e44-f918c7279a66",
+  "mandate_id": "mandate:f95975e7-cbbf-4f9e-94e0-3a44c7c50b23",
+  "mandate_hash": "sha256-xfdBQ-ieNw0c_BXoLMONyqYRvB4XBSlqg6LNULDgJEU",
+  "executed_at": "2026-09-13T12:52:54.440Z",
+  "input_hash": "sha256-KZCSUJbKSb8JcHmof_Jp72E1QV0DIG5Y_AkstjBTzOE",
+  "output_hash": "sha256-hPsCrTGfDcEHy7V80xqpRgbC2kvphT1oi6RLrjcinlk",
+  "mandate_chain": [
+    {
+      "type": "tiba.mandate",
+      "version": "0.1",
+      "id": "mandate:f95975e7-cbbf-4f9e-94e0-3a44c7c50b23",
+      "issued_at": "2026-09-13T12:52:46.088Z",
+      "issuer": "did:key:z6MkofGxs6YBH42CfUbu4GRvnVU7FmEsKoUFEYwFTkDGswQr",
+      "subject": "did:key:z6Mkk2ydQQAw96YgeLJvZEMuekwSeVUVo823ZYcASWdVsw3L",
+      "expires_at": "2026-09-13T13:52:42.950Z",
+      "scope": {
+        "actions": [
+          {
+            "protocol": "mcp",
+            "action": "tools/call",
+            "resource": "notes.local",
+            "tool": "notes.write"
+          },
+          {
+            "protocol": "payment",
+            "action": "transfer",
+            "resource": "solana:devnet",
+            "tool": "transfer_checked"
+          }
+        ],
+        "counterparties": [
+          "notes.local",
+          "mj9CbcE2hxDXLGeYFZ4kSCB6NeqMxwSxCie4fgjtVmY"
+        ],
+        "data": {
+          "read": [],
+          "write": [
+            "demo/notes"
+          ]
+        }
+      },
+      "budget": {
+        "amount": "0.001",
+        "currency": "USDC",
+        "per_action_max": "0.001"
+      },
+      "delegation": {
+        "max_depth": 0
+      },
+      "revocation": {
+        "url": "https://tiba.invalid/revocations/demo",
+        "list_id": "demo",
+        "authority": "did:key:z6MkofGxs6YBH42CfUbu4GRvnVU7FmEsKoUFEYwFTkDGswQr"
+      },
+      "escalation": {
+        "mode": "notify"
+      },
+      "signature": {
+        "alg": "Ed25519",
+        "kid": "did:key:z6MkofGxs6YBH42CfUbu4GRvnVU7FmEsKoUFEYwFTkDGswQr",
+        "value": "VSTYSWiDtIgDUfzIMrDVnExm3WDMW1oLk3RY2ZPc_t7dnUnZ0LJfm8P6mTPdDkXo-rWWVXqDYGKrxyxgolNkBg"
+      }
+    }
+  ],
+  "action": {
+    "protocol": "payment",
+    "action": "transfer",
+    "resource": "solana:devnet",
+    "tool": "transfer_checked",
+    "counterparty": "mj9CbcE2hxDXLGeYFZ4kSCB6NeqMxwSxCie4fgjtVmY",
+    "data_access": {
+      "read": [],
+      "write": []
+    },
+    "amount": "0.001",
+    "currency": "USDC"
+  },
+  "result": "success",
+  "actor": "did:key:z6Mkk2ydQQAw96YgeLJvZEMuekwSeVUVo823ZYcASWdVsw3L",
+  "evidence": [
+    {
+      "type": "solana_transaction",
+      "network": "solana-devnet",
+      "reference": "5qYptsRf83rjpz1C8FhdkpqkWj4w1V3H77ZonUMQNZwSXGXtDNjz4TzmLw9pJAeZ6vTJteTm2Ypagri5qtjPtZFB",
+      "url": "https://explorer.solana.com/tx/5qYptsRf83rjpz1C8FhdkpqkWj4w1V3H77ZonUMQNZwSXGXtDNjz4TzmLw9pJAeZ6vTJteTm2Ypagri5qtjPtZFB?cluster=devnet"
+    }
+  ],
+  "signature": {
+    "alg": "Ed25519",
+    "kid": "did:key:z6Mkk2ydQQAw96YgeLJvZEMuekwSeVUVo823ZYcASWdVsw3L",
+    "value": "YV7o4rF0r4pYFaiAJ9GoRRgiWRzAKjpo163ze5kijipKJ8SWooRCVOS0-fEMEknxqJEa50sINImri2gi_GjOAw"
+  }
+}

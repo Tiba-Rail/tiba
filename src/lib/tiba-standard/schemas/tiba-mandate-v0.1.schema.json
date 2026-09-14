@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tiba-mandate-v0.1.schema.json",
+  "title": "Tiba Mandate v0.1",
+  "description": "A signed, portable authorization policy for one agent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "version",
+    "id",
+    "issuer",
+    "subject",
+    "issued_at",
+    "expires_at",
+    "scope",
+    "delegation",
+    "revocation",
+    "escalation",
+    "signature"
+  ],
+  "properties": {
+    "type": { "const": "tiba.mandate" },
+    "version": { "const": "0.1" },
+    "id": { "$ref": "#/$defs/id" },
+    "issuer": { "$ref": "#/$defs/did_key" },
+    "subject": { "$ref": "#/$defs/did_key" },
+    "issued_at": { "$ref": "#/$defs/timestamp" },
+    "not_before": { "$ref": "#/$defs/timestamp" },
+    "expires_at": { "$ref": "#/$defs/timestamp" },
+    "scope": { "$ref": "#/$defs/scope" },
+    "budget": { "$ref": "#/$defs/budget" },
+    "delegation": { "$ref": "#/$defs/delegation" },
+    "revocation": { "$ref": "#/$defs/revocation" },
+    "escalation": { "$ref": "#/$defs/escalation" },
+    "extensions": {
+      "type": "object",
+      "description": "Namespaced extensions. An enforcing verifier MUST reject a constraint it does not understand.",
+      "additionalProperties": true
+    },
+    "signature": { "$ref": "#/$defs/signature" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "did_key": {
+      "type": "string",
+      "description": "A did:key identifier whose multicodec is ed25519-pub.",
+      "pattern": "^did:key:z[1-9A-HJ-NP-Za-km-z]+$",
+      "maxLength": 128
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$",
+      "maxLength": 24
+    },
+    "hash": {
+      "type": "string",
+      "description": "SHA-256 over UTF-8 JCS bytes, encoded as sha256- plus unpadded base64url.",
+      "pattern": "^sha256-[A-Za-z0-9_-]{43}$"
+    },
+    "selector": {
+      "type": "string",
+      "description": "Exact selector or the complete wildcard *; partial globs are not valid in v0.1.",
+      "minLength": 1,
+      "maxLength": 2048,
+      "pattern": "^(\\*|[^*\\s]+)$"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actions", "counterparties", "data"],
+      "properties": {
+        "actions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["protocol", "action", "resource", "tool"],
+            "properties": {
+              "protocol": { "$ref": "#/$defs/selector" },
+              "action": { "$ref": "#/$defs/selector" },
+              "resource": { "$ref": "#/$defs/selector" },
+              "tool": { "$ref": "#/$defs/selector" }
+            }
+          }
+        },
+        "counterparties": {
+          "type": "array",
+          "description": "Exact counterparty identifiers or *; use * explicitly when there is no counterparty restriction.",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/selector" }
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["read", "write"],
+          "properties": {
+            "read": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/selector" }
+            },
+            "write": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/selector" }
+            }
+          }
+        }
+      }
+    },
+    "amount": {
+      "type": "string",
+      "description": "A non-negative base-10 decimal string, not a JSON number.",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,18})?$",
+      "maxLength": 64
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9._-]{1,15}$",
+      "maxLength": 16
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": { "$ref": "#/$defs/amount" },
+        "currency": { "$ref": "#/$defs/currency" },
+        "per_action_max": { "$ref": "#/$defs/amount" }
+      }
+    },
+    "delegation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_depth"],
+      "properties": {
+        "max_depth": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "parent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "hash"],
+          "properties": {
+            "id": { "$ref": "#/$defs/id" },
+            "hash": { "$ref": "#/$defs/hash" }
+          }
+        }
+      }
+    },
+    "revocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "list_id", "authority"],
+      "properties": {
+        "url": { "type": "string", "format": "uri", "maxLength": 2048 },
+        "list_id": { "$ref": "#/$defs/id" },
+        "authority": { "$ref": "#/$defs/did_key" }
+      }
+    },
+    "escalation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": { "enum": ["deny", "require_confirmation", "notify"] },
+        "url": { "type": "string", "format": "uri", "maxLength": 2048 }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alg", "kid", "value"],
+      "properties": {
+        "alg": { "const": "Ed25519" },
+        "kid": { "$ref": "#/$defs/did_key" },
+        "value": {
+          "type": "string",
+          "description": "An Ed25519 signature encoded as unpadded base64url.",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
+        }
+      }
+    }
+  }
+}

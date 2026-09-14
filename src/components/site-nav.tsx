@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "./wordmark";
+import { SiteNavScrollReset } from "./site-nav-scroll-reset";
 import { prisma } from "@/lib/db";
 import { auth, signOut } from "@/auth";
 
@@ -14,6 +15,7 @@ export async function SiteNav({ current }: SiteNavProps) {
 
   return (
     <div className="w-full">
+      <SiteNavScrollReset />
       {!marketing && <KillSwitchBanner />}
       <nav className="border-b border-line">
         <div className="mx-auto max-w-7xl px-4 md:flex md:h-14 md:items-center md:justify-between md:px-6 lg:px-8">
@@ -67,10 +69,14 @@ function AppLinks({ current }: { current: string }) {
   const links = [
     { key: "app", label: "Home", href: "/app" },
     { key: "console", label: "Send", href: "/console" },
+    { key: "permissions", label: "Permissions", href: "/permissions" },
+    { key: "receipts", label: "Receipts", href: "/receipts" },
+    { key: "verify", label: "Verify", href: "/verify" },
     { key: "ledger", label: "Activity", href: "/ledger" },
     { key: "work-orders", label: "Invoices", href: "/work-orders" },
     { key: "recipients", label: "Recipients", href: "/recipients" },
-    { key: "policies", label: "Limits", href: "/policies" }
+    { key: "policies", label: "Limits", href: "/policies" },
+    { key: "developers", label: "Developers", href: "/developers" }
   ];
 
   return (

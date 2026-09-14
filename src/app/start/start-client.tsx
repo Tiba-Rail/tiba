@@ -140,7 +140,7 @@ export function StartClient() {
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder={typeof window !== "undefined" ? "Defaults to the deployment address" : ""}
+                placeholder="Defaults to the deployment address"
                 autoComplete="off"
                 spellCheck={false}
               />

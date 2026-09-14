@@ -13,9 +13,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Tiba — a wallet for software",
+  title: "Tiba — a wallet for AI agents",
   description:
-    "Tiba is a wallet for software: it pays people on your behalf, within your limits, and only after two separate checks agree on the job and the amount. Disagreement is a refusal, not a guess."
+    "A wallet for AI agents. You give your agent a signed permission slip; it acts and pays only within it; you get a signed receipt for everything it does, that anyone can check."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
