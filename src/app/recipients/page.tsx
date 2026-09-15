@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
+import { viewerWorkspace } from "@/lib/operator-auth";
 import { RecipientsClient } from "./recipients-client";
 import { SiteNav } from "@/components/site-nav";
+import { WorkspaceGate } from "@/components/workspace-gate";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Recipients - Tiba" };
@@ -10,7 +12,11 @@ function formatDate(date: Date | null): string | null {
 }
 
 export default async function RecipientsPage() {
+  const agent = await viewerWorkspace();
+  if (!agent) return <WorkspaceGate current="recipients" path="/recipients" />;
+
   const recipients = await prisma.recipient.findMany({
+    where: { agentId: agent.id },
     orderBy: { createdAt: "asc" }
   });
 

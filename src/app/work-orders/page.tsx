@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
+import { viewerWorkspace } from "@/lib/operator-auth";
 import { WorkOrdersClient } from "./work-orders-client";
 import { SiteNav } from "@/components/site-nav";
+import { WorkspaceGate } from "@/components/workspace-gate";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Invoices - Tiba" };
@@ -16,13 +18,17 @@ function shortDate(date: Date): string {
 }
 
 export default async function WorkOrdersPage() {
+  const agent = await viewerWorkspace();
+  if (!agent) return <WorkspaceGate current="work-orders" path="/work-orders" />;
+
   const [workOrders, recipients] = await Promise.all([
     prisma.workOrder.findMany({
+      where: { recipient: { agentId: agent.id } },
       include: { recipient: true },
       orderBy: { createdAt: "desc" }
     }),
     prisma.recipient.findMany({
-      where: { active: true },
+      where: { agentId: agent.id, active: true },
       orderBy: { createdAt: "asc" }
     })
   ]);

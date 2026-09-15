@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { RouterHealthStrip } from "@/components/router-health-strip";
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
+import { viewerWorkspace } from "@/lib/operator-auth";
 import { ConsoleClient } from "./console-client";
 import { SiteNav } from "@/components/site-nav";
-import { LiveRefresh } from "@/components/live-refresh";
+import { WorkspaceGate } from "@/components/workspace-gate";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Send - Tiba" };
@@ -29,18 +29,19 @@ export default async function ConsolePage({
   searchParams: Promise<{ agent?: string }>;
 }) {
   const { agent: agentId } = await searchParams;
-
-  const agent = agentId
-    ? await prisma.agent.findUnique({ where: { id: agentId } })
-    // Default to the original workspace so the demo is stable no matter how many
-    // workspaces sign up. Onboarding links carry ?agent=<id> to reach a new one.
-    : await prisma.agent.findFirst({ orderBy: { createdAt: "asc" } });
+  const agent = await viewerWorkspace(agentId);
+  if (!agent) return <WorkspaceGate current="console" path="/console" />;
 
   const [recipients, workOrders, heldIntents] = await Promise.all([
-    prisma.recipient.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.workOrder.findMany({ include: { recipient: true }, orderBy: { createdAt: "desc" } }),
+    prisma.recipient.findMany({ where: { agentId: agent.id }, orderBy: { createdAt: "asc" } }),
+    prisma.workOrder.findMany({
+      where: { recipient: { agentId: agent.id } },
+      include: { recipient: true },
+      orderBy: { createdAt: "desc" }
+    }),
     prisma.payoutIntent.findMany({
       where: {
+        agentId: agent.id,
         OR: [
           { decisionClass: "AMBER" },
           { decisionClass: "RED", reasonCode: { startsWith: "QUORUM_SPLIT" } }
@@ -50,21 +51,6 @@ export default async function ConsolePage({
       orderBy: { createdAt: "desc" }
     })
   ]);
-
-  if (!agent) {
-    return (
-      <main className="min-h-screen bg-background text-foreground">
-      <SiteNav current="console" />
-      <LiveRefresh />
-        <RouterHealthStrip />
-        <div className="mx-auto max-w-7xl px-4 py-8">
-          <h1 className="display-l">Nothing is set up yet</h1>
-          <p className="lede mt-2">This wallet has no software attached yet.</p>
-          <Link href="/start" className="btn btn-primary mt-6 inline-flex">Create a wallet</Link>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-background text-foreground">

@@ -38,6 +38,7 @@ model Agent {
   userId            String?  @map("user_id")
 
   intents           PayoutIntent[]
+  recipients        Recipient[]
 
   @@map("agents")
 }
@@ -112,10 +113,14 @@ model Recipient {
   t3nDid        String?   @map("t3n_did")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  // The workspace that owns this recipient. Work orders belong to their recipient's workspace.
+  agentId     String?  @map("agent_id")
 
+  agent       Agent?   @relation(fields: [agentId], references: [id])
   workOrders  WorkOrder[]
   intents     PayoutIntent[]
 
+  @@index([agentId])
   @@map("recipients")
 }
 

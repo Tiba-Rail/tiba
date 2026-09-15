@@ -24,7 +24,9 @@ export default async function Home() {
       include: { adjudications: { orderBy: { createdAt: "asc" } } }
     }),
     prisma.payoutIntent.findFirst({
-      where: { decisionClass: "RED" },
+      // Only a refusal from the same demo workspace as the pinned payment. Other workspaces'
+      // receipts are public by link, never advertised here.
+      where: { decisionClass: "RED", agent: { intents: { some: { id: EXAMPLE_PAID_INTENT_ID } } } },
       include: { adjudications: { orderBy: { createdAt: "asc" } } },
       orderBy: { createdAt: "desc" }
     })

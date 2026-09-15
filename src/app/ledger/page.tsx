@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { viewerWorkspace } from "@/lib/operator-auth";
+import { WorkspaceGate } from "@/components/workspace-gate";
 import { channelTuple } from "@/lib/adjudication-display";
 import { disagreementLine, explainDecision } from "@/app/console/types";
 import { formatDollars } from "@/app/format";
@@ -100,8 +102,11 @@ export default async function LedgerPage({
   const { filter: raw } = await searchParams;
   const filter: Filter = FILTERS.some((f) => f.key === raw) ? (raw as Filter) : "all";
 
+  const agent = await viewerWorkspace();
+  if (!agent) return <WorkspaceGate current="ledger" path="/ledger" />;
+
   const intents = await prisma.payoutIntent.findMany({
-    where: whereFor(filter),
+    where: { agentId: agent.id, ...whereFor(filter) },
     include: {
       recipient: true,
       adjudications: { orderBy: { createdAt: "asc" } }

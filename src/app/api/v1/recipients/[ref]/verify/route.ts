@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getIdentityProvider } from "@/lib/identity";
-import { isOperatorRequest } from "@/lib/operator-auth";
+import { resolveOperatorAgent } from "@/lib/operator-auth";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest, context: { params: Promise<{ ref: string }> }) {
-  if (!await isOperatorRequest(request)) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  const agent = await resolveOperatorAgent(request);
+  if (!agent) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   const { ref } = await context.params;
-  const recipient = await prisma.recipient.findUnique({ where: { ref } });
+  const recipient = await prisma.recipient.findFirst({ where: { ref, agentId: agent.id } });
   if (!recipient) return NextResponse.json({ error: "RECIPIENT_NOT_FOUND" }, { status: 404 });
 
   const provider = getIdentityProvider();
