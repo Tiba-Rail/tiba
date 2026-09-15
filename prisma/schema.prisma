@@ -36,6 +36,8 @@ model Agent {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   userId            String?  @map("user_id")
+  contentRef        String?  @map("content_ref")
+  refBrowserId      String?  @map("ref_browser_id")
 
   intents           PayoutIntent[]
 

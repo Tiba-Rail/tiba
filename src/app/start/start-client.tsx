@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { chainName, defaultPublicChain } from "@/app/format";
+import { storedRef } from "@/components/ref-capture";
 
 type WorkspaceResult = {
   workspace_id: string;
@@ -40,7 +41,7 @@ export function StartClient() {
       const response = await fetch("/api/v1/workspaces", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, [ADDRESS_KEY]: address.trim() || undefined })
+        body: JSON.stringify({ name, [ADDRESS_KEY]: address.trim() || undefined, ref: storedRef()?.ref ?? undefined, ref_browser: storedRef()?.bid })
       });
       const payload = await response.json().catch(() => ({ error: "UNKNOWN" })) as { error?: string } & Partial<WorkspaceResult>;
       if (!response.ok) {

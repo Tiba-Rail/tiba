@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { isSolanaAddress } from "@/lib/rails/solana";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { REF_KEY, refForWallet } from "@/lib/ref-tag";
 export const runtime = "nodejs";
 const MICROS_PER_USDC = 1_000_000n;
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -17,9 +18,10 @@ export async function POST(request: NextRequest) {
   const solanaAddress = optionalAddress(body.solana_address) ?? process.env.SOLANA_ADDRESS?.trim();
   if (!solanaAddress) return NextResponse.json({ error: "SOLANA_ADDRESS_REQUIRED" }, { status: 503 });
   if (!isSolanaAddress(solanaAddress)) return NextResponse.json({ error: "INVALID_SOLANA_ADDRESS" }, { status: 400 });
+  const { contentRef, refBrowserId } = refForWallet(body, request.cookies.get(REF_KEY)?.value);
   const suffix = randomBytes(4).toString("hex"); const agentKey = makeKey("tiba_live_"); const ownerKey = makeKey("tiba_owner_"); const now = new Date(); const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   const createWorkspace = () => prisma.$transaction(async (tx) => {
-    const agent = await tx.agent.create({ data: { name, apiKeyHash: agentKey.hash, apiKeyPrefix: agentKey.keyPrefix, ownerTokenHash: ownerKey.hash, ownerTokenPrefix: ownerKey.keyPrefix, ceilingMicros: 5n * MICROS_PER_USDC, hourCapMicros: 10n * MICROS_PER_USDC, dayCapMicros: 20n * MICROS_PER_USDC, hourCountCap: 5, dayCountCap: 20, killSwitch: false, requireRecipientKyc: false, rail: "solana", ...(userId ? { userId } : {}) } });
+    const agent = await tx.agent.create({ data: { name, apiKeyHash: agentKey.hash, apiKeyPrefix: agentKey.keyPrefix, ownerTokenHash: ownerKey.hash, ownerTokenPrefix: ownerKey.keyPrefix, ceilingMicros: 5n * MICROS_PER_USDC, hourCapMicros: 10n * MICROS_PER_USDC, dayCapMicros: 20n * MICROS_PER_USDC, hourCountCap: 5, dayCountCap: 20, killSwitch: false, requireRecipientKyc: false, rail: "solana", contentRef, refBrowserId, ...(userId ? { userId } : {}) } });
     const recipient = await tx.recipient.create({ data: { id: `recipient-${suffix}`, ref: `owner-${suffix}`, displayName: "Example recipient", solanaAddress, active: true, kycStatus: "verified", kycProvider: "onboarding", kycVerifiedAt: now } });
     await tx.workOrder.create({ data: { id: `work-order-${suffix}`, recipientId: recipient.id, ref: `WO-${suffix.toUpperCase()}`, ceilingMicros: 5n * MICROS_PER_USDC, briefText: "First invoice for your new wallet.", payerRecord: { approved_amount_micros: "5000000", delivery_status: "verified_complete", source: "onboarding" }, requiredChannels: "both", expiresAt, status: "open" } });
     return [agent, recipient] as const;

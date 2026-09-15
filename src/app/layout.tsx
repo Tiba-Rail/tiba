@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
 import { SolanaProviders } from "@/components/solana-providers";
+import { RefCapture } from "@/components/ref-capture";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${inter.variable} ${jetbrains.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <body className="min-h-full">
+        <RefCapture />
         <SolanaProviders>{children}</SolanaProviders>
       </body>
     </html>
