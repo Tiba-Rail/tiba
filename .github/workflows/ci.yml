@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # A tracked .env file is how a Vercel token reached this public repo (#1). Fail the build
+      # if any env file other than the placeholder template is committed again.
+      - name: No tracked env files
+        run: "! git ls-files -- '.env*' ':(exclude).env.example' | grep ."
       - uses: actions/setup-node@v4
         with:
           node-version: 25

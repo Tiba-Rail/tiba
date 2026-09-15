@@ -1,8 +1,9 @@
 node_modules/
 .next/
-.env
-.env.local
-.env.prod
+# Every env file (vercel env pull writes .env.local / .env.*.local / custom names). Only the
+# placeholder template is tracked; CI fails if any other .env* file is committed.
+.env*
+!.env.example
 *.log
 *.webm
 recordings/
