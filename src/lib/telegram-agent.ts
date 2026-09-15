@@ -1,4 +1,5 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import type { Agent } from "@prisma/client";
 import { PublicKey } from "@solana/web3.js";
 import { prisma } from "@/lib/db";
 import { processPayoutIntent } from "@/lib/payout-intent";
@@ -11,7 +12,6 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const GROQ_KEY = process.env.GROQ_API_KEY ?? "";
 const GROQ_MODEL = process.env.GROQ_MODEL ?? "openai/gpt-oss-120b";
 const DEFAULT_AGENT_KEY = process.env.TIBA_AGENT_KEY ?? "";
-const DEFAULT_OWNER_KEY = process.env.OPERATOR_TOKEN ?? "";
 
 const SOLANA_ADDRESS = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/;
 const PAYMENT_WORDS = /(pay|send|transfer|settle|invoice|wo-?\d+)/i;
@@ -35,7 +35,9 @@ const ALIASES: Record<string, string> = {
   ali: "ali"
 };
 
-type Keys = { agentKey: string; ownerKey: string; own: boolean };
+// The workspace a chat pays from. A connected chat stores only the workspace id: /connect checks
+// both keys once and keeps neither. Other chats use the shared demo wallet.
+type Wallet = { agent: Agent; own: boolean };
 
 function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -63,57 +65,65 @@ export function baseUrl(): string {
   return vercel ? `https://${vercel}` : "https://tiba-omega.vercel.app";
 }
 
-async function send(chatId: string, text: string): Promise<void> {
-  if (!TELEGRAM_TOKEN) return;
-  await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+async function telegram(method: string, body: Record<string, unknown>): Promise<boolean> {
+  if (!TELEGRAM_TOKEN) return false;
+  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/${method}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true })
-  }).catch(() => undefined);
-}
-
-async function keysFor(chatId: string): Promise<Keys> {
-  const row = await prisma.telegramChat.findUnique({ where: { chatId } });
-  if (row) return { agentKey: row.agentKey, ownerKey: row.ownerKey, own: true };
-  return { agentKey: DEFAULT_AGENT_KEY, ownerKey: DEFAULT_OWNER_KEY, own: false };
-}
-
-// Owner-side calls go over HTTP so they reuse the operator checks in those routes. They are
-// fast. The slow part, the payment itself, runs in-process instead of calling ourselves.
-async function ownerPost(keys: Keys, path: string, body: unknown): Promise<{ ok: boolean; json: Record<string, unknown> }> {
-  const response = await fetch(`${baseUrl()}${path}`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${keys.ownerKey}`, "content-type": "application/json" },
     body: JSON.stringify(body)
-  });
-  const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  return { ok: response.ok, json };
+  }).catch(() => null);
+  return Boolean(response?.ok);
 }
 
-async function ensureRecipient(keys: Keys, address: string, name?: string): Promise<string> {
-  const ref = `r-${address.slice(0, 10)}`;
-  const { ok, json } = await ownerPost(keys, "/api/v1/recipients", {
-    ref,
-    display_name: name || `Wallet ${address.slice(0, 6)}…${address.slice(-4)}`,
-    solana_address: address
-  });
-  if (ok || /exists|unique|P2002/i.test(JSON.stringify(json))) return ref;
-  throw new Error(`could not save recipient: ${JSON.stringify(json).slice(0, 120)}`);
+async function send(chatId: string, text: string): Promise<void> {
+  await telegram("sendMessage", { chat_id: chatId, text, disable_web_page_preview: true });
 }
 
-async function openInvoice(keys: Keys, recipientRef: string, amountUsdc: number, purpose?: string): Promise<string> {
+async function walletFor(chatId: string): Promise<Wallet | null> {
+  const row = await prisma.telegramChat.findUnique({ where: { chatId }, include: { agent: true } });
+  if (row) return { agent: row.agent, own: true };
+  const agent = DEFAULT_AGENT_KEY ? await prisma.agent.findUnique({ where: { apiKeyHash: sha256(DEFAULT_AGENT_KEY) } }) : null;
+  return agent ? { agent, own: false } : null;
+}
+
+// Owner-side steps run in-process as the chat's workspace, which the chat proved it owns at
+// /connect. Nothing needs a stored bearer key to call the owner APIs over HTTP.
+async function ensureRecipient(agent: Agent, address: string, name?: string): Promise<string> {
+  const known = await prisma.recipient.findFirst({ where: { agentId: agent.id, solanaAddress: address }, select: { ref: true } });
+  if (known) return known.ref;
+  // Refs are unique across the deployment; another workspace may already use this one.
+  const base = `r-${address.slice(0, 10)}`;
+  const taken = await prisma.recipient.findUnique({ where: { ref: base }, select: { id: true } });
+  const ref = taken ? `${base}-${randomBytes(3).toString("hex")}` : base;
+  await prisma.recipient.create({
+    data: {
+      ref,
+      displayName: name || `Wallet ${address.slice(0, 6)}…${address.slice(-4)}`,
+      solanaAddress: address,
+      active: true,
+      agentId: agent.id
+    }
+  });
+  return ref;
+}
+
+async function openInvoice(agent: Agent, recipientRef: string, amountUsdc: number, purpose?: string): Promise<string> {
+  const recipient = await prisma.recipient.findFirst({ where: { ref: recipientRef, agentId: agent.id }, select: { id: true } });
+  const micros = BigInt(Math.round(amountUsdc * 1e6));
+  if (!recipient || micros <= 0n) throw new Error("could not open invoice");
   const ref = `INV-${Date.now().toString(36).toUpperCase()}`;
-  const micros = Math.round(amountUsdc * 1e6);
-  const { ok, json } = await ownerPost(keys, "/api/v1/work-orders", {
-    ref,
-    recipient_ref: recipientRef,
-    brief_text: purpose || "Payment requested by the owner via Telegram",
-    ceiling_usdc: String(amountUsdc),
-    expires_at: new Date(Date.now() + 24 * 3600e3).toISOString(),
-    required_channels: "both",
-    payer_record: JSON.stringify({ approved_amount_micros: String(micros), delivery_status: "verified_complete" })
+  await prisma.workOrder.create({
+    data: {
+      ref,
+      recipientId: recipient.id,
+      ceilingMicros: micros,
+      briefText: purpose || "Payment requested by the owner via Telegram",
+      payerRecord: { approved_amount_micros: micros.toString(), delivery_status: "verified_complete" },
+      requiredChannels: "both",
+      expiresAt: new Date(Date.now() + 24 * 3600e3),
+      status: "open"
+    }
   });
-  if (!ok) throw new Error(`could not open invoice: ${JSON.stringify(json).slice(0, 120)}`);
   return ref;
 }
 
@@ -193,15 +203,9 @@ async function think(text: string, force: boolean): Promise<{ call: ToolCall | n
   return { call: { name: first.function.name, args }, reply: null };
 }
 
-async function pay(chatId: string, keys: Keys, recipientRef: string, workOrderRef: string, amountUsdc: number): Promise<void> {
+async function pay(chatId: string, agent: Agent, recipientRef: string, workOrderRef: string, amountUsdc: number): Promise<void> {
   const shown = amountUsdc > 0 ? `${amountUsdc.toFixed(2)} USDC` : "the invoice amount";
   await send(chatId, `Understood — pay ${recipientRef} · invoice ${workOrderRef} · ${shown}`);
-
-  const agent = await prisma.agent.findUnique({ where: { apiKeyHash: sha256(keys.agentKey) } });
-  if (!agent) {
-    await send(chatId, "That wallet key is not recognised. Send /connect with the two keys from your wallet.");
-    return;
-  }
 
   const artifact = [
     "DELIVERY NOTE",
@@ -258,7 +262,7 @@ async function pay(chatId: string, keys: Keys, recipientRef: string, workOrderRe
   }
 }
 
-async function connect(chatId: string, parts: string[]): Promise<void> {
+async function connect(chatId: string, parts: string[], messageId?: number): Promise<void> {
   if (parts.length < 2) {
     await send(
       chatId,
@@ -267,35 +271,37 @@ async function connect(chatId: string, parts: string[]): Promise<void> {
     return;
   }
   const [agentKey, ownerKey] = parts;
-  // The two keys are recognised in different places: the owner key opens invoices, the agent
-  // key is only known to the payments table. Check each where it actually works.
-  const agentOk = Boolean(await prisma.agent.findUnique({ where: { apiKeyHash: sha256(agentKey) } }));
-  const ownerOk = Boolean(await prisma.agent.findFirst({ where: { ownerTokenHash: sha256(ownerKey) } }));
-  if (!agentOk || !ownerOk) {
-    const detail = `${ownerOk ? "" : " The owner key looks wrong."}${agentOk ? "" : " The agent key looks wrong."}`;
-    await send(chatId, `Those keys were not accepted.${detail} Copy them again from ${baseUrl()}/start`);
+  // The message holds both keys in plain text; do not leave it in the chat history.
+  const removed = messageId !== undefined && await telegram("deleteMessage", { chat_id: chatId, message_id: messageId });
+  const cleanup = removed ? " I deleted your /connect message so the keys are not left in this chat." : " Delete your /connect message: it contains both keys.";
+
+  // Both keys must belong to the same workspace. Only that workspace's id is stored.
+  const agent = await prisma.agent.findUnique({ where: { apiKeyHash: sha256(agentKey) } });
+  if (!agent || agent.ownerTokenHash !== sha256(ownerKey)) {
+    const detail = agent ? " The owner key does not belong to that wallet." : " The agent key looks wrong.";
+    await send(chatId, `Those keys were not accepted.${detail} Copy them again from ${baseUrl()}/start.${cleanup}`);
     return;
   }
   await prisma.telegramChat.upsert({
     where: { chatId },
-    create: { chatId, agentKey, ownerKey },
-    update: { agentKey, ownerKey }
+    create: { chatId, agentId: agent.id },
+    update: { agentId: agent.id }
   });
-  await send(chatId, "Connected. This chat now pays from your wallet.");
+  await send(chatId, `Connected. This chat now pays from your wallet.${cleanup}`);
 }
 
-export async function handleTelegramMessage(chatId: string, text: string): Promise<void> {
+export async function handleTelegramMessage(chatId: string, text: string, messageId?: number): Promise<void> {
   const trimmed = text.trim();
 
   if (/^\/connect\b/i.test(trimmed)) {
-    await connect(chatId, trimmed.split(/\s+/).slice(1));
+    await connect(chatId, trimmed.split(/\s+/).slice(1), messageId);
     return;
   }
   if (/^\/whoami\b/i.test(trimmed)) {
-    const keys = await keysFor(chatId);
+    const wallet = await walletFor(chatId);
     await send(
       chatId,
-      keys.own ? `Your wallet · agent key ${keys.agentKey.slice(0, 12)}…` : "The shared demo wallet. Use /connect to switch to yours."
+      wallet?.own ? `Your wallet · ${wallet.agent.name} · agent key ${wallet.agent.apiKeyPrefix}…` : "The shared demo wallet. Use /connect to switch to yours."
     );
     return;
   }
@@ -314,7 +320,11 @@ export async function handleTelegramMessage(chatId: string, text: string): Promi
     return;
   }
 
-  const keys = await keysFor(chatId);
+  const wallet = await walletFor(chatId);
+  if (!wallet) {
+    await send(chatId, `No wallet is set up for this chat. Create one at ${baseUrl()}/start, then send /connect.`);
+    return;
+  }
   const looksLikePayment = PAYMENT_WORDS.test(trimmed) || solanaAddressIn(trimmed) !== null;
 
   let decided;
@@ -348,7 +358,7 @@ export async function handleTelegramMessage(chatId: string, text: string): Promi
     }
     // The shared demo wallet only pays its own demo invoices. Paying a new address needs the
     // chat's own wallet, or anyone on Telegram could pay themselves from the shared treasury.
-    if (!keys.own) {
+    if (!wallet.own) {
       await send(chatId, `Paying a new address needs your own wallet. Create one at ${baseUrl()}/start, then send /connect.`);
       return;
     }
@@ -357,9 +367,9 @@ export async function handleTelegramMessage(chatId: string, text: string): Promi
       `New recipient ${address.slice(0, 6)}…${address.slice(-4)}. Saving them and opening an invoice for ${amount.toFixed(2)} USDC.`
     );
     try {
-      const ref = await ensureRecipient(keys, address, decided.call.args.name as string | undefined);
-      const invoice = await openInvoice(keys, ref, amount, decided.call.args.purpose as string | undefined);
-      await pay(chatId, keys, ref, invoice, amount);
+      const ref = await ensureRecipient(wallet.agent, address, decided.call.args.name as string | undefined);
+      const invoice = await openInvoice(wallet.agent, ref, amount, decided.call.args.purpose as string | undefined);
+      await pay(chatId, wallet.agent, ref, invoice, amount);
     } catch (error) {
       await send(chatId, `Could not set that up: ${(error as Error).message.slice(0, 140)}`);
     }
@@ -370,7 +380,7 @@ export async function handleTelegramMessage(chatId: string, text: string): Promi
   const key = rawRef.toLowerCase().replace(/[^a-z0-9]/g, "");
   await pay(
     chatId,
-    keys,
+    wallet.agent,
     ALIASES[key] ?? rawRef,
     String(decided.call.args.work_order_ref ?? ""),
     Number(decided.call.args.amount_usdc) || 0
