@@ -174,6 +174,7 @@ async function seedEvalData(evalCases) {
         displayName: testCase.recipientRef,
         solanaAddress: recipientAddress,
         active: true,
+        agentId: agent.id,
         createdAt: seededAt,
         updatedAt: seededAt
       }

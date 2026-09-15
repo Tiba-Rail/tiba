@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import type { Agent } from "@prisma/client";
-import type { NextRequest } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
+import { OWNER_COOKIE, pickWorkspace, type WorkspaceView } from "@/lib/workspace-access";
 
 export function operatorTokenFrom(request: NextRequest): string | null {
   const authorization = request.headers.get("authorization") ?? "";
@@ -12,30 +15,60 @@ function hash(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-export async function resolveOperatorAgent(request: NextRequest): Promise<Agent | null> {
-  const token = operatorTokenFrom(request);
-  if (!token) return null;
-
-  // Legacy global operator token falls back to the first agent for back-compat.
-  const expected = process.env.OPERATOR_TOKEN;
-  if (expected && token === expected) {
+/** Workspace for an owner-key hash. The legacy global OPERATOR_TOKEN acts as the first workspace. */
+async function agentForOwnerHash(tokenHash: string): Promise<Agent | null> {
+  const legacy = process.env.OPERATOR_TOKEN;
+  if (legacy && tokenHash === hash(legacy)) {
     return prisma.agent.findFirst({ orderBy: { createdAt: "asc" } });
   }
-
-  // Per-workspace owner token.
-  return prisma.agent.findUnique({ where: { ownerTokenHash: hash(token) } });
+  return prisma.agent.findUnique({ where: { ownerTokenHash: tokenHash } });
 }
 
-export async function isOperatorRequest(request: NextRequest): Promise<boolean> {
+export async function agentForOwnerKey(ownerKey: string): Promise<Agent | null> {
+  return agentForOwnerHash(hash(ownerKey));
+}
+
+export async function resolveOperatorAgent(request: NextRequest): Promise<Agent | null> {
   const token = operatorTokenFrom(request);
-  if (!token) return false;
+  return token ? agentForOwnerKey(token) : null;
+}
 
-  const expected = process.env.OPERATOR_TOKEN;
-  if (expected && token === expected) return true;
+/** The shared demo wallet: the workspace behind TIBA_AGENT_KEY, which the Telegram demo pays from. */
+export async function demoWorkspace(): Promise<Agent | null> {
+  const key = process.env.TIBA_AGENT_KEY;
+  return key ? prisma.agent.findUnique({ where: { apiKeyHash: hash(key) } }) : null;
+}
 
-  const agent = await prisma.agent.findUnique({
-    where: { ownerTokenHash: hash(token) },
-    select: { id: true }
+/** Lets this browser open the workspace pages. Only the key's hash is stored, httpOnly. */
+export function setOwnerCookie(response: NextResponse, ownerKey: string): void {
+  response.cookies.set(OWNER_COOKIE, hash(ownerKey), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60
   });
-  return Boolean(agent);
+}
+
+/**
+ * The workspace a server-rendered page may show: one proven by the owner-key cookie or saved to
+ * the signed-in account, else the shared demo wallet, read-only. Null means show the unlock
+ * screen, never somebody else's data.
+ */
+export async function viewerWorkspace(requestedId?: string): Promise<WorkspaceView<Agent> | null> {
+  const cookieHash = (await cookies()).get(OWNER_COOKIE)?.value;
+  const fromCookie = cookieHash ? await agentForOwnerHash(cookieHash) : null;
+
+  let userId: string | undefined;
+  try {
+    userId = (await auth())?.user?.id;
+  } catch {
+    userId = undefined; // Sign-in is optional; the owner key alone is enough.
+  }
+  const owned = userId
+    ? await prisma.agent.findMany({ where: { userId }, orderBy: { createdAt: "desc" } })
+    : [];
+
+  const accessible = fromCookie ? [fromCookie, ...owned.filter((agent) => agent.id !== fromCookie.id)] : owned;
+  return pickWorkspace(accessible, requestedId, await demoWorkspace());
 }

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
 
-  let update: { message?: { chat?: { id?: number | string }; text?: string } };
+  let update: { message?: { message_id?: number; chat?: { id?: number | string }; text?: string } };
   try {
     update = (await request.json()) as typeof update;
   } catch {
@@ -22,11 +22,12 @@ export async function POST(request: NextRequest) {
 
   const chatId = update.message?.chat?.id;
   const text = update.message?.text;
+  const messageId = update.message?.message_id;
   if (chatId === undefined || !text) return NextResponse.json({ ok: true });
 
   after(async () => {
     try {
-      await handleTelegramMessage(String(chatId), text);
+      await handleTelegramMessage(String(chatId), text, messageId);
     } catch (error) {
       console.error("telegram agent failed", error);
     }

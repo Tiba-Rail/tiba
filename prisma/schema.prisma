@@ -38,6 +38,8 @@ model Agent {
   userId            String?  @map("user_id")
 
   intents           PayoutIntent[]
+  recipients        Recipient[]
+  telegramChats     TelegramChat[]
 
   @@map("agents")
 }
@@ -112,10 +114,14 @@ model Recipient {
   t3nDid        String?   @map("t3n_did")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  // The workspace that owns this recipient. Work orders belong to their recipient's workspace.
+  agentId     String?  @map("agent_id")
 
+  agent       Agent?   @relation(fields: [agentId], references: [id])
   workOrders  WorkOrder[]
   intents     PayoutIntent[]
 
+  @@index([agentId])
   @@map("recipients")
 }
 
@@ -205,13 +211,15 @@ model Artifact {
   @@map("artifacts")
 }
 
-// Which Tiba wallet a Telegram chat pays from. Set with /connect; without a row
-// the chat falls back to the pilot wallet in the environment.
+// Which Tiba wallet a Telegram chat pays from. /connect checks both keys once and stores only the
+// workspace id, never the keys. Without a row the chat uses the shared demo wallet.
 model TelegramChat {
   chatId    String   @id @map("chat_id")
-  agentKey  String   @map("agent_key")
-  ownerKey  String   @map("owner_key")
+  agentId   String   @map("agent_id")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
   @@map("telegram_chats")
 }

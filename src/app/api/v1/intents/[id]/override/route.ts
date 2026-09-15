@@ -32,7 +32,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!operator) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   const { id } = await context.params;
   const intent = await prisma.payoutIntent.findFirst({
-    where: { id, agentId: operator.id },
+    // The recipient must belong to this workspace too, so an approval can only discharge this
+    // workspace's own invoices.
+    where: { id, agentId: operator.id, recipient: { agentId: operator.id } },
     include: { agent: true, recipient: true, adjudications: true }
   });
   if (!intent) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });

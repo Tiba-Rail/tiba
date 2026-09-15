@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { isOperatorRequest } from "@/lib/operator-auth";
+import { resolveOperatorAgent } from "@/lib/operator-auth";
 import { parseUsdcToMicros } from "@/lib/money";
 
 export const runtime = "nodejs";
@@ -11,8 +11,10 @@ function unauthorized() {
 }
 
 export async function GET(request: NextRequest) {
-  if (!await isOperatorRequest(request)) return unauthorized();
+  const agent = await resolveOperatorAgent(request);
+  if (!agent) return unauthorized();
   const workOrders = await prisma.workOrder.findMany({
+    where: { recipient: { agentId: agent.id } },
     include: { recipient: true },
     orderBy: { createdAt: "desc" }
   });
@@ -31,7 +33,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!await isOperatorRequest(request)) return unauthorized();
+  const agent = await resolveOperatorAgent(request);
+  if (!agent) return unauthorized();
   let body: Record<string, unknown>;
   try {
     body = await request.json() as Record<string, unknown>;
@@ -58,7 +61,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "INVALID_REQUEST" }, { status: 400 });
   }
 
-  const recipient = await prisma.recipient.findUnique({ where: { ref: body.recipient_ref } });
+  const recipient = await prisma.recipient.findFirst({ where: { ref: body.recipient_ref, agentId: agent.id } });
   if (!recipient) return NextResponse.json({ error: "RECIPIENT_NOT_FOUND" }, { status: 404 });
 
   let payerRecord: Prisma.InputJsonValue = {};

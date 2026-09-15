@@ -1,29 +1,22 @@
-import { prisma } from "@/lib/db";
 import { formatDollars } from "@/app/format";
+import { viewerWorkspace } from "@/lib/operator-auth";
 import { SiteNav } from "@/components/site-nav";
+import { WorkspaceGate } from "@/components/workspace-gate";
+import { DemoView } from "@/components/demo-view";
 import { LimitsClient } from "./limits-client";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Limits - Tiba" };
 
 export default async function PoliciesPage() {
-  const agent = await prisma.agent.findFirst({ orderBy: { createdAt: "asc" } });
-
-  if (!agent) {
-    return (
-      <main className="min-h-screen bg-background text-foreground">
-        <SiteNav current="policies" />
-        <div className="mx-auto max-w-7xl px-4 py-8">
-          <h1 className="display-l">Nothing is set up yet</h1>
-          <p className="lede mt-2">This wallet has no software attached yet.</p>
-        </div>
-      </main>
-    );
-  }
+  const view = await viewerWorkspace();
+  if (!view) return <WorkspaceGate current="policies" path="/policies" />;
+  const { workspace: agent, readOnly } = view;
 
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="policies" />
+      <DemoView readOnly={readOnly}>
       <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-8 md:px-6 lg:px-8">
         <header>
           <p className="eyebrow">Limits</p>
@@ -43,6 +36,7 @@ export default async function PoliciesPage() {
           history={[]}
         />
       </div>
+      </DemoView>
     </main>
   );
 }

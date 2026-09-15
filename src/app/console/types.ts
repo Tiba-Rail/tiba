@@ -259,6 +259,7 @@ export function humanError(code: string | null | undefined): { text: string; cod
     NOT_OVERRIDABLE: "This one cannot be approved.",
     ALREADY_PAID: "Already paid.",
     RECIPIENT_NOT_FOUND: "That recipient is not saved.",
+    RECIPIENT_REF_TAKEN: "Another wallet already uses that short ID. Pick a different one.",
     RECIPIENT_NEEDS_SOLANA_ADDRESS: "Add a Solana wallet address.",
     INVALID_SOLANA_ADDRESS: "That is not a valid Solana address.",
     INVALID_PAYER_RECORD_JSON: "Your record is not valid JSON.",

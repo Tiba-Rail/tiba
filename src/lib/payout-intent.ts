@@ -108,7 +108,8 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
   const existing = await prisma.payoutIntent.findUnique({ where: { idempotencyKey: body.idempotency_key } });
   if (existing) return toPublicIntent(existing);
 
-  const recipient = await prisma.recipient.findUnique({ where: { ref: body.recipient_ref } });
+  // Only this workspace's recipients, and through them only its own open invoices.
+  const recipient = await prisma.recipient.findFirst({ where: { ref: body.recipient_ref, agentId: agent.id } });
   if (!recipient) {
     throw new Error("RECIPIENT_NOT_FOUND");
   }

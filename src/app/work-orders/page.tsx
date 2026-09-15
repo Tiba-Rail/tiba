@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
+import { viewerWorkspace } from "@/lib/operator-auth";
 import { WorkOrdersClient } from "./work-orders-client";
 import { SiteNav } from "@/components/site-nav";
+import { WorkspaceGate } from "@/components/workspace-gate";
+import { DemoView } from "@/components/demo-view";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Invoices - Tiba" };
@@ -16,13 +19,18 @@ function shortDate(date: Date): string {
 }
 
 export default async function WorkOrdersPage() {
+  const view = await viewerWorkspace();
+  if (!view) return <WorkspaceGate current="work-orders" path="/work-orders" />;
+  const { workspace: agent, readOnly } = view;
+
   const [workOrders, recipients] = await Promise.all([
     prisma.workOrder.findMany({
+      where: { recipient: { agentId: agent.id } },
       include: { recipient: true },
       orderBy: { createdAt: "desc" }
     }),
     prisma.recipient.findMany({
-      where: { active: true },
+      where: { agentId: agent.id, active: true },
       orderBy: { createdAt: "asc" }
     })
   ]);
@@ -30,6 +38,7 @@ export default async function WorkOrdersPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="work-orders" />
+      <DemoView readOnly={readOnly}>
       <WorkOrdersClient
         workOrders={workOrders.map((workOrder) => ({
           ref: workOrder.ref,
@@ -48,6 +57,7 @@ export default async function WorkOrdersPage() {
           active: recipient.active
         }))}
       />
+      </DemoView>
     </main>
   );
 }

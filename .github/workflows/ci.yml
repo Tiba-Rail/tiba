@@ -4,19 +4,30 @@ on:
   push:
   pull_request:
 
+# The workflow only reads the repository.
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Third-party actions run at a fixed commit, not a movable tag (#4). Dependabot proposes
+      # SHA bumps; the trailing comment names the release the SHA belongs to.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Dependency install scripts run later in this job; they get no git credentials.
+          persist-credentials: false
+      # A tracked .env file is how a Vercel token reached this public repo (#1). Fail the build
+      # if any env file other than the placeholder template is committed again.
+      - name: No tracked env files
+        run: "! git ls-files -- '.env*' ':(exclude).env.example' | grep ."
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 25
           cache: npm
-      # `npm ci` refuses this lockfile: Tailwind's wasm fallback pulls optional packages that
-      # npm on Windows will not write into the lock, so the lock can never satisfy it. `npm install`
-      # still honours the lock, it just tolerates the gap. Revert to `npm ci` once the lock is
-      # regenerated on Linux.
-      - run: npm install --no-audit --no-fund
+      # Installs exactly what package-lock.json records, with its integrity hashes, and fails if
+      # the lock and package.json disagree. Never resolves newer versions.
+      - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
       - run: npm test

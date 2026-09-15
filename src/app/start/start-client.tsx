@@ -170,6 +170,12 @@ export function StartClient() {
             <p className="lede mt-3 text-held">
               They are shown once. Copy them now.
             </p>
+            {result.rail === "mock" ? (
+              <p className="mt-3 text-sm text-muted">
+                Payments from this wallet are simulated: nothing moves on chain. Live {CHAIN} devnet wallets
+                need sign-in first and are limited per account and per day.
+              </p>
+            ) : null}
           </div>
 
           <section className="card p-5">
