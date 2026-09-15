@@ -6,4 +6,5 @@ test("legacy receipt network is derived from the stored chain without enabling a
   assert.equal(receiptNetwork("solana"), "Solana devnet");
   assert.equal(receiptNetwork("sui"), "Sui testnet");
   assert.equal(receiptNetwork(null), "Sui testnet");
+  assert.equal(receiptNetwork("mock"), "Simulated, no transfer");
 });

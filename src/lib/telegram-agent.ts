@@ -346,6 +346,12 @@ export async function handleTelegramMessage(chatId: string, text: string): Promi
       await send(chatId, "How much should I send? e.g. pay <address> 1 USDC");
       return;
     }
+    // The shared demo wallet only pays its own demo invoices. Paying a new address needs the
+    // chat's own wallet, or anyone on Telegram could pay themselves from the shared treasury.
+    if (!keys.own) {
+      await send(chatId, `Paying a new address needs your own wallet. Create one at ${baseUrl()}/start, then send /connect.`);
+      return;
+    }
     await send(
       chatId,
       `New recipient ${address.slice(0, 6)}…${address.slice(-4)}. Saving them and opening an invoice for ${amount.toFixed(2)} USDC.`

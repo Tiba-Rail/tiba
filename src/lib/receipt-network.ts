@@ -2,6 +2,7 @@
 // no chain value. This is receipt display only: neither value can reach a rail.
 export function receiptNetwork(chain: string | null): string {
   if (chain === "solana") return "Solana devnet";
+  if (chain === "mock") return "Simulated, no transfer";
   if (chain === "sui" || chain === null) return "Sui testnet";
   return "Test network";
 }
