@@ -3,7 +3,8 @@
 ALTER TABLE "recipients" ADD COLUMN "agent_id" TEXT;
 
 -- Backfill, most specific evidence first.
--- 1. Onboarding creates a workspace and its example recipient in one transaction.
+-- 1. Onboarding creates a workspace and its example recipient (ref "owner-<suffix>") in one
+--    transaction. Matched by ref, since the kyc_* columns were added outside migrations.
 UPDATE "recipients" AS r
 SET "agent_id" = (
   SELECT a."id" FROM "agents" AS a
@@ -12,7 +13,7 @@ SET "agent_id" = (
   ORDER BY a."created_at" DESC
   LIMIT 1
 )
-WHERE r."agent_id" IS NULL AND r."kyc_provider" = 'onboarding';
+WHERE r."agent_id" IS NULL AND r."ref" LIKE 'owner-%';
 
 -- 2. The workspace that first submitted a payment to the recipient.
 UPDATE "recipients" AS r
