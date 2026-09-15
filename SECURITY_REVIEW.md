@@ -16,12 +16,14 @@ The local CSO JSON artifact is stored under `.gstack/security-reports/` and excl
 
 | Issue | Severity | Status | Affected area | Fix commit |
 |---|---|---|---|---|
-| [#1](https://github.com/Tiba-Rail/tiba/issues/1) | High | Open — current-tree copy removed; history/credential action pending | `.env.prod:26`, commit `777b056` | [e112e95](https://github.com/Tiba-Rail/tiba/commit/e112e95) |
+| [#1](https://github.com/Tiba-Rail/tiba/issues/1) | High | Fixed in the tree; the expired token remains in history at `777b056` (not rewritten) | `.env.prod:26`, commit `777b056` | [e112e95](https://github.com/Tiba-Rail/tiba/commit/e112e95), [1e5ea12](https://github.com/Tiba-Rail/tiba/commit/1e5ea12) |
 | [#2](https://github.com/Tiba-Rail/tiba/issues/2) | High | Fixed | `api/console/ledger`, intent override | [de7ccc6](https://github.com/Tiba-Rail/tiba/commit/de7ccc6) |
-| [#3](https://github.com/Tiba-Rail/tiba/issues/3) | Medium | Open | Public server-rendered data pages | — |
-| [#4](https://github.com/Tiba-Rail/tiba/issues/4) | Medium | Open | `.github/workflows/ci.yml:11-20` | — |
-| [#5](https://github.com/Tiba-Rail/tiba/issues/5) | Medium | Accepted for devnet demo; open for production design | Anonymous Solana onboarding | — |
-| [#6](https://github.com/Tiba-Rail/tiba/issues/6) | Medium | Open | Telegram-linked bearer keys | — |
+| [#3](https://github.com/Tiba-Rail/tiba/issues/3) | Medium | Fixed (needs its migration run) | Public server-rendered data pages | [3638e78](https://github.com/Tiba-Rail/tiba/commit/3638e78), [122e2b1](https://github.com/Tiba-Rail/tiba/commit/122e2b1) |
+| [#4](https://github.com/Tiba-Rail/tiba/issues/4) | Medium | Fixed | `.github/workflows/ci.yml:11-20` | [07d232d](https://github.com/Tiba-Rail/tiba/commit/07d232d) |
+| [#5](https://github.com/Tiba-Rail/tiba/issues/5) | Medium | Fixed | Anonymous Solana onboarding | [2e604c8](https://github.com/Tiba-Rail/tiba/commit/2e604c8) |
+| [#6](https://github.com/Tiba-Rail/tiba/issues/6) | Medium | Fixed (needs its migration run) | Telegram-linked bearer keys | [cbc8cf0](https://github.com/Tiba-Rail/tiba/commit/cbc8cf0) |
+
+What each fix does, and what has to happen before it is live, is in [SECURITY_FIXES.md](SECURITY_FIXES.md).
 
 Issue #2 was fixed with the shortest correct diff: ledger reads now filter by the resolved agent, and overrides load only intents belonging to that agent. GitHub Actions passed in [run 34730917619](https://github.com/Tiba-Rail/tiba/actions/runs/34730917619).
 
