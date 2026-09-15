@@ -1,11 +1,43 @@
 import Link from "next/link";
 import { RotatingWord } from "@/components/rotating-word";
 import { SiteNav } from "@/components/site-nav";
+import { prisma } from "@/lib/db";
+import { microsToUsdc } from "@/lib/money";
+import { channelTuple } from "@/lib/adjudication-display";
+import { disagreementLine } from "@/app/console/types";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tiba — a wallet for AI agents" };
 
+function requestIdFor(adjudications: Array<{ channel: string; requestId: string | null }>, channel: string): string {
+  return adjudications.find((row) => row.channel === channel)?.requestId ?? "missing";
+}
+
+// Pinned to the 11 Sep devnet payout of 0.01 USDC to recipient sol-test-0911. The newest PAID row
+// was a treasury self-pay test that moved the money back into the payer's own account.
+const EXAMPLE_PAID_INTENT_ID = "0e4d1636-dad4-4369-8fde-1e4d1fa57fc3";
+
 export default async function Home() {
+  const [paidIntent, refusedIntent] = await Promise.all([
+    prisma.payoutIntent.findUnique({
+      where: { id: EXAMPLE_PAID_INTENT_ID },
+      include: { adjudications: { orderBy: { createdAt: "asc" } } }
+    }),
+    prisma.payoutIntent.findFirst({
+      where: { decisionClass: "RED" },
+      include: { adjudications: { orderBy: { createdAt: "asc" } } },
+      orderBy: { createdAt: "desc" }
+    })
+  ]);
+
+  const refusedDisagreement = refusedIntent
+    ? disagreementLine(
+        refusedIntent.reasonCode,
+        channelTuple(refusedIntent.adjudications.find((row) => row.channel === "artifact")?.tupleJson),
+        channelTuple(refusedIntent.adjudications.find((row) => row.channel === "payer_record")?.tupleJson)
+      )
+    : null;
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="" />
@@ -34,6 +66,28 @@ export default async function Home() {
             </Link>
           </div>
         </header>
+
+        <section className="border-t border-line pt-12">
+          <p className="eyebrow">Eval of an earlier build, 29 Aug 2026, on a mock settlement rail. Not live figures.</p>
+          <div className="mt-6 grid grid-cols-2 gap-8 md:grid-cols-4">
+            <div>
+              <p className="num display-l">20 / 20</p>
+              <p className="eyebrow mt-2">honest notes paid</p>
+            </div>
+            <div>
+              <p className="num display-l">10 / 10</p>
+              <p className="eyebrow mt-2">tampered notes refused</p>
+            </div>
+            <div>
+              <p className="num display-l">0 / 20</p>
+              <p className="eyebrow mt-2">false refusals</p>
+            </div>
+            <div>
+              <p className="num display-l">13 s</p>
+              <p className="eyebrow mt-2">mean per decision</p>
+            </div>
+          </div>
+        </section>
 
         <section className="border-t border-line pt-12">
           <p className="eyebrow">Your control, made explicit</p>
@@ -90,6 +144,62 @@ export default async function Home() {
               Every outcome is a receipt that can be checked independently, without trusting a dashboard.
             </p>
             <p className="lede">The wallet stays: agents still pay from it within the limits you set.</p>
+            <p className="lede">
+              Around it sit limits you set and your software can only read: a per-payment
+              ceiling, hourly and daily spending limits, a list of saved recipients, and a freeze.
+            </p>
+          </div>
+        </section>
+
+        <section className="border-t border-line pt-12">
+          <p className="eyebrow">A real example</p>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {refusedIntent ? (
+              <div className="card p-5">
+                <span className="pill pill-refused">Refused</span>
+                <p className="mt-3 text-sm">
+                  {refusedDisagreement ??
+                    "The two checks gave different answers, so Tiba refused."}
+                </p>
+                <Link className="btn btn-ghost mt-3" href={`/r/${refusedIntent.publicToken}`}>
+                  Open receipt →
+                </Link>
+              </div>
+            ) : null}
+            {paidIntent ? (
+              <div className="card p-5">
+                <span className="pill pill-paid">Paid</span>
+                <p className="mt-3 text-sm">
+                  <span className="num">{microsToUsdc(paidIntent.amountMicros)}</span> sent to a
+                  separate recipient wallet on the test network. No real money moved.
+                </p>
+                <p className="eyebrow mt-4">Transaction</p>
+                {paidIntent.explorerUrl ? (
+                  <a className="link mt-1 inline-block text-sm" href={paidIntent.explorerUrl}>
+                    View on test network
+                  </a>
+                ) : (
+                  <p className="num mt-1 break-all text-xs text-muted">{paidIntent.digest ?? "missing"}</p>
+                )}
+                <p className="eyebrow mt-4">Check references</p>
+                <p className="num mt-1 break-all text-xs text-muted">
+                  A: {requestIdFor(paidIntent.adjudications, "artifact")} · B:{" "}
+                  {requestIdFor(paidIntent.adjudications, "payer_record")}
+                </p>
+                <div>
+                  <Link className="btn btn-ghost mt-3" href={`/r/${paidIntent.publicToken}`}>
+                    Open receipt →
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="card p-5">
+                <span className="pill pill-paid">Paid</span>
+                <p className="mt-3 text-sm text-muted">
+                  No paid example yet. Send a payment from Send.
+                </p>
+              </div>
+            )}
           </div>
         </section>
 

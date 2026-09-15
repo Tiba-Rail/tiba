@@ -12,3 +12,10 @@ scripts/free-disk.ps1
 
 .vercel
 scripts/.t3-agent-state.json
+
+# Local operator working files (QA/status docs, screenshots, dead spec duplicate)
+QA_STANDARD.md
+STATUS_STANDARD.md
+PREVIEW_READY.txt
+shots/
+src/lib/tiba-standard/TIBA_STANDARD_SPEC.md
