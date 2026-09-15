@@ -4,7 +4,7 @@ import type { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { OWNER_COOKIE, pickWorkspace } from "@/lib/workspace-access";
+import { OWNER_COOKIE, pickWorkspace, type WorkspaceView } from "@/lib/workspace-access";
 
 export function operatorTokenFrom(request: NextRequest): string | null {
   const authorization = request.headers.get("authorization") ?? "";
@@ -33,6 +33,12 @@ export async function resolveOperatorAgent(request: NextRequest): Promise<Agent 
   return token ? agentForOwnerKey(token) : null;
 }
 
+/** The shared demo wallet: the workspace behind TIBA_AGENT_KEY, which the Telegram demo pays from. */
+export async function demoWorkspace(): Promise<Agent | null> {
+  const key = process.env.TIBA_AGENT_KEY;
+  return key ? prisma.agent.findUnique({ where: { apiKeyHash: hash(key) } }) : null;
+}
+
 /** Lets this browser open the workspace pages. Only the key's hash is stored, httpOnly. */
 export function setOwnerCookie(response: NextResponse, ownerKey: string): void {
   response.cookies.set(OWNER_COOKIE, hash(ownerKey), {
@@ -46,9 +52,10 @@ export function setOwnerCookie(response: NextResponse, ownerKey: string): void {
 
 /**
  * The workspace a server-rendered page may show: one proven by the owner-key cookie or saved to
- * the signed-in account. Null means show the unlock screen, never somebody else's data.
+ * the signed-in account, else the shared demo wallet, read-only. Null means show the unlock
+ * screen, never somebody else's data.
  */
-export async function viewerWorkspace(requestedId?: string): Promise<Agent | null> {
+export async function viewerWorkspace(requestedId?: string): Promise<WorkspaceView<Agent> | null> {
   const cookieHash = (await cookies()).get(OWNER_COOKIE)?.value;
   const fromCookie = cookieHash ? await agentForOwnerHash(cookieHash) : null;
 
@@ -63,5 +70,5 @@ export async function viewerWorkspace(requestedId?: string): Promise<Agent | nul
     : [];
 
   const accessible = fromCookie ? [fromCookie, ...owned.filter((agent) => agent.id !== fromCookie.id)] : owned;
-  return pickWorkspace(accessible, requestedId);
+  return pickWorkspace(accessible, requestedId, await demoWorkspace());
 }

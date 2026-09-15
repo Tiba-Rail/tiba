@@ -5,6 +5,7 @@ import { decisionSentence } from "@/app/console/types";
 import { formatDollars } from "@/app/format";
 import { getSettlementAddress, getSettlementBalance } from "@/app/settlement";
 import { LiveRefresh } from "@/components/live-refresh";
+import { DemoView } from "@/components/demo-view";
 import { WorkspaceGate } from "@/components/workspace-gate";
 import { viewerWorkspace } from "@/lib/operator-auth";
 
@@ -48,8 +49,9 @@ export default async function AppHome({
   searchParams: Promise<{ agent?: string }>;
 }) {
   const { agent: agentId } = await searchParams;
-  const agent = await viewerWorkspace(agentId);
-  if (!agent) return <WorkspaceGate current="app" path="/app" />;
+  const view = await viewerWorkspace(agentId);
+  if (!view) return <WorkspaceGate current="app" path="/app" />;
+  const { workspace: agent, readOnly } = view;
 
   const [heldIntents, recentIntents] = await Promise.all([
     prisma.payoutIntent.findMany({
@@ -81,6 +83,7 @@ export default async function AppHome({
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="app" />
       <LiveRefresh />
+      <DemoView readOnly={readOnly}>
       <div className="mx-auto flex max-w-3xl flex-col px-4 pb-16 pt-10 md:px-6 md:pt-14 lg:px-8">
 
         {/* Spendable today — the number */}
@@ -215,6 +218,7 @@ export default async function AppHome({
           </a>
         </footer>
       </div>
+      </DemoView>
     </main>
   );
 }

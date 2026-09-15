@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { viewerWorkspace } from "@/lib/operator-auth";
 import { WorkspaceGate } from "@/components/workspace-gate";
+import { DemoView } from "@/components/demo-view";
 import { channelTuple } from "@/lib/adjudication-display";
 import { disagreementLine, explainDecision } from "@/app/console/types";
 import { formatDollars } from "@/app/format";
@@ -102,8 +103,9 @@ export default async function LedgerPage({
   const { filter: raw } = await searchParams;
   const filter: Filter = FILTERS.some((f) => f.key === raw) ? (raw as Filter) : "all";
 
-  const agent = await viewerWorkspace();
-  if (!agent) return <WorkspaceGate current="ledger" path="/ledger" />;
+  const view = await viewerWorkspace();
+  if (!view) return <WorkspaceGate current="ledger" path="/ledger" />;
+  const { workspace: agent, readOnly } = view;
 
   const intents = await prisma.payoutIntent.findMany({
     where: { agentId: agent.id, ...whereFor(filter) },
@@ -119,6 +121,7 @@ export default async function LedgerPage({
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="ledger" />
+      <DemoView readOnly={readOnly}>
       <div className="mx-auto max-w-5xl px-4 py-8 md:px-6 lg:px-8">
         <header className="mb-6">
           <p className="eyebrow">Activity</p>
@@ -192,6 +195,7 @@ export default async function LedgerPage({
           )}
         </div>
       </div>
+      </DemoView>
     </main>
   );
 }

@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { Agent } from "@prisma/client";
 import { PublicKey } from "@solana/web3.js";
 import { prisma } from "@/lib/db";
+import { demoWorkspace } from "@/lib/operator-auth";
 import { processPayoutIntent } from "@/lib/payout-intent";
 
 // The Telegram agent used to run as a laptop process polling Telegram. It lives here now,
@@ -11,7 +12,6 @@ import { processPayoutIntent } from "@/lib/payout-intent";
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
 const GROQ_KEY = process.env.GROQ_API_KEY ?? "";
 const GROQ_MODEL = process.env.GROQ_MODEL ?? "openai/gpt-oss-120b";
-const DEFAULT_AGENT_KEY = process.env.TIBA_AGENT_KEY ?? "";
 
 const SOLANA_ADDRESS = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/;
 const PAYMENT_WORDS = /(pay|send|transfer|settle|invoice|wo-?\d+)/i;
@@ -82,7 +82,7 @@ async function send(chatId: string, text: string): Promise<void> {
 async function walletFor(chatId: string): Promise<Wallet | null> {
   const row = await prisma.telegramChat.findUnique({ where: { chatId }, include: { agent: true } });
   if (row) return { agent: row.agent, own: true };
-  const agent = DEFAULT_AGENT_KEY ? await prisma.agent.findUnique({ where: { apiKeyHash: sha256(DEFAULT_AGENT_KEY) } }) : null;
+  const agent = await demoWorkspace();
   return agent ? { agent, own: false } : null;
 }
 

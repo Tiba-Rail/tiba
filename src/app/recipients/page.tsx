@@ -3,6 +3,7 @@ import { viewerWorkspace } from "@/lib/operator-auth";
 import { RecipientsClient } from "./recipients-client";
 import { SiteNav } from "@/components/site-nav";
 import { WorkspaceGate } from "@/components/workspace-gate";
+import { DemoView } from "@/components/demo-view";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Recipients - Tiba" };
@@ -12,8 +13,9 @@ function formatDate(date: Date | null): string | null {
 }
 
 export default async function RecipientsPage() {
-  const agent = await viewerWorkspace();
-  if (!agent) return <WorkspaceGate current="recipients" path="/recipients" />;
+  const view = await viewerWorkspace();
+  if (!view) return <WorkspaceGate current="recipients" path="/recipients" />;
+  const { workspace: agent, readOnly } = view;
 
   const recipients = await prisma.recipient.findMany({
     where: { agentId: agent.id },
@@ -23,6 +25,7 @@ export default async function RecipientsPage() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="recipients" />
+      <DemoView readOnly={readOnly}>
       <RecipientsClient
         recipients={recipients.map((recipient) => ({
           ref: recipient.ref,
@@ -35,6 +38,7 @@ export default async function RecipientsPage() {
           kycExpiresAt: formatDate(recipient.kycExpiresAt)
         }))}
       />
+      </DemoView>
     </main>
   );
 }

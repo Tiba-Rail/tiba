@@ -5,6 +5,7 @@ import { viewerWorkspace } from "@/lib/operator-auth";
 import { ConsoleClient } from "./console-client";
 import { SiteNav } from "@/components/site-nav";
 import { WorkspaceGate } from "@/components/workspace-gate";
+import { DemoView } from "@/components/demo-view";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Send - Tiba" };
@@ -29,8 +30,9 @@ export default async function ConsolePage({
   searchParams: Promise<{ agent?: string }>;
 }) {
   const { agent: agentId } = await searchParams;
-  const agent = await viewerWorkspace(agentId);
-  if (!agent) return <WorkspaceGate current="console" path="/console" />;
+  const view = await viewerWorkspace(agentId);
+  if (!view) return <WorkspaceGate current="console" path="/console" />;
+  const { workspace: agent, readOnly } = view;
 
   const [recipients, workOrders, heldIntents] = await Promise.all([
     prisma.recipient.findMany({ where: { agentId: agent.id }, orderBy: { createdAt: "asc" } }),
@@ -56,6 +58,7 @@ export default async function ConsolePage({
     <main className="min-h-screen bg-background text-foreground">
       <SiteNav current="console" />
       <RouterHealthStrip />
+      <DemoView readOnly={readOnly}>
       <ConsoleClient
         budget={{
           agentName: agent.name,
@@ -91,6 +94,7 @@ export default async function ConsolePage({
           reasonCode: intent.reasonCode
         }))}
       />
+      </DemoView>
     </main>
   );
 }
