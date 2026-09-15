@@ -7,8 +7,9 @@ import { isSolanaAddress } from "@/lib/rails/solana";
 import { clientIp, onboardingRail, rateLimit } from "@/lib/rate-limit";
 export const runtime = "nodejs";
 const MICROS_PER_USDC = 1_000_000n;
-// Live (treasury-backed) workspaces the whole deployment may create per 24 hours. Each can spend at
-// most its 20 USDC daily limit, so this cap bounds onboarding's daily treasury exposure.
+// Live (treasury-backed) workspaces the whole deployment may create per 24 hours. Sign-in accepts
+// any Solana wallet, so this is the real bound, not the per-account one. It bounds new live
+// wallets a day, not spend: each keeps its 20 USDC daily limit on later days, so exposure adds up.
 const LIVE_ONBOARDING_DAILY_CAP = Number(process.env.LIVE_ONBOARDING_DAILY_CAP ?? 20);
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 function makeKey(prefix: string) { const secret = randomBytes(32).toString("base64url"); const key = `${prefix}${secret}`; return { key, hash: hash(key), keyPrefix: key.slice(0, 12) }; }
