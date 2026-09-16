@@ -12,7 +12,7 @@ import {
 } from "@/lib/prompts";
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
 import { reconcile, type DecisionTuple, type RequiredChannels } from "@/lib/reconcile";
-import { chainForRecipient, executionFailedCode, PayoutRailError, payoutRail, settledChain } from "@/lib/rails";
+import { chainForRecipient, executionFailedCode, PayoutRailError, payoutRail, settledChain, settlementFromReceipt } from "@/lib/rails";
 import { replenishDemoWorkOrder } from "@/lib/demo-replenish";
 
 export type PublicIntent = {
@@ -337,15 +337,17 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
         throw new PayoutRailError(executionFailedCode(target.chain), "Settlement did not return a digest.");
       }
 
+      const settlement = settlementFromReceipt(receipt);
       return tx.payoutIntent.update({
         where: { id: intent.id },
         data: {
           workOrderId: selected.id,
           amountMicros: reconciled.tuple.amountMicros,
-          status: "settled",
-          decisionClass: "PAID",
-          digest: receipt.digest,
-          explorerUrl: receipt.explorerUrl,
+          status: settlement.status,
+          decisionClass: settlement.decisionClass,
+          reasonCode: settlement.reasonCode,
+          digest: settlement.digest,
+          explorerUrl: settlement.explorerUrl,
           chain,
           ...pricing
         }

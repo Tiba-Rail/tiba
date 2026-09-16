@@ -50,7 +50,8 @@ export function decisionWord(decisionClass: string): string {
   return decisionClass;
 }
 
-export function decisionSentence(decisionClass: string): string {
+export function decisionSentence(decisionClass: string, status?: string): string {
+  if (status === "pending_confirmation") return "Pending confirmation";
   if (decisionClass === "PAID") return "Paid";
   if (decisionClass === "AMBER") return "Needs approval";
   if (decisionClass === "RED") return "Refused";
@@ -70,6 +71,7 @@ export function explainDecision(decisionClass: string, reasonCode: string | null
       case "MISSING_REQUIRED_CHANNEL": return "Your own records could not be read, so the payment is held for approval.";
       case "SCHEMA_INVALID": return "A check returned an unreadable answer, so the payment is held for approval.";
       case "REQUEST_REJECTED": return "The reading service turned the request away, so the payment is held for approval.";
+      case "PENDING_RPC_QUORUM": return "The transfer was sent. It is not marked paid until a second RPC confirms the signature.";
       default: return "Held for approval.";
     }
   }

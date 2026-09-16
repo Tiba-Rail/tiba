@@ -78,6 +78,7 @@ function formatRelativeTime(date: Date): string {
 
 function statusText(intent: { status: string; decisionClass: string }): { word: string; cls: string } {
   if (intent.status === "processing") return { word: "Pending", cls: "text-muted" };
+  if (intent.status === "pending_confirmation") return { word: "Pending confirmation", cls: "text-held" };
   if (intent.decisionClass === "PAID") return { word: "Paid", cls: "text-paid" };
   if (intent.decisionClass === "AMBER") return { word: "Needs approval", cls: "text-held" };
   return { word: "Refused", cls: "text-refused" };
@@ -90,6 +91,9 @@ function statusSentence(intent: {
   reasonCode: string | null;
 }): string {
   if (intent.status === "processing") return "Checks running.";
+  if (intent.status === "pending_confirmation") {
+    return "Transfer sent. Waiting for a second RPC to confirm before marking paid.";
+  }
   if (intent.decisionClass === "PAID") return "Both checks agreed — sent.";
   if (intent.decisionClass === "AMBER") return explainDecision("AMBER", intent.reasonCode);
   return `Checks disagreed — refused. Nothing moved. ${explainDecision("RED", intent.reasonCode)}`;

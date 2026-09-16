@@ -20,6 +20,8 @@
     "e2e": "node scripts/e2e.mjs",
     "eval": "node scripts/eval.mjs",
     "solana:smoke": "node scripts/solana-smoke.mjs",
+    "solana:reconcile": "node scripts/reconcile.mjs",
+    "solana:rotate-key": "node scripts/rotate-key.mjs",
     "a2a:proof": "node scripts/a2a-proof.mjs",
     "postinstall": "prisma generate",
     "t3:demo": "node --no-warnings scripts/t3-identity-demo.mjs"

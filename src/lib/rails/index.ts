@@ -8,6 +8,33 @@ export interface PayoutRequest {
 export interface PayoutReceipt {
   digest: string;
   explorerUrl: string;
+  /** Paid requires two RPCs. "pending" means the signature exists but only one endpoint confirmed it. */
+  confirmation?: "confirmed" | "pending";
+}
+
+export function settlementFromReceipt(receipt: PayoutReceipt): {
+  status: "settled" | "pending_confirmation";
+  decisionClass: "PAID" | "AMBER";
+  reasonCode: string | null;
+  digest: string;
+  explorerUrl: string;
+} {
+  if (receipt.confirmation === "pending") {
+    return {
+      status: "pending_confirmation",
+      decisionClass: "AMBER",
+      reasonCode: "PENDING_RPC_QUORUM",
+      digest: receipt.digest,
+      explorerUrl: receipt.explorerUrl
+    };
+  }
+  return {
+    status: "settled",
+    decisionClass: "PAID",
+    reasonCode: null,
+    digest: receipt.digest,
+    explorerUrl: receipt.explorerUrl
+  };
 }
 
 export interface PayoutRail {

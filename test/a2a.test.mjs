@@ -15,6 +15,7 @@ test("decision classes map to 1.0 task states", () => {
   assert.equal(taskState({ status: "refused", decision_class: "RED" }), "TASK_STATE_REJECTED");
   assert.equal(taskState({ status: "held", decision_class: "AMBER" }), "TASK_STATE_INPUT_REQUIRED");
   assert.equal(taskState({ status: "processing", decision_class: "AMBER" }), "TASK_STATE_WORKING");
+  assert.equal(taskState({ status: "pending_confirmation", decision_class: "AMBER" }), "TASK_STATE_WORKING");
 });
 
 test("task carries the decision artifact and echoes the message into history", () => {

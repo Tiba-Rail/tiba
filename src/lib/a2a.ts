@@ -54,7 +54,7 @@ const STATE: Record<string, string> = {
 const DECISION: Record<string, string> = { PAID: "PAID", RED: "REFUSED", AMBER: "HELD" };
 
 export function taskState(intent: Pick<UpstreamIntent, "status" | "decision_class">): string {
-  if (intent.status === "processing") return "TASK_STATE_WORKING";
+  if (intent.status === "processing" || intent.status === "pending_confirmation") return "TASK_STATE_WORKING";
   return STATE[intent.decision_class] ?? "TASK_STATE_UNSPECIFIED";
 }
 
