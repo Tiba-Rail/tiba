@@ -3,7 +3,7 @@
 
 ## 1. One-paragraph summary
 
-Tiba is an agent-to-human payment rail: infrastructure that lets software pay a real person without a human clicking "approve" for every transfer. An agent submits a payout request containing the recipient, amount, and supporting evidence, such as a delivery note. Two isolated verification channels independently check whether the payment matches an open work order and the payer's own records. The payment executes only when both produce the same work order and amount. Any disagreement or policy failure causes a refusal. Tiba settles payments on the Sui testnet using SUI as a stand-in for USDC, a dollar-linked stablecoin, and publishes receipts that let third parties verify what happened.
+Tiba is an agent-to-human payment rail: infrastructure that lets software pay a real person without a human clicking "approve" for every transfer. An agent submits a payout request containing the recipient, amount, and supporting evidence, such as a delivery note. Two isolated verification channels independently check whether the payment matches an open work order and the payer's own records. The payment executes only when both produce the same work order and amount. Any disagreement or policy failure causes a refusal. Tiba settles payments on the Solana devnet in USDC, a dollar-linked stablecoin, and publishes receipts that let third parties verify what happened. (The Sui testnet path was used for one hackathon in August 2026 and was removed on 11 September 2026.)
 
 ## 2. The problem
 
@@ -58,7 +58,7 @@ Tiba's current payment flow is:
    - Whether the kill switch is active
    - Whether the request has already been processed, using idempotency so a repeated request does not create a duplicate payment
 
-6. Approved payments settle on the Sui testnet. SUI is currently used as a stand-in for USDC because testnet USDC has not yet been funded.
+6. Approved payments settle on the Solana devnet in Circle's devnet USDC (mint 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU). The application refuses to run against any other network.
 
 7. Paid and refused outcomes receive public receipts. Each receipt includes both verification channels' request IDs and links to Gonka's public receipt-verification endpoint, allowing a third party to independently confirm that the calls occurred.
 
@@ -126,7 +126,7 @@ Tiba is not positioned as a replacement for established stablecoin infrastructur
 
 ### Mainnet production custody
 
-V1 does not provide production custody of real funds on a mainnet network. It runs settlement on Sui testnet, with SUI standing in for USDC. Moving to production custody would require unresolved decisions about custody, regulation, real-money operations, and the appropriate funded settlement setup.
+V1 does not provide production custody of real funds on a mainnet network. It runs settlement on Solana devnet, in devnet USDC. Moving to production custody would require unresolved decisions about custody, regulation, real-money operations, and the appropriate funded settlement setup.
 
 ## 8. Roadmap (v1.1+, not yet built)
 

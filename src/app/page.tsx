@@ -211,7 +211,7 @@ export default async function Home() {
             <div className="card p-5">
               <span className="pill pill-paid">Recorded</span>
               <p className="mt-3 text-sm">
-                A permitted notes action and a <span className="num">0.001 USDC</span> Solana devnet payment each leave a signed receipt.
+                A permitted notes action and a <span className="num">0.01 USDC</span> Solana devnet payment each leave a signed receipt.
               </p>
               <Link className="btn btn-ghost mt-3" href="/receipts">
                 See signed receipts →
