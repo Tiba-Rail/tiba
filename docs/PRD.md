@@ -1,9 +1,13 @@
 
-# Product Requirements Document — Tiba
+# Product Requirements Document — Tiba v4
+
+## 0. What changed from the last version
+
+The previous version of this document (1 Sep 2026) described settlement on Sui testnet. That was true of a parallel experiment at the time (real transaction proof in `docs/DECISIONS.md`, digest `Cz2DWU6hQQfRQ1JCCDP3qw27XGD5P2MSEJw5Y6W87wpE`), but the current codebase settles on **Solana devnet** (`src/app/settlement.ts`, `@solana/web3.js`, `api.devnet.solana.com`) — that pivot happened after this doc was last touched and was never written back. This version corrects that, and adds the actual product decision made on 17 Sep 2026 after a night of research: what Tiba is for, in one sentence, and why x402 changes the roadmap.
 
 ## 1. One-paragraph summary
 
-Tiba is an agent-to-human payment rail: infrastructure that lets software pay a real person without a human clicking "approve" for every transfer. An agent submits a payout request containing the recipient, amount, and supporting evidence, such as a delivery note. Two isolated verification channels independently check whether the payment matches an open work order and the payer's own records. The payment executes only when both produce the same work order and amount. Any disagreement or policy failure causes a refusal. Tiba settles payments on the Sui testnet using SUI as a stand-in for USDC, a dollar-linked stablecoin, and publishes receipts that let third parties verify what happened.
+Tiba is the authorization layer for autonomous agent payments: infrastructure that lets software pay a real person or another service without a human clicking "approve" for every transfer. An agent submits a payout request with the recipient, amount, and supporting evidence. Two isolated verification channels independently check the request against the payer's own records; the payment executes only when both agree, and any disagreement is a refusal, not a guess. Tiba settles on Solana devnet today and publishes a public receipt for every decision, paid or refused, that a third party can independently check.
 
 ## 2. The problem
 
@@ -11,173 +15,83 @@ The immediate customer is a founder who has already shipped an AI agent with acc
 
 That founder's customer asks: "Can your agent pay people without me approving every payment?"
 
-The honest answer today is often: "Not safely."
+The honest answer today is often: "Not safely." An agent that can spend money needs more than a wallet and spending limits — it needs a way to determine whether a requested payment is actually supported by the payer's records and the work being performed. Tiba addresses this: the agent can request a payment, but it cannot override a refusal, increase its own limits, change the recipient allowlist, or disable the kill switch.
 
-An agent that can spend money needs more than a wallet and spending limits. It needs a way to determine whether a requested payment is actually supported by the payer's records and the work being performed. If the agent can approve its own evidence, a bad instruction, incorrect record, or fraudulent artifact may lead to the wrong person being paid. If every payment still requires a human approval click, the agent is not truly autonomous.
+## 3. Why now — the case as of 17 Sep 2026, checked against real sources
 
-Tiba addresses this authorization problem. The agent can request a payment, but it cannot override a refusal, increase its own limits, change the recipient allowlist, or disable the kill switch.
+Three independent checks run tonight landed on the same conclusion from different angles, which is the strongest signal this kind of research can give:
 
-## 3. Why now
+1. **A fresh redo of all 102 YC Requests for Startups** (three engines, real sources, 17 Sep) found 97 dead ends for Rizqey Labs and one real survivor: packaging the permission-and-receipt engine as a devtool other agent builders can install. Every other RFS category (fintech, stablecoins, government) died on regulatory or capital grounds a solo founder can't clear.
+2. **A 19-model Council vote** on the crypto-to-QR idea independently converged on the same shape: the one gap that's real and specific is "no card required, no ceiling" agent-initiated payment — and the confident votes all said Tiba doesn't fit a consumer QR product, it fits the authorization layer underneath any rail.
+3. **A three-engine sweep on x402** (Coinbase's open HTTP-402 payment protocol, now governed by the Linux Foundation, ~40 member orgs including AWS, Cloudflare, Circle, Binance, Google) found the identical hole from the primary spec itself: x402's own documentation states client-side budget management, session policy, and dual-check/human approval are explicitly **out of scope** — MetaMask's own words, "the wallet decides what an agent is allowed to spend and whether a transaction gets signed at all." A peer-reviewed security study (USENIX Security 2026, arXiv:2607.19545 — verified as a real paper, not a fabricated citation) checked 15 x402 facilitators handling 60k+ sellers and found **every single one violated at least one of eight basic security rules**, including a "free shopping" flaw. Nobody has built the missing policy/approval layer well. Real 2026 adoption is genuine (AWS CloudFront, Cloudflare Workers, Fireblocks, Circle's Arc mainnet all ship it), but the settlement-volume headlines are inflated — three independent firms (Chainalysis, TRM Labs, Bitquery) separately found the bulk of on-chain "agent payment" volume is bridge traffic, self-pay, and test loops, not real commerce.
 
-YC's "Best Time to Build in Crypto" request for startups explicitly identifies agentic commerce and agents using crypto networks as financial rails as funded categories.
+The conclusion these three checks agree on: **do not try to become a new settlement rail to replace x402** — that fight is already lost to a free, neutrally-governed, already-adopted standard with AWS and Cloudflare built on top of it. **Do become the thing that decides whether the payment x402 is about to send should actually happen.** That is not a pivot. It is the same product this document already described in September, stated more precisely, with three independent 2026 checks behind it instead of none.
 
-The broader implication is that crypto rails may become invisible infrastructure: companies will use them to move money without necessarily describing their products as "crypto products." Agents using financial rails is treated as an increasingly inevitable direction.
+## 4. What Tiba does today (built and live)
 
-Tiba is aimed at the missing authorization layer in that direction. It is designed for companies that want autonomous payments while retaining a decision process that fails safely when the evidence does not agree.
+Tiba's current payment flow:
 
-## 4. What Tiba does today (v1, built and live)
-
-Tiba's current payment flow is:
-
-1. An agent submits a payout intent containing:
-
-   - The recipient
-   - The amount
-   - An untrusted evidence artifact, such as a delivery note
-
-2. Tiba sends the request through GonkaRouter, a gateway that routes inference requests to multiple models, using two isolated verification channels.
-
+1. An agent submits a payout intent: recipient, amount, an untrusted evidence artifact (e.g. a delivery note).
+2. The request goes through GonkaRouter (`src/lib/gonka.ts`) to two isolated verification channels.
    - Channel A reads only the evidence artifact and the list of open work-order IDs.
    - Channel B reads only the payer's own records and never sees the evidence artifact.
+3. Each channel independently produces `{work_order_id, amount}`. Agreement continues the request; disagreement refuses it. No tie-breaker, no fallback guess.
+4. A fail-closed policy layer checks: max amount per transfer, rolling hourly/daily caps, recipient allowlist, kill switch, and idempotency (a repeated request never double-pays).
+5. Approved payments settle on **Solana devnet**, using a devnet USDC mint as the asset.
+6. Paid and refused outcomes get public receipts, including both verification channels' request IDs and a link to Gonka's public verification endpoint.
 
-3. Each channel independently produces:
+Live surfaces (`tiba-omega.vercel.app` / `tiba.rizqey.com`): operator console (test-payment panel, spending caps, kill switch, WebMCP capability matrix, held-intent queue), `/intents`, `/work-orders`, `/recipients`, `/policies`, `/ledger`, `/r/[token]` (public per-payment receipt). Six WebMCP tools let a browser AI agent list work orders/recipients/budget and submit a payment or read the ledger — verified end-to-end in real Chrome — with no path to override a refusal, change a cap, or use the kill switch.
 
-   `{work_order_id, amount}`
-
-4. The two outputs must be identical.
-
-   - Agreement allows the request to continue.
-   - Disagreement causes a refusal.
-   - There is no tie-breaker and no fallback guess.
-
-5. A fail-closed policy layer checks:
-
-   - The maximum amount allowed for one transfer
-   - Rolling hourly and daily spending caps
-   - Whether the recipient is on the allowlist
-   - Whether the kill switch is active
-   - Whether the request has already been processed, using idempotency so a repeated request does not create a duplicate payment
-
-6. Approved payments settle on the Sui testnet. SUI is currently used as a stand-in for USDC because testnet USDC has not yet been funded.
-
-7. Paid and refused outcomes receive public receipts. Each receipt includes both verification channels' request IDs and links to Gonka's public receipt-verification endpoint, allowing a third party to independently confirm that the calls occurred.
-
-The live product is deployed at `tiba-omega.vercel.app`. Its current surfaces include:
-
-- An operator console with a test-payment panel, spending caps, kill switch, WebMCP agent-tools capability matrix, and held-intent queue
-- `/intents`, showing payments grouped as Paid, Refused, Settlement failed, or Held
-- `/work-orders`
-- `/recipients`
-- `/policies`
-- `/ledger`
-- `/r/[token]`, providing a public receipt for an individual payment
-
-The ledger and individual receipt pages include a unified decision pipeline showing Channel A, Channel B, Agreement, Policy, and Settlement.
-
-Tiba also exposes six WebMCP tools. WebMCP tools are browser-callable functions that an AI agent can use. The tools allow a browser AI agent to list work orders, recipients, and budget information, submit a payment, and read the ledger. They do not allow the agent to override a refusal, change a spending cap, or use the kill switch. This flow has been verified end-to-end in real Chrome against the live site.
+An A2A (Agent2Agent) adapter shipped in v1.1: Agent Card at `/.well-known/agent-card.json`, JSON-RPC `SendMessage`/`GetTask` at `POST /a2a`, forwarding into the same verification engine untouched. An identity/compliance gate also shipped, default off (`require_recipient_kyc` on `/policies`), provider abstraction ready for a real KYC vendor later.
 
 ## 5. Who it's for
 
-The buyer is a company or founder building an autonomous agent that needs to pay people or services.
+The buyer is a company or founder building an autonomous agent that needs to pay people or services, and needs: autonomous execution, a real link between the payment and work-order/payer records, spending and recipient controls, refusal on disagreement, and a public record of every decision. The end recipient is the human or service getting paid — Tiba doesn't represent them or do their KYC.
 
-The buyer needs:
+## 6. Competitive landscape (checked 17 Sep 2026, real sources)
 
-- Autonomous payment execution
-- A way to connect a payment request to work-order and payer records
-- Spending and recipient controls
-- Refusal when independent checks disagree
-- A public record of why a payment was paid or refused
+| Product | What it actually does | Has Tiba's mechanism? |
+|---|---|---|
+| **x402** (Coinbase → Linux Foundation) | The payment handshake itself — HTTP 402, a server asks, a wallet signs, a facilitator settles. Real 2026 adoption: AWS CloudFront/Bedrock AgentCore, Cloudflare Workers, Fireblocks, Circle Arc, Binance B402. | No — the spec explicitly puts budget/session/dual-check "out of scope." A 2026 security study found every checked facilitator (15/15) violated a basic security rule. |
+| **Google AP2** | Authorization/mandate layer (donated to FIDO Alliance, Apr 2026), rail-agnostic, crypto via the a2a-x402 extension. | No published transaction volume as of mid-2026; the right abstraction, no shipped product to point to. |
+| **OpenAI ACP / Stripe** | Consumer checkout inside ChatGPT (Etsy, Shopify, etc.) | Retail SKU checkout, not API-to-API authorization. |
+| **Visa TAP / Mastercard Agent Pay** | Card-network agent identity and tokenized credentials, real 2026 bank pilots (Santander). | Closed network, card rails; not built for a $0.001 API call or a Solana-native agent wallet. |
+| **Circle Agent Stack, Skyfire, Crossmint** | Agent wallets, agent identity (KYA), payment tooling | Single verification path each; none require two independent checks to agree before executing. |
+| **Tiba** | Two independent, isolated verification channels that must agree; disagreement is a refusal, not a guess. Solana-native. | — |
 
-The end recipient is different. The recipient is the human or service receiving payment for completed work or another authorized obligation.
+Nothing in this table does what Tiba does. x402 in particular is not a competitor to out-build — it's the rail Tiba should speak, with Tiba's authorization sitting in front of every signature.
 
-Tiba serves the buyer's need for controlled autonomous spending. It does not represent the recipient, approve the recipient's work independently as a human would, or provide a full identity-verification service today.
+## 7. Roadmap — v4 priorities (17 Sep 2026)
 
-## 6. Competitive landscape and differentiation
+### Priority 1 (new): Tiba as an x402 buyer on Solana
 
-The supplied research shows that existing products cover important parts of the agent-payment problem, but not the same verification-and-refusal mechanism.
+Implement Tiba as an x402 v2 buyer: parse `PAYMENT-REQUIRED`, sign an SPL `transfer_checked` transaction (facilitator as fee-payer, per the x402 Solana `exact` scheme), attach `PAYMENT-SIGNATURE`, read `PAYMENT-RESPONSE`. Gonka's two-channel agreement and the existing policy gate (caps, allowlist, kill switch) run **before** the signature is produced — x402 never gets to sign anything Tiba's own engine hasn't already cleared. This is additive to the existing settlement path, not a replacement: Tiba keeps its own intent/receipt flow for direct payouts, and gains the ability to pay any endpoint that only speaks 402.
 
-| Product or company | Focus identified in the research | Verification mechanism | Tiba's relevant difference |
-|---|---|---|---|
-| Circle Agent Stack | Agent wallet and payment infrastructure | Single verification | Tiba adds two isolated verification channels that must agree before execution. |
-| Skyfire | Agent identity, including KYA ("Know Your Agent"), which is different from human KYC | Single verification | Tiba's core control is payment authorization through independent evidence checks, not agent identity alone. |
-| Crossmint | Agent wallet and payment tooling | Single verification | Tiba adds mandatory agreement between two independent checks and refusal on disagreement. |
-| Coinbase x402 | Agent payment infrastructure; the research reports more than 100 million transactions | Single verification | The research does not identify x402 as documenting Tiba's two-channel agreement requirement. A builder described its developer funnel as narrow despite the high transaction volume. |
-| Google AP2 | Agent payment and agent-to-agent protocol infrastructure | Single verification | Open GitHub feedback challenged claims that AP2 was production-ready. The research does not identify AP2 as documenting Tiba's independent verification-and-refusal mechanism. |
-| Stripe and Bridge | Stablecoin infrastructure and live agent-stablecoin-payment documentation, including MPP and x402; Stripe acquired Bridge in a deal reported at $1.1 billion | Single verification | Tiba is not trying to replace Stripe or Circle as a settlement rail. Its distinction is the authorization engine that refuses when independent checks disagree. |
-| **Tiba** | Payment authorization for autonomous agents | **Two independent verification channels that must agree** | Disagreement is a refusal, not a guess. |
+Do not build a facilitator. That is a separate, gas-sponsoring, security-exposed business (the thing the USENIX paper studied) and is explicitly out of scope.
 
-Two independent verification channels that must agree provide superior security compared to a single verification path. This approach catches specific failure modes that single verification systems miss: if one verification channel is compromised or hallucinates, or if an evidence artifact is manipulated, the disagreement between the isolated channels will trigger a refusal. Single verification systems have no way to detect these failures and may incorrectly approve fraudulent payments. By requiring agreement between two independent, isolated channels, Tiba creates a fail-closed system that defaults to refusing payment when there's any doubt about the validity of the request.
+Optional, lower priority within this item: emit the `offer-and-receipt` x402 extension so a Tiba receipt is protocol-shaped for anyone already parsing x402 receipts, not just Tiba's own `/r/[token]` page.
 
-The differentiated claim is:
+### Priority 2: Marketing and positioning refresh
 
-Tiba requires two independent checks to agree before a payment executes; disagreement is a refusal, not a guess.
+Update site copy and the deck to state the x402-aware positioning plainly: Tiba is the check that runs before an agent's payment goes out, on any rail, including the one the rest of the industry just agreed to standardize on. Follow the existing `docs/COPY_MAP.md` convention (file | current | new | KEEP) — do not silently rewrite copy that already tested fine.
 
-The research supports this as a real differentiation in the verification mechanism. None of the competitors' public documentation reviewed for this product documents the same requirement.
+### Priority 3 (unchanged from v1.1): identity/compliance provider
 
-## 7. What's explicitly out of scope for v1
+A real KYC provider behind the existing abstraction, after v1/x402 traction — no change to this priority's scope or reasoning.
 
-### Full KYC platform
+### Explicitly still out of scope
 
-Tiba will not build a complete know-your-customer platform in v1. KYC means verifying a person's identity for compliance purposes. The current product is focused on deciding whether a payment request is authorized, not on becoming an identity or compliance provider.
+- Full KYC platform, mainnet production custody, replacing Stripe/Circle/x402 as a settlement rail, running an x402 facilitator. Same reasoning as before: the product is the authorization decision, not custody or plumbing.
+- Crypto-to-QR (the separate consumer-payment idea researched 17 Sep) is parked, not merged into Tiba. It is a different buyer, a different regulatory problem (a real licensing gap in every jurisdiction checked except El Salvador), and forcing it into this PRD would repeat the exact "bolt it onto Tiba" mistake the RFS research was built to catch.
 
-### Replacing Stripe or Circle as a settlement rail
+## 8. Success criteria (unchanged, plus one)
 
-Tiba is not positioned as a replacement for established stablecoin infrastructure. It already holds funds and settles payments as part of its mechanism, but its product value is the verification-and-refusal layer around payment execution.
+Everything in the 1 Sep version still holds: real end-to-end payment with independent receipt verification, a real refusal on disagreement or policy violation, no override path, no duplicate payment, a third party can read a receipt and understand the pipeline, WebMCP tools can't bypass controls.
 
-### Mainnet production custody
+New: **an x402-speaking endpoint (e.g. an AWS CloudFront-protected resource, or a Cloudflare Worker charging per request) gets paid by Tiba, with Gonka's two-channel agreement and the policy gate having run first** — proof that the authorization layer works in front of someone else's rail, not just Tiba's own.
 
-V1 does not provide production custody of real funds on a mainnet network. It runs settlement on Sui testnet, with SUI standing in for USDC. Moving to production custody would require unresolved decisions about custody, regulation, real-money operations, and the appropriate funded settlement setup.
+## 9. Open questions
 
-## 8. Roadmap (v1.1+, not yet built)
-
-### Priority 1: A thin Agent2Agent adapter — built (v1.1)
-
-Build a small adapter for Google's Agent2Agent, or A2A, protocol. A2A is a standard way for one software agent to call another.
-
-The adapter would allow external agents to call Tiba's payment authorization and settlement flow without changing the core verification engine.
-
-**Status (1 Sep 2026):** built. Agent Card at `/.well-known/agent-card.json`, JSON-RPC `SendMessage` / `GetTask` at `POST /a2a`, forwarding to `/api/v1/intents` with the caller's agent key; the verification engine is untouched (`docs/A2A.md`).
-
-This is a build hypothesis supported by the current research, not a proven market gap or guaranteed source of demand.
-
-**Timeline:** Shipped (v1.1). Streaming and push notifications: only if a real A2A client asks.
-
-### Priority 2: Electronic identity and compliance checks as another gate — built (v1.1, default off)
-
-Integrate checks from an electronic KYC or compliance provider as one additional gate in the existing refuse-or-pay decision.
-
-**Status (1 Sep 2026):** built. A provider abstraction (`src/lib/identity.ts`, mock provider today; `IDENTITY_PROVIDER` reserved for Persona/Sumsub) writes a verdict onto the recipient; when an agent has `require_recipient_kyc` on (toggle on /policies, default off), an intent for a recipient whose check is missing, failed, or expired is refused `RED RECIPIENT_UNVERIFIED` before any model runs.
-
-The design is:
-
-- Verification channels agree
-- Policy checks pass
-- Identity or compliance checks pass
-- Payment settles
-
-A failed check would result in refusal or non-execution according to the policy design.
-
-This would not turn Tiba into a full KYC product. It would add compliance-provider results around the existing payment authorization engine. The specific provider and scope of checks remain unresolved.
-
-The verification-and-refusal engine remains the core product. A2A and electronic KYC are integrations around it, not a rewrite of Tiba.
-
-**Timeline:** Gate shipped (v1.1). A real provider behind the same interface: after v1 traction.
-
-## 9. Success criteria
-
-Tiba would have meaningful product proof when the following are demonstrated with real use cases rather than staged demo data:
-
-- A genuine payment is processed end-to-end: an agent submits the intent, both channels agree, policy checks pass, settlement completes on testnet, and the public receipt can be independently verified.
-- A genuine error or fraud scenario produces a refusal, including a case where the two channels disagree or a policy rule blocks the transfer.
-- The refusal cannot be overridden by the connected agent.
-- A repeated request does not create a duplicate payment.
-- A third party can inspect a public receipt and understand the decision pipeline across Channel A, Channel B, Agreement, Policy, and Settlement.
-- A browser AI agent can use the permitted WebMCP tools to submit and inspect payments while remaining unable to change limits, disable controls, or bypass refusals.
-
-## 10. Open questions
-
-1. What custody and regulatory structure is appropriate before Tiba handles real money on a production network?
-
-2. Which identity or compliance provider should be integrated first, and which jurisdictions and checks should that integration cover?
-
-3. Is there enough demand from external agent builders to justify the A2A adapter as the first integration after v1?
+1. Custody/regulatory structure before any production-network money — unchanged, unresolved.
+2. Which identity/compliance provider, and for which jurisdictions — unchanged, unresolved.
+3. Whether external x402-speaking endpoints are worth targeting before Tiba has its own paying customers, or whether Priority 1 should stay demo-only until then.

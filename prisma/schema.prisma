@@ -163,6 +163,8 @@ model PayoutIntent {
   gnkUsd           String?  @map("gnk_usd")
   pricingUpdatedAt DateTime? @map("pricing_updated_at")
   publicToken      String   @unique @map("public_token")
+  // True when this intent was authorized for an x402 retry rather than Tiba's own rail.
+  x402Routed       Boolean  @default(false) @map("x402_routed")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 

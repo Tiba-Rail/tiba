@@ -46,6 +46,10 @@ export function solanaExplorerTxUrl(signature: string): string {
   return `https://explorer.solana.com/tx/${signature}?cluster=devnet`;
 }
 
+export function solanaPayerKeypair(): Keypair {
+  return keypairFromEnv();
+}
+
 function keypairFromEnv(): Keypair {
   requireDevnet();
 

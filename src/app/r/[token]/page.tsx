@@ -105,6 +105,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   // Determine settlement status
   function getSettlementStatus(decisionClass: string, reasonCode: string | null): string {
     if (decisionClass === "PAID") return "Yes";
+    if (reasonCode === "SETTLEMENT_PENDING") return "Pending";
     if (
       reasonCode === "SETTLEMENT_FAILED" ||
       reasonCode === "SOLANA_EXECUTION_FAILED"
@@ -264,6 +265,13 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                   )}
                 </td>
               </tr>
+              {intent.x402Routed ? (
+                <tr className="border-b border-line">
+                  <td className="py-3 px-3">How it was sent</td>
+                  <td className="py-3 px-3">x402</td>
+                  <td className="py-3 px-3">This payment went out through x402, after Tiba's checks.</td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
           </div>

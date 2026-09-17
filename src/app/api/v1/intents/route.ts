@@ -24,7 +24,8 @@ function response(intent: PublicIntent) {
     signature: intent.signature,
     chain: intent.chain,
     explorer_url: intent.explorerUrl,
-    public_token: intent.publicToken
+    public_token: intent.publicToken,
+    x402_routed: intent.x402Routed
   });
 }
 

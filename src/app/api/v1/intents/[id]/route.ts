@@ -16,6 +16,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     id: intent.id, status: intent.status, decision_class: intent.decisionClass, reason_code: intent.reasonCode,
     amount_micros: intent.amountMicros.toString(), digest: intent.digest, explorer_url: intent.explorerUrl,
     public_token: intent.publicToken,
+    x402_routed: intent.x402Routed,
     adjudications: intent.adjudications.map((row) => ({
       channel: row.channel,
       model: row.model,

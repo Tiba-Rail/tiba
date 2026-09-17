@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Agent, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getGnkUsdRate } from "@/lib/gonka-pricing";
-import { runGonka, fingerprintPrompt, fingerprintResponse, type GonkaMessage, type GonkaResult } from "@/lib/gonka";
+import { runGonka, fingerprintPrompt, fingerprintResponse, type GonkaMessage, type GonkaRequest, type GonkaResult } from "@/lib/gonka";
 import { recipientIdentityOk } from "@/lib/identity";
 import {
   artifactDecisionSchema,
@@ -13,7 +13,9 @@ import {
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
 import { reconcile, type DecisionTuple, type RequiredChannels } from "@/lib/reconcile";
 import { chainForRecipient, executionFailedCode, PayoutRailError, payoutRail, settledChain } from "@/lib/rails";
+import { solanaExplorerTxUrl } from "@/lib/rails/solana";
 import { replenishDemoWorkOrder } from "@/lib/demo-replenish";
+import type { SettlementResponse } from "@/lib/x402/types";
 
 export type PublicIntent = {
   id: string;
@@ -26,12 +28,19 @@ export type PublicIntent = {
   chain: string | null;
   /** Same value as digest: the transaction id on whichever chain settled. */
   signature: string | null;
+  x402Routed: boolean;
 };
 
 type IntentBody = {
   idempotency_key: string;
   artifact: string;
   recipient_ref: string;
+};
+
+export type ProcessPayoutOptions = {
+  /** Default "rail" keeps today's settlement. "defer" is the x402 path: authorize, do not send. */
+  settlement?: "rail" | "defer";
+  gonka?: (request: GonkaRequest) => Promise<GonkaResult>;
 };
 
 function hash(value: string): string {
@@ -47,6 +56,7 @@ function toPublicIntent(intent: {
   explorerUrl: string | null;
   publicToken: string;
   chain: string | null;
+  x402Routed?: boolean;
 }): PublicIntent {
   return {
     id: intent.id,
@@ -57,7 +67,8 @@ function toPublicIntent(intent: {
     explorerUrl: intent.explorerUrl,
     publicToken: intent.publicToken,
     chain: intent.chain,
-    signature: intent.digest
+    signature: intent.digest,
+    x402Routed: intent.x402Routed === true
   };
 }
 
@@ -104,7 +115,13 @@ async function pricingData() {
   };
 }
 
-export async function processPayoutIntent(agent: Agent, body: IntentBody): Promise<PublicIntent> {
+export async function processPayoutIntent(
+  agent: Agent,
+  body: IntentBody,
+  options: ProcessPayoutOptions = {}
+): Promise<PublicIntent> {
+  const gonka = options.gonka ?? runGonka;
+  const settlement = options.settlement ?? "rail";
   const existing = await prisma.payoutIntent.findUnique({ where: { idempotencyKey: body.idempotency_key } });
   if (existing) return toPublicIntent(existing);
 
@@ -201,8 +218,8 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
   ];
 
   const [artifactRun, payerRun] = await Promise.allSettled([
-    runGonka({ channel: "artifact", messages: artifactMessages, schema: artifactDecisionSchema }),
-    runGonka({ channel: "payer_record", messages: payerMessages, schema: payerRecordDecisionSchema })
+    gonka({ channel: "artifact", messages: artifactMessages, schema: artifactDecisionSchema }),
+    gonka({ channel: "payer_record", messages: payerMessages, schema: payerRecordDecisionSchema })
   ]);
   const artifactResult = artifactRun.status === "fulfilled" ? artifactRun.value : unavailable("moonshotai/Kimi-K2.6");
   const payerResult = payerRun.status === "fulfilled" ? payerRun.value : unavailable("deepseek-ai/DeepSeek-V4-Flash-0731");
@@ -328,6 +345,21 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
         });
       }
 
+      if (settlement === "defer") {
+        return tx.payoutIntent.update({
+          where: { id: intent.id },
+          data: {
+            workOrderId: selected.id,
+            amountMicros: reconciled.tuple.amountMicros,
+            status: "processing",
+            decisionClass: "AMBER",
+            x402Routed: true,
+            chain,
+            ...pricing
+          }
+        });
+      }
+
       const receipt = await payoutRail(agent.rail, target.chain).send({
         recipientAddress: target.address,
         amountMicros: reconciled.tuple.amountMicros,
@@ -372,4 +404,59 @@ export async function processPayoutIntent(agent: Agent, body: IntentBody): Promi
     });
     return toPublicIntent(updated);
   }
+}
+
+export async function finalizeX402Settlement(intentId: string, settlement: SettlementResponse): Promise<PublicIntent> {
+  const intent = await prisma.payoutIntent.findUnique({ where: { id: intentId } });
+  if (!intent) throw new Error("INTENT_NOT_FOUND");
+  if (!intent.x402Routed) throw new Error("INTENT_NOT_X402");
+
+  const pending = settlement.errorReason === "settlement_pending";
+  const digest = settlement.transaction?.trim() ? settlement.transaction.trim() : null;
+  const explorerUrl = digest ? solanaExplorerTxUrl(digest) : null;
+  const pricing = await pricingData();
+
+  if (settlement.success) {
+    const updated = await prisma.payoutIntent.update({
+      where: { id: intentId },
+      data: {
+        status: "settled",
+        decisionClass: "PAID",
+        reasonCode: null,
+        digest,
+        explorerUrl,
+        ...pricing
+      }
+    });
+    await replenishDemoWorkOrder(prisma, { workOrderId: updated.workOrderId, settled: true });
+    return toPublicIntent(updated);
+  }
+
+  if (pending) {
+    const updated = await prisma.payoutIntent.update({
+      where: { id: intentId },
+      data: {
+        status: "processing",
+        decisionClass: "AMBER",
+        reasonCode: "SETTLEMENT_PENDING",
+        digest,
+        explorerUrl,
+        ...pricing
+      }
+    });
+    return toPublicIntent(updated);
+  }
+
+  const updated = await prisma.payoutIntent.update({
+    where: { id: intentId },
+    data: {
+      status: "refused",
+      decisionClass: "RED",
+      reasonCode: "SETTLEMENT_FAILED",
+      digest,
+      explorerUrl,
+      ...pricing
+    }
+  });
+  return toPublicIntent(updated);
 }
