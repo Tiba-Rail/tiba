@@ -37,6 +37,7 @@ export default function DevelopersPage() {
         <section className="mt-12 border-t border-line pt-8" aria-labelledby="fits-title">
           <p className="eyebrow">Where it fits</p>
           <h2 id="fits-title" className="display-m mt-2">Tiba adds the boundary. Your protocol keeps its job.</h2>
+          <p className="mt-3 max-w-[62ch] text-sm leading-6 text-muted">Tiba also pays anything that speaks x402.</p>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             {integrations.map((integration) => (
               <article key={integration.name} className="card p-5">

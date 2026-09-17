@@ -271,3 +271,29 @@ machine-facing JSON-RPC endpoint — left untouched by design.
 |---|---|
 | Root title "Tiba — a wallet for software" + description | KEEP |
 | (no per-page titles) | /console "Send - Tiba"; /ledger "Activity - Tiba"; /intents "Payments - Tiba"; /work-orders "Invoices - Tiba"; /recipients "Recipients - Tiba"; /policies "Limits - Tiba"; /r/[token] "Receipt - Tiba" |
+
+## v4 — x402 positioning (17 Sep 2026)
+
+Additive only. Nothing above is rewritten. Tiba does not claim to certify anyone, and does not claim mainnet, real money, or production custody.
+
+### src/app/page.tsx (landing) — why Tiba
+
+| current | new |
+|---|---|
+| (no copy under How it works about other payment plumbing) | After the limits paragraph: "Most agent-payment plumbing, including x402 — the protocol AWS, Cloudflare, Circle, and Coinbase now share — leaves the approval decision out of scope. The wallet is supposed to decide whether a payment may go out at all. That check is what Tiba runs, before any signature." |
+| Hero, eval, examples, footer, remaining How it works lines | KEEP |
+
+### src/app/developers/page.tsx
+
+| current | new |
+|---|---|
+| "Tiba adds the boundary. Your protocol keeps its job." (Where it fits h2) | KEEP, then one line under it: "Tiba also pays anything that speaks x402." |
+| Integration cards (AP2, x402, Visa TAP, MCP, A2A) | KEEP |
+| Header lede, schemas, spec | KEEP |
+
+### src/app/r/[token]/page.tsx (receipt)
+
+| current | new |
+|---|---|
+| (no "How it was sent" row) | When `x402Routed`: Step "How it was sent" / Result "x402" / Detail "This payment went out through x402, after Tiba's checks." |
+| Existing receipt rows, reason codes, PAID/REFUSED pills | KEEP |

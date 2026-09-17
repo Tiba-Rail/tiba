@@ -92,7 +92,21 @@ Slide.
 Speaker line:
 Small, self-authored eval, but direct: clean paid, adversarial refused, and no clean false refusals.
 
-## Slide 8 -- What We Cut
+## Slide 8 -- In front of any rail
+
+Slide text:
+Tiba is the check that runs before an agent's payment goes out.
+x402 — the protocol AWS, Cloudflare, Circle, and Coinbase now share — leaves that approval decision out of scope.
+Tiba also pays anything that speaks x402.
+Devnet only. No real money.
+
+On screen:
+Slide.
+
+Speaker line:
+We are not a new rail. We sit in front of the one the rest of the industry already agreed to use, and we decide whether the payment may go out at all.
+
+## Slide 9 -- What We Cut
 
 Slide text:
 Cut: cross-border orchestration, KYC, mainnet, real USDC, image evidence.
@@ -105,7 +119,7 @@ Slide.
 Speaker line:
 We narrowed the proof so the judges can inspect the actual GonkaRouter and Sui path.
 
-## Slide 9 -- Ask + Team
+## Slide 10 -- Ask + Team
 
 Slide text:
 Ask: test the refusal boundary, receipts, and testnet digest.

@@ -150,6 +150,12 @@ export default async function Home() {
               Around it sit limits you set and your software can only read: a per-payment
               ceiling, hourly and daily spending limits, a list of saved recipients, and a freeze.
             </p>
+            <p className="lede">
+              Most agent-payment plumbing, including x402 — the protocol AWS, Cloudflare, Circle,
+              and Coinbase now share — leaves the approval decision out of scope. The wallet is
+              supposed to decide whether a payment may go out at all. That check is what Tiba
+              runs, before any signature.
+            </p>
           </div>
         </section>
 

@@ -10,7 +10,7 @@
 
 ### [0:20] The rule
 **Screen:** Send page: spending limits, saved recipients, freeze.
-**Say:** "Tiba is a bounded wallet. The rule is match, don't mint: every payable amount starts as an invoice a human registered. The software can match a delivery to it — it can never invent a new amount, raise its own limits, or touch the freeze."
+**Say:** "Tiba is a bounded wallet. The rule is match, don't mint: every payable amount starts as an invoice a human registered. The software can match a delivery to it — it can never invent a new amount, raise its own limits, or touch the freeze. That check sits in front of any rail, including x402, which leaves the approval decision out of scope."
 
 ### [0:40] Demo: clean pay
 **Screen:** The Genuine delivery note button fires a clean note; pipeline animates Channel A / Channel B / Agreement / Policy / Settlement; PAID lands; activity row shows the Sui digest.
@@ -42,6 +42,7 @@ Demo fallback: if Gonka stalls, say "the request is held, not paid" and jump to 
 4. **Where is GonkaRouter load-bearing?** On the decision path before settlement — the two checks run through it, must agree, and every receipt carries the router's request IDs.
 5. **Real or just a UI?** Testnet, but not a mock — real GonkaRouter calls, real Sui testnet settlement, clickable digests.
 6. **Not done / not generic?** No mainnet, no KYC, no real USDC. The new part is the control surface: an AI can match a registered obligation but cannot mint a payable amount.
+7. **x402?** Tiba is the check before the payment goes out. x402 leaves that decision out of scope; Tiba also pays anything that speaks it. Devnet only.
 
 ## Sources
 
