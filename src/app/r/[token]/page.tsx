@@ -176,24 +176,15 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                       <div className="break-all">Model used: {adjudicationsByChannel.get("artifact")?.model}</div>
                       {adjudicationsByChannel.get("artifact")?.fallback ? (
                         <div style={{ color: "var(--held)" }}>
-                          The reading service (Gonka) swapped in a different model for this reader:{" "}
+                          The reading service swapped in a different model for this reader:{" "}
                           <span className="num break-all text-xs">{adjudicationsByChannel.get("artifact")?.fallback}</span>
                         </div>
                       ) : null}
                       <div>
-                        Reference (Gonka request ID):{" "}
-                        {adjudicationsByChannel.get("artifact")?.requestId ? (
-                          <a
-                            className="link num inline-block max-w-full break-all text-xs"
-                            href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("artifact")?.requestId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {adjudicationsByChannel.get("artifact")?.requestId}
-                          </a>
-                        ) : (
-                          "missing"
-                        )}
+                        Reference (request ID):{" "}
+                        <span className="num break-all text-xs">
+                          {adjudicationsByChannel.get("artifact")?.requestId ?? "missing"}
+                        </span>
                       </div>
                       <div>Took: <span className="num">{formatLatency(adjudicationsByChannel.get("artifact")?.latencyMs)}</span></div>
                     </div>
@@ -211,24 +202,15 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                       <div className="break-all">Model used: {adjudicationsByChannel.get("payer_record")?.model}</div>
                       {adjudicationsByChannel.get("payer_record")?.fallback ? (
                         <div style={{ color: "var(--held)" }}>
-                          The reading service (Gonka) swapped in a different model for this reader:{" "}
+                          The reading service swapped in a different model for this reader:{" "}
                           <span className="num break-all text-xs">{adjudicationsByChannel.get("payer_record")?.fallback}</span>
                         </div>
                       ) : null}
                       <div>
-                        Reference (Gonka request ID):{" "}
-                        {adjudicationsByChannel.get("payer_record")?.requestId ? (
-                          <a
-                            className="link num inline-block max-w-full break-all text-xs"
-                            href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("payer_record")?.requestId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {adjudicationsByChannel.get("payer_record")?.requestId}
-                          </a>
-                        ) : (
-                          "missing"
-                        )}
+                        Reference (request ID):{" "}
+                        <span className="num break-all text-xs">
+                          {adjudicationsByChannel.get("payer_record")?.requestId ?? "missing"}
+                        </span>
                       </div>
                       <div>Took: <span className="num">{formatLatency(adjudicationsByChannel.get("payer_record")?.latencyMs)}</span></div>
                     </div>
