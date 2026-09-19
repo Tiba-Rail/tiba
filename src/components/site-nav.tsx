@@ -8,7 +8,7 @@ interface SiteNavProps {
   current: string;
 }
 
-const MARKETING_KEYS = new Set(["", "how", "start"]);
+const MARKETING_KEYS = new Set(["", "how", "start", "try"]);
 
 export async function SiteNav({ current }: SiteNavProps) {
   const marketing = MARKETING_KEYS.has(current);
@@ -45,6 +45,16 @@ async function KillSwitchBanner() {
 function MarketingLinks({ current }: { current: string }) {
   return (
     <>
+      <Link
+        href="/try"
+        className={
+          current === "try"
+            ? "font-medium text-foreground transition-colors duration-150"
+            : "text-muted transition-colors duration-150 hover:text-foreground"
+        }
+      >
+        Try it
+      </Link>
       <Link
         href="/how"
         className={

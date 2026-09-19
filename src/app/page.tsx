@@ -57,7 +57,10 @@ export default async function Home() {
             <Link className="btn btn-primary" href="/start">
               Create your wallet
             </Link>
-            <Link className="btn btn-secondary" href="/signin">
+            <Link className="btn btn-secondary" href="/try">
+              Try it
+            </Link>
+            <Link className="btn btn-ghost" href="/signin">
               Sign in
             </Link>
             <Link className="btn btn-ghost" href="/app">
