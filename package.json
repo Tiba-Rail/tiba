@@ -59,5 +59,15 @@
     "prisma": "^7.3.0",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2",
+    "mysql2": "3.24.4",
+    "jayson": {
+      "uuid": "11.1.1"
+    },
+    "@solflare-wallet/sdk": {
+      "uuid": "11.1.1"
+    }
   }
 }
