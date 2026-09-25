@@ -1,0 +1,112 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Tiba deck</title>
+<meta name="viewport" content="width=1920"><meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FBFAF7;--fg:#14161A;--muted:#6A7078;--line:#E4E2DC;--surface:#FFFFFF;--action:#2D4FC7;--paid:#1F6B4A;--refused:#7A2E2E;--refused-bg:#F2E4E4}
+@page{size:1920px 1080px;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font-family:Inter,system-ui,sans-serif}
+.s{width:1920px;height:1080px;padding:110px 140px;position:relative;overflow:hidden;page-break-after:always;background:var(--bg);display:flex;flex-direction:column}
+.logo{position:absolute;top:56px;left:140px;font-family:'Instrument Serif',serif;font-size:34px;color:var(--fg)}
+.logo b{color:var(--action);font-weight:400;margin-right:8px}
+.num{position:absolute;top:62px;right:140px;font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--muted)}
+.k{font-size:20px;letter-spacing:.14em;text-transform:uppercase;color:var(--action);font-weight:500;margin-bottom:28px}
+h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:128px;line-height:1.02;letter-spacing:-.01em}
+h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:86px;line-height:1.05;letter-spacing:-.01em}
+h1 i,h2 i{font-style:italic}
+.blue{color:var(--action)}
+p.sub{font-size:32px;line-height:1.45;color:#3a3f47;max-width:1100px;margin-top:34px}
+.foot{position:absolute;bottom:56px;left:140px;right:140px;display:flex;justify-content:space-between;font-size:20px;color:var(--muted);border-top:1px solid var(--line);padding-top:20px}
+.row{display:flex;gap:80px;align-items:center;flex:1}
+.row .txt{flex:0 0 700px}
+.shot{flex:1;display:flex;justify-content:center;align-items:center}
+.shot img{max-width:100%;max-height:760px;border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 60px rgba(20,22,26,.08);background:#fff}
+.lines{margin-top:60px;display:flex;flex-direction:column;gap:28px}
+.lines div{font-size:40px;line-height:1.35;padding-left:34px;border-left:3px solid var(--action)}
+.stats{display:flex;gap:70px;margin-top:70px}
+.stat .v{font-family:'JetBrains Mono',monospace;font-size:78px;letter-spacing:-.02em}
+.stat .l{font-size:18px;letter-spacing:.12em;text-transform:uppercase;color:var(--action);margin-top:10px;font-weight:500}
+.note{font-size:18px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:26px}
+.facts{margin-top:70px;display:flex;flex-direction:column;gap:22px;font-size:32px}
+.facts span{color:var(--muted)}
+.m3{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:70px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:44px 40px}
+.card .v{font-family:'Instrument Serif',serif;font-size:96px;line-height:1}
+.card .d{font-size:28px;line-height:1.4;margin-top:22px}
+.card .src{font-size:17px;color:var(--muted);margin-top:22px;line-height:1.4}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:70px}
+.step .t{font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--action);letter-spacing:.08em;text-transform:uppercase}
+.step .d{font-size:34px;line-height:1.35;margin-top:18px;border-top:2px solid var(--fg);padding-top:22px}
+.bottomline{margin-top:70px;font-size:34px;color:#3a3f47}
+</style></head><body>
+
+<section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div>
+ <div style="margin-top:150px"><div class="k">A wallet for AI agents &middot; Solana test network</div>
+ <h1>A wallet your <span class="blue">AI agents</span> can<br><i>pay people</i> from.</h1>
+ <p class="sub">You give your agent a signed permission slip. It pays only inside it, and every payment leaves a receipt anyone can check.</p></div>
+ <div class="foot"><span>Faris Irfan</span><span>tiba.rizqey.com</span></div></section>
+
+<section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">02</div>
+ <div style="margin-top:170px"><div class="k">The problem</div>
+ <h1>Agents stop when<br><i>money moves</i>.</h1>
+ <div class="lines"><div>Approve every payment yourself, and you're on call for your own agent.</div><div>Or hand it a key and hope.</div></div></div></section>
+
+<section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">03</div>
+ <div class="row"><div class="txt"><div class="k">01 &middot; Permission slip</div><h2>You sign what it's <i>allowed</i> to do.</h2>
+ <p class="sub">Write the job in plain English. Tiba drafts the scope, budget and expiry. You review it, then sign.</p></div>
+ <div class="shot"><img src="s_perm.png"></div></div></section>
+
+<section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">04</div>
+ <div class="row"><div class="txt"><div class="k">02 &middot; Checked before it moves</div><h2>If it doesn't match, <i>nothing moves</i>.</h2>
+ <p class="sub">Tiba reads the bill and your own records. If the amount, the job or the payee don't match, it refuses.</p></div>
+ <div class="shot"><img src="s_refused.png"></div></div></section>
+
+<section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">05</div>
+ <div class="row"><div class="txt"><div class="k">03 &middot; Receipts</div><h2>Every outcome gets a receipt <i>anyone</i> can open.</h2>
+ <p class="sub">Paid or refused, the receipt says who asked, which rule allowed it, and what happened on Solana.</p></div>
+ <div class="shot"><img src="s_paid.png"></div></div></section>
+
+<section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">06</div>
+ <div class="row"><div class="txt"><div class="k">04 &middot; Your limits</div><h2>You set the limits. The agent can only <i>read</i> them.</h2>
+ <p class="sub">A ceiling per payment, hourly and daily limits, saved recipients only, and a freeze switch. Big payments still come back to you.</p></div>
+ <div class="shot"><img src="s_wallet.png" style="max-height:800px"></div></div></section>
+
+<section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">07</div>
+ <div style="margin-top:90px"><div class="k">Proof so far</div><h2>Correct bills get paid.<br>Padded or fake ones <i>don't</i>.</h2>
+ <div class="stats"><div class="stat"><div class="v">20 / 20</div><div class="l">Correct bills paid</div></div>
+ <div class="stat"><div class="v">10 / 10</div><div class="l">Fake or padded bills refused</div></div>
+ <div class="stat"><div class="v">0 / 20</div><div class="l">Correct bills wrongly refused</div></div>
+ <div class="stat"><div class="v">13 s</div><div class="l">Per decision</div></div></div>
+ <div class="note">Our own test, 29 Aug 2026, on a practice payment rail. We wrote the 30 bills ourselves. Not live figures.</div>
+ <div class="facts"><div>1st place &middot; Superteam Malaysia Solana Lab <span>&middot; Aug 2026</span></div>
+ <div>Security audit: 6 of 6 issues fixed <span>&middot; 15 Sep 2026</span></div>
+ <div>Live on Solana's test network &middot; agents can also pay for services over x402</div></div></div></section>
+
+<section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">08</div>
+ <div style="margin-top:90px"><div class="k">Market</div><h2>Agents will spend <i>trillions</i>.<br>Every payment needs a yes or a no.</h2>
+ <div class="m3"><div class="card"><div class="v">$3&ndash;5T</div><div class="d">of buying run by AI agents by 2030</div><div class="src">McKinsey, Oct 2025. US retail alone: up to $1T.</div></div>
+ <div class="card"><div class="v">$303B</div><div class="d">in stablecoins today, heading to about $420B by year end</div><div class="src">Stablecoin Beat, 10 Sep 2026. Year-end projection: Citi, via Spark.</div></div>
+ <div class="card"><div class="v">$30&ndash;50M</div><div class="d">a year if 1% of agent spending runs through a check like Tiba at 0.1% per payment</div><div class="src">Our what-if, maths shown. Not a forecast.</div></div></div></div></section>
+
+<section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">09</div>
+ <div style="margin-top:90px"><div class="k">One wallet, three rails</div><h2>Built for the chains that were <i>built for payments</i>.</h2>
+ <div class="steps"><div class="step"><div class="t">Solana &middot; live</div><div class="d">Where Tiba runs today. Test network, public receipts, x402 for paying services.</div></div>
+ <div class="step"><div class="t">Tempo &middot; in build</div><div class="d">Stripe and Paradigm's chain, made only for stablecoin payments. Fees paid in stablecoins, nothing else to hold.</div></div>
+ <div class="step"><div class="t">Zcash &middot; in build</div><div class="d">Private payouts. The receipt hands the auditor a viewing key instead of a public link.</div></div></div>
+ <div class="bottomline">Same permission slip, same limits, same receipt. The rail is a setting.</div></div></section>
+
+<section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">10</div>
+ <div style="margin-top:90px"><div class="k">How it scales</div><h2>The expense policy and the finance sign-off,<br><i>for AI agents</i>.</h2>
+ <div class="steps"><div class="step"><div class="t">Today</div><div class="d">Builders on Solana, Tempo and Zcash, on test networks.</div></div>
+ <div class="step"><div class="t">Next</div><div class="d">Real money, after a second security audit.</div></div>
+ <div class="step"><div class="t">Then</div><div class="d">Any company whose agents pay suppliers, freelancers or ad bills.</div></div></div>
+ <div class="bottomline">We charge per payment we check, so revenue grows with payments, not with headcount.</div></div></section>
+
+<section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">11</div>
+ <div style="margin-top:170px"><div class="k">For Colosseum</div>
+ <h1>Live on the <i>test network</i>.</h1>
+ <p class="sub">Next: move to real money, and get the first teams running their agents' payments through Tiba.</p></div>
+ <div class="foot"><span>Faris Irfan</span><span>tiba.rizqey.com</span></div></section>
+
+</body></html>
