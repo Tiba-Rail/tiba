@@ -39,6 +39,18 @@ p.sub{font-size:32px;line-height:1.45;color:#3a3f47;max-width:1100px;margin-top:
 .step .t{font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--action);letter-spacing:.08em;text-transform:uppercase}
 .step .d{font-size:34px;line-height:1.35;margin-top:18px;border-top:2px solid var(--fg);padding-top:22px}
 .bottomline{margin-top:70px;font-size:34px;color:#3a3f47}
+
+/* present mode: one slide fills the screen, arrows / tap / swipe to move, F = full screen, Esc = scroll view */
+html,body{height:100%}
+body.present{overflow:hidden;background:#FBFAF7}
+body.present .s{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(var(--k,1));transform-origin:center center;page-break-after:auto;box-shadow:0 0 0 1px var(--line)}
+body.present .s.active{display:flex}
+#hud{position:fixed;right:16px;bottom:14px;z-index:9;display:flex;gap:8px;align-items:center;font:500 13px Inter,system-ui,sans-serif;color:#6A7078}
+#hud button{font:inherit;color:#14161A;background:#fff;border:1px solid #E4E2DC;border-radius:8px;padding:6px 10px;cursor:pointer}
+#hud button:hover{border-color:#C9C6BE}
+#hint{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9;font:13px Inter,system-ui,sans-serif;color:#6A7078;background:#fff;border:1px solid #E4E2DC;border-radius:8px;padding:6px 12px;transition:opacity .6s}
+body:not(.present) #hint{display:none}
+@media print{body.present{overflow:visible}body.present .s{display:flex;position:relative;top:auto;left:auto;transform:none;page-break-after:always;box-shadow:none}#hud,#hint{display:none}}
 </style></head><body>
 
 <section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div>
@@ -91,9 +103,9 @@ p.sub{font-size:32px;line-height:1.45;color:#3a3f47;max-width:1100px;margin-top:
 
 <section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">09</div>
  <div style="margin-top:90px"><div class="k">One wallet, three rails</div><h2>Built for the chains that were <i>built for payments</i>.</h2>
- <div class="steps"><div class="step"><div class="t">Solana &middot; live</div><div class="d">Where Tiba runs today. Test network, public receipts, x402 for paying services.</div></div>
- <div class="step"><div class="t">Tempo &middot; in build</div><div class="d">Stripe and Paradigm's chain, made only for stablecoin payments. Fees paid in stablecoins, nothing else to hold.</div></div>
- <div class="step"><div class="t">Zcash &middot; in build</div><div class="d">Private payouts. The receipt hands the auditor a viewing key instead of a public link.</div></div></div>
+ <div class="steps"><div class="step"><div class="t">Solana &middot; live</div><div class="d">The big, fast, cheap chain. Its Malaysian community picked Tiba first. Live today on the test network.</div></div>
+ <div class="step"><div class="t">Tempo &middot; in build</div><div class="d">Built by Stripe, the card-payments company behind most online shops, with Paradigm, a big crypto investor. Made only for stablecoin payments.</div></div>
+ <div class="step"><div class="t">Zcash &middot; in build</div><div class="d">The privacy chain, since 2016. Payments hidden by default. A viewing key shows the auditor, and nobody else.</div></div></div>
  <div class="bottomline">Same permission slip, same limits, same receipt. The rail is a setting.</div></div></section>
 
 <section class="s"><div class="logo"><b>&Sigma;</b>Tiba</div><div class="num">10</div>
@@ -109,4 +121,30 @@ p.sub{font-size:32px;line-height:1.45;color:#3a3f47;max-width:1100px;margin-top:
  <p class="sub">Next: move to real money, and get the first teams running their agents' payments through Tiba.</p></div>
  <div class="foot"><span>Faris Irfan</span><span>tiba.rizqey.com</span></div></section>
 
+
+<div id="hud"><span id="ctr"></span><button id="fs" title="Full screen (F)">&#x26F6; Full screen</button><button id="mode" title="Esc">Scroll</button></div>
+<div id="hint">&larr; &rarr; or tap to move &middot; F full screen &middot; Esc scroll view</div>
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('section.s')),n=slides.length,i=0,body=document.body;
+  function fit(){var k=Math.min(innerWidth/1920,innerHeight/1080);body.style.setProperty('--k',k)}
+  function show(j){i=Math.max(0,Math.min(n-1,j));slides.forEach(function(s,x){s.classList.toggle('active',x===i)});document.getElementById('ctr').textContent=(i+1)+' / '+n;if(history.replaceState)history.replaceState(null,'','#'+(i+1))}
+  function present(on){body.classList.toggle('present',on);document.getElementById('mode').textContent=on?'Scroll':'Present';if(on){fit();show(i)}else{slides[i].scrollIntoView()}}
+  var h=parseInt((location.hash||'').replace('#',''),10);if(h>=1&&h<=n)i=h-1;
+  present(true);
+  addEventListener('resize',fit);
+  addEventListener('keydown',function(e){if(!body.classList.contains('present')){if(e.key==='Escape'||e.key==='p')present(true);return}
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'||e.key==='Enter')show(i+1);
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'||e.key==='Backspace')show(i-1);
+    else if(e.key==='Home')show(0);else if(e.key==='End')show(n-1);
+    else if(e.key==='f'||e.key==='F'){if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()}
+    else if(e.key==='Escape')present(false);else return;e.preventDefault()});
+  addEventListener('click',function(e){if(!body.classList.contains('present')||e.target.closest('#hud'))return;show(e.clientX<innerWidth/3?i-1:i+1)});
+  var x0=null;addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+  addEventListener('touchend',function(e){if(x0===null)return;var dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>40)show(dx<0?i+1:i-1)});
+  document.getElementById('fs').onclick=function(){document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()};
+  document.getElementById('mode').onclick=function(){present(!body.classList.contains('present'))};
+  setTimeout(function(){document.getElementById('hint').style.opacity=0},4000);
+})();
+</script>
 </body></html>
