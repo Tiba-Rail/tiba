@@ -601,7 +601,7 @@ export function disagreementLine(
 | Tool row 4 | `Ask to pay someone` / `Yes` / `Operator key` / `Cannot turn a refusal into a payment` |
 | Tool row 5 | `Read the last decision` / `Yes` / `Nothing` / `—` |
 | Tool row 6 | `Read history` / `Yes` / `Operator key` / `Cannot change what happened` |
-| Disallowed row 1 | `Approve a payment by hand` / `No` / `—` / `Not even a human can pick a side when the checks disagree` |
+| Disallowed row 1 | `Approve a payment by hand` / `No` / `—` / `Only the owner, with the owner key. If the checks disagree, the owner's approval pays what the owner's own record says, never what the bill says` |
 | Disallowed row 2 | `Change a limit or the approved list` / `No` / `—` / `Only a human with the operator key` |
 | Disallowed row 3 | `Turn the emergency stop on or off` / `No` / `—` / `Only a human with the operator key` |
 | Recent calls eyebrow | `Recent AI actions` |

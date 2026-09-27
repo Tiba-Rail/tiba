@@ -2,7 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Keypair } from "@solana/web3.js";
 import { chainForRecipient } from "../src/lib/rails/index.ts";
-import { buildSolanaPayoutTransaction, solanaRail } from "../src/lib/rails/solana.ts";
+import {
+  SOLANA_DEVNET_RPC,
+  SOLANA_DEVNET_RPC_WITNESS,
+  buildSolanaPayoutTransaction,
+  confirmPayoutQuorum,
+  quorumOutcome,
+  rpcEndpointsAreIndependent,
+  solanaRail,
+  solanaRpcEndpoints
+} from "../src/lib/rails/solana.ts";
 
 const RECIPIENT = Keypair.generate().publicKey.toBase58();
 
@@ -73,4 +82,63 @@ test("chainForRecipient requires a Solana address", () => {
   assert.deepEqual(chainForRecipient({ solanaAddress: RECIPIENT }), { chain: "solana", address: RECIPIENT });
   assert.equal(chainForRecipient({ solanaAddress: "" }), null);
   assert.equal(chainForRecipient({ solanaAddress: null }), null);
+});
+
+test("default Solana RPC endpoints are two different devnet nodes", () => {
+  const keys = ["SOLANA_RPC_URL", "SOLANA_RPC_URL_2"];
+  const saved = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  delete process.env.SOLANA_RPC_URL;
+  delete process.env.SOLANA_RPC_URL_2;
+  try {
+    const endpoints = solanaRpcEndpoints();
+    assert.equal(endpoints.primary, SOLANA_DEVNET_RPC);
+    assert.equal(endpoints.witness, SOLANA_DEVNET_RPC_WITNESS);
+    assert.equal(rpcEndpointsAreIndependent(endpoints.primary, endpoints.witness), true);
+    assert.equal(rpcEndpointsAreIndependent("https://api.devnet.solana.com/", "https://api.devnet.solana.com"), false);
+  } finally {
+    for (const key of keys) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key];
+    }
+  }
+});
+
+test("rpc quorum pays only when both endpoints report the same success", () => {
+  const confirmed = { err: null, confirmationStatus: "confirmed" };
+  const finalized = { err: null, confirmationStatus: "finalized" };
+  const rejected = { err: { InstructionError: [0, "Custom"] }, confirmationStatus: "confirmed" };
+  assert.equal(quorumOutcome(confirmed, finalized), "confirmed");
+  assert.equal(quorumOutcome(confirmed, null), "pending");
+  assert.equal(quorumOutcome(null, null), "pending");
+  assert.equal(quorumOutcome(confirmed, rejected), "split");
+  assert.equal(quorumOutcome(rejected, confirmed), "split");
+  assert.equal(quorumOutcome(rejected, rejected), "rejected");
+  assert.equal(quorumOutcome({ err: null, confirmationStatus: "processed" }, confirmed), "pending");
+});
+
+test("confirmPayoutQuorum refuses a witness that disagrees", async () => {
+  await assert.rejects(
+    () => confirmPayoutQuorum(
+      "sig-split",
+      async (which) => which === "primary"
+        ? { err: null, confirmationStatus: "confirmed" }
+        : { err: "rejected", confirmationStatus: "confirmed" },
+      { polls: 1, sleep: async () => {} }
+    ),
+    payoutError("SOLANA_RPC_QUORUM_FAILED")
+  );
+});
+
+test("confirmPayoutQuorum waits until a slow witness agrees", async () => {
+  let witnessReads = 0;
+  await confirmPayoutQuorum(
+    "sig-lag",
+    async (which) => {
+      if (which === "primary") return { err: null, confirmationStatus: "confirmed" };
+      witnessReads += 1;
+      return witnessReads < 2 ? null : { err: null, confirmationStatus: "finalized" };
+    },
+    { polls: 3, sleep: async () => {} }
+  );
+  assert.equal(witnessReads, 2);
 });

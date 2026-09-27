@@ -217,7 +217,7 @@ export function WorkOrdersClient({ workOrders, recipients }: WorkOrdersClientPro
           <label className="block text-sm font-medium">
             What must pass before paying
             <select className={inputClass} name="required_channels" defaultValue="both" required>
-              <option value="payer_record">Your own records only</option>
+              <option value="payer_record">Your own records only (under $50; larger amounts still take both checks)</option>
               <option value="both">Both checks</option>
               <option value="human">You</option>
             </select>

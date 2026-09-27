@@ -1,33 +1,48 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DenialBanner } from "@/components/denial-banner";
 import { formatLatency, microsToUsdc } from "@/lib/money";
 import { prisma } from "@/lib/db";
 import { channelTuple, type ChannelTuple } from "@/lib/adjudication-display";
+import { GROWTH_LINE, growthHref, receiptComparisonFromStored, receiptShareLines } from "@/lib/receipt-comparison";
+import { BillRecordMismatch } from "@/components/bill-record-mismatch";
 import { SiteNav } from "@/components/site-nav";
 import { decisionSentence, disagreementLine, explainDecision } from "@/app/console/types";
 import { recipientIdentityOk } from "@/lib/identity";
 import { LiveRefresh } from "@/components/live-refresh";
-import { receiptNetwork } from "@/lib/receipt-network";
+import { coinSymbol, microsToCoin, receiptNetwork, receiptViewingKeyNote } from "@/lib/receipt-network";
+import { receiptMakerSentences, receiptSameModelNote } from "@/lib/channel-makers";
+import { limitsStatus } from "@/lib/receipt-status";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Receipt - Tiba" };
 
-function formatTime(date: Date | null): string {
-  if (!date) return "time unknown";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZoneName: "short"
-  }).format(date);
-}
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const { token } = await params;
+  const intent = await prisma.payoutIntent.findUnique({
+    where: { publicToken: token },
+    include: { adjudications: true }
+  });
+  if (!intent) return { title: "Receipt - Tiba" };
 
-function remainingBudget(dayCapMicros: bigint, spentMicrosDay: bigint): string {
-  const remaining = dayCapMicros > spentMicrosDay ? dayCapMicros - spentMicrosDay : 0n;
-  return microsToUsdc(remaining);
+  const share = receiptShareLines({
+    decisionClass: intent.decisionClass,
+    amount: microsToCoin(intent.amountMicros, intent.chain),
+    chain: intent.chain,
+    comparison: receiptComparisonFromStored({
+      artifact: intent.adjudications.find((row) => row.channel === "artifact") ?? null,
+      payerRecord: intent.adjudications.find((row) => row.channel === "payer_record") ?? null
+    })
+  });
+  const title = `${share.outcome} · ${share.amount}`;
+  const description = `${share.network}.${share.mismatch ? ` Mismatch: ${share.mismatch}.` : ""}`;
+
+  return {
+    title: "Receipt - Tiba",
+    description,
+    openGraph: { title, description },
+    twitter: { card: "summary_large_image", title, description }
+  };
 }
 
 export default async function ReceiptPage({ params }: { params: Promise<{ token: string }> }) {
@@ -43,13 +58,39 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
 
   if (!intent) notFound();
 
+  const bountyClaim = await prisma.bountyClaim.findUnique({
+    where: { payoutIntentId: intent.id },
+    include: { bounty: true }
+  });
+
   const adjudicationsByChannel = new Map(intent.adjudications.map((row) => [row.channel, row]));
   const paid = intent.decisionClass === "PAID";
 
-  // Get channel tuples for disagreement line
-  const channelATuple = channelTuple(adjudicationsByChannel.get("artifact")?.tupleJson);
-  const channelBTuple = channelTuple(adjudicationsByChannel.get("payer_record")?.tupleJson);
+  // Get channel tuples for disagreement line. A model can return a tuple with a blank
+  // work_order_id -- a real read that just didn't find a number, not the same as no read at
+  // all -- so a blank field is named rather than left empty ("saw invoice , 480.00").
+  function withoutBlankFields(tuple: ChannelTuple, side: "bill" | "record"): ChannelTuple {
+    if (!tuple) return tuple;
+    const label = side === "bill" ? "not found on the bill" : "not found on the record";
+    return {
+      workOrderId: tuple.workOrderId.trim() || label,
+      amount: tuple.amount.trim() || label
+    };
+  }
+  const channelATuple = withoutBlankFields(channelTuple(adjudicationsByChannel.get("artifact")?.tupleJson), "bill");
+  const channelBTuple = withoutBlankFields(channelTuple(adjudicationsByChannel.get("payer_record")?.tupleJson), "record");
   const disagreement = disagreementLine(intent.reasonCode, channelATuple, channelBTuple);
+  const refusedComparison =
+    intent.decisionClass === "RED"
+      ? receiptComparisonFromStored({
+          artifact: adjudicationsByChannel.get("artifact")
+            ? { tupleJson: adjudicationsByChannel.get("artifact")?.tupleJson }
+            : null,
+          payerRecord: adjudicationsByChannel.get("payer_record")
+            ? { tupleJson: adjudicationsByChannel.get("payer_record")?.tupleJson }
+            : null
+        })
+      : null;
 
   // Determine channel match status
   function getChannelMatchStatus(tupleA: ChannelTuple, tupleB: ChannelTuple): string {
@@ -65,20 +106,6 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
     if (!tupleA || !tupleB) return "Not run";
     if (tupleA.workOrderId === tupleB.workOrderId && tupleA.amount === tupleB.amount) return "Yes";
     return "No";
-  }
-
-  // Determine policy status
-  function getPolicyStatus(reasonCode: string | null): string {
-    const policyRefusalCodes = [
-      "DAY_AMOUNT_CAP", "DAY_COUNT_CAP", "HOUR_AMOUNT_CAP", "HOUR_COUNT_CAP",
-      "TRANSACTION_CEILING", "WORK_ORDER_CEILING", "WORK_ORDER_EXPIRED",
-      "WORK_ORDER_NOT_OPEN", "NO_OPEN_OBLIGATION", "RECIPIENT_INACTIVE",
-      "RECIPIENT_NOT_FOUND", "KILL_SWITCH", "RECIPIENT_UNVERIFIED", "RECIPIENT_NEEDS_SOLANA_ADDRESS",
-      "INVALID_AMOUNT", "INVALID_TIMESTAMP"
-    ];
-
-    if (policyRefusalCodes.includes(reasonCode || "")) return "Blocked";
-    return "Passed";
   }
 
   // Identity gate is per agent (default off) and sits before inference. No per-intent
@@ -105,14 +132,33 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   // Determine settlement status
   function getSettlementStatus(decisionClass: string, reasonCode: string | null): string {
     if (decisionClass === "PAID") return "Yes";
+    if (reasonCode === "SETTLEMENT_PENDING") return "Pending";
     if (
       reasonCode === "SETTLEMENT_FAILED" ||
-      reasonCode === "SOLANA_EXECUTION_FAILED"
+      reasonCode === "SOLANA_EXECUTION_FAILED" ||
+      reasonCode === "TEMPO_EXECUTION_FAILED" ||
+      reasonCode === "ZCASH_EXECUTION_FAILED"
     ) return "Tried and failed";
     return "Not tried";
   }
 
   const network = receiptNetwork(intent.chain);
+  const artifactRow = adjudicationsByChannel.get("artifact");
+  const payerRow = adjudicationsByChannel.get("payer_record");
+  const makerSentences = receiptMakerSentences({
+    artifactModel: artifactRow?.ok ? artifactRow.model : null,
+    payerModel: payerRow?.ok ? payerRow.model : null
+  });
+  const sameModelNote = receiptSameModelNote(Boolean(artifactRow?.sameMaker || payerRow?.sameMaker));
+  const limits = limitsStatus(intent.decisionClass, intent.reasonCode);
+
+  // A refusal before the limits never stores the amount (it stays 0), so show what the
+  // bill asked for when Check 1 read it, instead of a false 0.00.
+  const unreadAmount = !paid && intent.amountMicros === 0n;
+  const amountLabel = paid ? "Amount" : unreadAmount ? (channelATuple ? "Bill asked for" : "Amount") : "Amount asked for";
+  const amountValue = unreadAmount
+    ? (channelATuple ? channelATuple.amount.replace(/ USDC$/, "") : "Not read")
+    : microsToUsdc(intent.amountMicros).replace(/ USDC$/, "");
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -121,23 +167,46 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 md:px-6 lg:px-8">
         <header className="flex flex-col gap-4 border-b border-line pb-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="eyebrow">Receipt — anyone with this link can read it</p>
+            <p className="eyebrow">
+              {intent.chain === "zcash"
+                ? "Receipt — anyone with the viewing key can check the payment"
+                : "Receipt — anyone with this link can read it"}
+            </p>
             <h1 className="display-l mt-2">
               {decisionSentence(intent.decisionClass)}
             </h1>
+            {paid ? <p className="mt-2 text-sm text-muted">Paid on {network}.</p> : null}
           </div>
           <div className="card p-4 md:min-w-72">
-            <p className="text-sm text-muted">{paid ? "Amount" : "Amount asked for"}</p>
+            <p className="text-sm text-muted">{amountLabel}</p>
             <p className="num mt-1 text-2xl">
-              {microsToUsdc(intent.amountMicros).replace(/ USDC$/, "")}{" "}
-              <span className="text-sm text-muted">USDC</span>
+              {amountValue}
+              {amountValue !== "Not read" ? (
+                <>
+                  {" "}
+                  <span className="text-sm text-muted">{coinSymbol(intent.chain)}</span>
+                </>
+              ) : null}
             </p>
           </div>
         </header>
 
+        {refusedComparison ? <BillRecordMismatch comparison={refusedComparison} /> : null}
+
         <DenialBanner decisionClass={intent.decisionClass} reasonCode={intent.reasonCode} />
 
-        <section className="grid gap-4 md:grid-cols-3">
+        {bountyClaim ? (
+          <section className="card p-5">
+            <p className="title text-muted">Bounty</p>
+            <p className="mt-2 text-xl font-semibold">{bountyClaim.bounty.title}</p>
+            <p className="mt-1 text-sm text-muted">
+              Asked: <span className="num">{microsToCoin(bountyClaim.amountAskedMicros, intent.chain)}</span>
+            </p>
+            <p className="mt-1 text-sm text-muted">Claimed: {bountyClaim.summary}</p>
+          </section>
+        ) : null}
+
+        <section className="grid gap-4 md:grid-cols-2">
           <Fact
             label={paid ? "Paid to" : "To"}
             value={intent.recipient.displayName}
@@ -145,17 +214,14 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
           />
           <Fact
             label="Why"
-            value={explainDecision(intent.decisionClass, intent.reasonCode)}
-          />
-          <Fact
-            label="Left to spend today (live)"
-            value={remainingBudget(intent.agent.dayCapMicros, intent.agent.spentMicrosDay)}
-            detail="right now, not at the time of this receipt"
+            value={explainDecision(intent.decisionClass, intent.reasonCode, intent.chain)}
           />
         </section>
 
         <section className="card p-5">
           <h2 className="title">How this decision was made</h2>
+          {makerSentences ? <p className="mt-4 text-sm">{makerSentences}</p> : null}
+          {sameModelNote ? <p className="mt-2 text-sm">{sameModelNote}</p> : null}
           <div className="mt-4 max-w-full overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
@@ -175,24 +241,15 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                       <div className="break-all">Model used: {adjudicationsByChannel.get("artifact")?.model}</div>
                       {adjudicationsByChannel.get("artifact")?.fallback ? (
                         <div style={{ color: "var(--held)" }}>
-                          The reading service (Gonka) swapped in a different model for this reader:{" "}
+                          The reading service swapped in a different model for this reader:{" "}
                           <span className="num break-all text-xs">{adjudicationsByChannel.get("artifact")?.fallback}</span>
                         </div>
                       ) : null}
                       <div>
-                        Reference (Gonka request ID):{" "}
-                        {adjudicationsByChannel.get("artifact")?.requestId ? (
-                          <a
-                            className="link num inline-block max-w-full break-all text-xs"
-                            href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("artifact")?.requestId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {adjudicationsByChannel.get("artifact")?.requestId}
-                          </a>
-                        ) : (
-                          "missing"
-                        )}
+                        Reference (request ID):{" "}
+                        <span className="num break-all text-xs">
+                          {adjudicationsByChannel.get("artifact")?.requestId ?? "missing"}
+                        </span>
                       </div>
                       <div>Took: <span className="num">{formatLatency(adjudicationsByChannel.get("artifact")?.latencyMs)}</span></div>
                     </div>
@@ -210,24 +267,15 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                       <div className="break-all">Model used: {adjudicationsByChannel.get("payer_record")?.model}</div>
                       {adjudicationsByChannel.get("payer_record")?.fallback ? (
                         <div style={{ color: "var(--held)" }}>
-                          The reading service (Gonka) swapped in a different model for this reader:{" "}
+                          The reading service swapped in a different model for this reader:{" "}
                           <span className="num break-all text-xs">{adjudicationsByChannel.get("payer_record")?.fallback}</span>
                         </div>
                       ) : null}
                       <div>
-                        Reference (Gonka request ID):{" "}
-                        {adjudicationsByChannel.get("payer_record")?.requestId ? (
-                          <a
-                            className="link num inline-block max-w-full break-all text-xs"
-                            href={`https://api.gonkarouter.io/v1/receipts/${adjudicationsByChannel.get("payer_record")?.requestId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {adjudicationsByChannel.get("payer_record")?.requestId}
-                          </a>
-                        ) : (
-                          "missing"
-                        )}
+                        Reference (request ID):{" "}
+                        <span className="num break-all text-xs">
+                          {adjudicationsByChannel.get("payer_record")?.requestId ?? "missing"}
+                        </span>
                       </div>
                       <div>Took: <span className="num">{formatLatency(adjudicationsByChannel.get("payer_record")?.latencyMs)}</span></div>
                     </div>
@@ -243,8 +291,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
               </tr>
               <tr className="border-b border-line">
                 <td className="py-3 px-3">Your limits</td>
-                <td className="py-3 px-3">{getPolicyStatus(intent.reasonCode)}</td>
-                <td className="py-3 px-3">{getPolicyStatus(intent.reasonCode) === "Blocked" ? explainDecision(intent.decisionClass, intent.reasonCode) : "—"}</td>
+                <td className="py-3 px-3">{limits}</td>
+                <td className="py-3 px-3">{limits === "Blocked" ? explainDecision(intent.decisionClass, intent.reasonCode) : "—"}</td>
               </tr>
               <tr className="border-b border-line">
                 <td className="py-3 px-3">Identity check</td>
@@ -262,28 +310,28 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                   ) : (
                     "No transfer happened, so there is no transaction record."
                   )}
+                  {receiptViewingKeyNote(intent.chain) ? (
+                    <div>{receiptViewingKeyNote(intent.chain)}</div>
+                  ) : null}
                 </td>
               </tr>
+              {intent.x402Routed ? (
+                <tr className="border-b border-line">
+                  <td className="py-3 px-3">How it was sent</td>
+                  <td className="py-3 px-3">x402</td>
+                  <td className="py-3 px-3">This payment went out through x402, after Tiba's checks.</td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2">
-          <div className="card p-5">
-            <h2 className="title">Verification cost (GNK/USD)</h2>
-            {intent.gnkUsd ? (
-              <p className="num mt-3 text-2xl">
-                ${intent.gnkUsd}
-                <span className="ml-2 align-middle text-sm font-medium text-muted">
-                  at {formatTime(intent.pricingUpdatedAt)}
-                </span>
-              </p>
-            ) : (
-              <p className="mt-3 text-sm text-muted">price not available</p>
-            )}
-          </div>
-        </section>
+        <p className="text-sm">
+          <Link className="link" href={growthHref(intent.publicToken)}>
+            {GROWTH_LINE}
+          </Link>
+        </p>
 
         <Link
           className="btn btn-ghost w-fit"

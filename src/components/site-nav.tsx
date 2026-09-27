@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "./wordmark";
+import { SiteNavScrollReset } from "./site-nav-scroll-reset";
 import { prisma } from "@/lib/db";
 import { auth, signOut } from "@/auth";
 
@@ -7,13 +8,14 @@ interface SiteNavProps {
   current: string;
 }
 
-const MARKETING_KEYS = new Set(["", "how", "start"]);
+const MARKETING_KEYS = new Set(["", "how", "start", "try"]);
 
 export async function SiteNav({ current }: SiteNavProps) {
   const marketing = MARKETING_KEYS.has(current);
 
   return (
     <div className="w-full">
+      <SiteNavScrollReset />
       {!marketing && <KillSwitchBanner />}
       <nav className="border-b border-line">
         <div className="mx-auto max-w-7xl px-4 md:flex md:h-14 md:items-center md:justify-between md:px-6 lg:px-8">
@@ -44,6 +46,16 @@ function MarketingLinks({ current }: { current: string }) {
   return (
     <>
       <Link
+        href="/try"
+        className={
+          current === "try"
+            ? "font-medium text-foreground transition-colors duration-150"
+            : "text-muted transition-colors duration-150 hover:text-foreground"
+        }
+      >
+        Try it
+      </Link>
+      <Link
         href="/how"
         className={
           current === "how"
@@ -67,10 +79,15 @@ function AppLinks({ current }: { current: string }) {
   const links = [
     { key: "app", label: "Home", href: "/app" },
     { key: "console", label: "Send", href: "/console" },
+    { key: "permissions", label: "Permissions", href: "/permissions" },
+    { key: "receipts", label: "Receipts", href: "/receipts" },
+    { key: "verify", label: "Verify", href: "/verify" },
     { key: "ledger", label: "Activity", href: "/ledger" },
     { key: "work-orders", label: "Invoices", href: "/work-orders" },
+    { key: "bounties", label: "Bounties", href: "/bounties" },
     { key: "recipients", label: "Recipients", href: "/recipients" },
-    { key: "policies", label: "Limits", href: "/policies" }
+    { key: "policies", label: "Limits", href: "/policies" },
+    { key: "developers", label: "Developers", href: "/developers" }
   ];
 
   return (

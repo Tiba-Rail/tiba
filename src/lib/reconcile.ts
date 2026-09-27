@@ -46,8 +46,5 @@ export function reconcile(
   if (payer.amountMicros !== artifact.amountMicros) {
     return { ok: false, decisionClass: "RED", reasonCode: "QUORUM_SPLIT:amount_micros" };
   }
-  if ((payer.deliveryTimestamp ?? "") !== (artifact.deliveryTimestamp ?? "")) {
-    return { ok: false, decisionClass: "RED", reasonCode: "QUORUM_SPLIT:delivery_timestamp" };
-  }
   return { ok: true, tuple: payer };
 }

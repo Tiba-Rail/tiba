@@ -126,7 +126,7 @@ export function useAgentTools(deps: {
         // Tool 4: submit_payment
         {
           name: "submit_payment",
-          description: "Attempt a payment. Two isolated verification channels must agree on the invoice and amount; if they disagree the payment is refused and the software cannot override that. Takes up to 60 seconds.",
+          description: "Attempt a payment. Two isolated verification channels must agree on the invoice and amount; if they disagree the payment is refused and these tools cannot override that; only the owner can, from the console. Takes up to 60 seconds.",
           inputSchema: {
             type: "object",
             properties: {

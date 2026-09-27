@@ -96,7 +96,7 @@ export function agentCard(origin: string) {
   return {
     name: "Tiba",
     description:
-      "Agent-to-human payout authorization and settlement: two independent verification channels must agree on the work order and amount before a stablecoin payout settles, and Tiba refuses when they disagree.",
+      "Agent-to-human payout check and settlement: reads the bill against the payer's own record before a stablecoin payout settles, pays the amount the record approved, and refuses with a public receipt when the bill names a different job or amount.",
     version: "1.0.0",
     supportedInterfaces: [{ url: `${origin}/a2a`, protocolBinding: "JSONRPC", protocolVersion: A2A_VERSION }],
     provider: { organization: "Rizqey Labs", url: origin },

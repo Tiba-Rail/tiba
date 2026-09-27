@@ -41,4 +41,7 @@ test("agent card has the 1.0 required fields and points at /a2a", () => {
   }
   assert.equal(card.supportedInterfaces[0].url, "https://x.test/a2a");
   assert.equal(card.skills[0].id, "authorize_and_settle_payout");
+  // The card says the record sets the amount; it must not claim two independent checks always run.
+  assert.match(card.description, /payer's own record/);
+  assert.doesNotMatch(card.description, /two independent/i);
 });

@@ -1,0 +1,4 @@
+winner_name,solana_address,amount_usdc,bounty_ref,claim_text
+Sample Winner A,AcUGHbyYqYXrNk8HYHpdCRnNnov8hsnRUNbCiQ7dLCwG,25,superteam-my-sample,"Wrote the devnet guide, linked in the thread."
+Sample Winner B,m9xU5NrhtH2qWrwM7Lha5oX4FmFFUGPodjtKeaNER29,10.50,krackeddevs-sample,"Shipped the workshop notes, including the faucet steps."
+Sample Winner C,2tdDoKVUoagCRFGDoSnbDSg8Q2nKANzTMPAaSwR4xLB5,3.25,superteam-my-sample,"Reviewed two pull requests and posted the checklist."

@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "next dev",
     "start": "next start",
-    "build": "prisma generate && next build",
+    "build": "prisma migrate deploy && prisma generate && next build",
     "typecheck": "tsc --noEmit",
     "test": "node --test",
     "db:push": "prisma db push",
@@ -20,7 +20,11 @@
     "e2e": "node scripts/e2e.mjs",
     "eval": "node scripts/eval.mjs",
     "solana:smoke": "node scripts/solana-smoke.mjs",
+    "tempo:smoke": "node scripts/tempo-smoke.mjs",
     "a2a:proof": "node scripts/a2a-proof.mjs",
+    "recover:x402-signing": "node scripts/recover-stuck-x402-signing.mjs",
+    "recover:settlement-pending": "node scripts/recover-stuck-settlement-pending.mjs",
+    "recover:bounty-claims": "node scripts/recover-stuck-bounty-claims.mjs",
     "postinstall": "prisma generate",
     "t3:demo": "node --no-warnings scripts/t3-identity-demo.mjs"
   },
@@ -44,7 +48,9 @@
     "pg": "^8.23.0",
     "qrcode": "1.5.4",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "undici": "^7.30.0",
+    "viem": "^2.56.9"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
@@ -59,5 +65,15 @@
     "prisma": "^7.3.0",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2",
+    "mysql2": "3.24.4",
+    "jayson": {
+      "uuid": "11.1.1"
+    },
+    "@solflare-wallet/sdk": {
+      "uuid": "11.1.1"
+    }
   }
 }

@@ -91,8 +91,10 @@ Two findings from that testing, both design limits rather than bugs:
    work order. Amounts are still not compared in that mode (the payer's approved amount
    stays authoritative); "both" and "human" behaviour is unchanged. Covered in
    test/reconcile.test.mjs.
-2. A valid ISO timestamp in the artifact is copied by channel A while B uses received_at,
-   so the channels split on delivery_timestamp. Presets now avoid ISO stamps.
+2. Implemented 27 Sep: delivery timestamps remain in both stored audit tuples, but
+   `reconcile()` no longer compares them. Both values come from Tiba's receipt metadata rather
+   than the payer's record, so the comparison carried no payment-safety information and caused
+   honest historical-looking bills to split. Work-order ID and amount still must agree.
 
 ## Identity gate (1 Sep)
 

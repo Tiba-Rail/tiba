@@ -1,12 +1,22 @@
 import { createHash } from "node:crypto";
 import "dotenv/config";
+import { assertDatabaseWipeAllowed, requireSeedAgentKey } from "./db-wipe-guard.mjs";
+
+let dbHost;
+let apiKey;
+try {
+  dbHost = assertDatabaseWipeAllowed();
+  apiKey = requireSeedAgentKey(process.env, dbHost);
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
 
 const { prisma } = await import("../src/lib/db.ts");
 
-const apiKey = process.env.SEED_AGENT_KEY ?? "tiba_testnet_demo_key";
-const apiKeySource = process.env.SEED_AGENT_KEY ? "SEED_AGENT_KEY" : "default_demo_key";
+const apiKeySource = "SEED_AGENT_KEY";
 const apiKeyHash = createHash("sha256").update(apiKey).digest("hex");
-const agentRail = process.env.SEED_AGENT_RAIL === "mock" ? "mock" : "solana";
+const agentRail = process.env.SEED_AGENT_RAIL === "solana" ? "solana" : "mock";
 const seededAt = new Date("2026-08-29T00:00:00.000Z");
 const expiresAt = new Date("2026-09-30T00:00:00.000Z");
 const defaultRecipientAddress = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";

@@ -1,0 +1,1 @@
+Tiba lets an AI agent hold money keys under a permission slip: every payout has a scope, a budget, and an expiry, and requires an explicit human approval before it executes. Every action produces a receipt.

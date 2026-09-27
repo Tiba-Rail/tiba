@@ -4,10 +4,20 @@ import fs from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import "dotenv/config";
+import { assertDatabaseWipeAllowed, requireSeedAgentKey } from "./db-wipe-guard.mjs";
+
+let dbHost;
+let AGENT_KEY;
+try {
+  dbHost = assertDatabaseWipeAllowed();
+  AGENT_KEY = requireSeedAgentKey(process.env, dbHost);
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
 
 const { prisma } = await import("../src/lib/db.ts");
 
-const AGENT_KEY = process.env.SEED_AGENT_KEY ?? "tiba_testnet_demo_key";
 const API_KEY_HASH = createHash("sha256").update(AGENT_KEY).digest("hex");
 const nextBin = path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next");
 const seededAt = new Date("2026-08-29T00:00:00.000Z");

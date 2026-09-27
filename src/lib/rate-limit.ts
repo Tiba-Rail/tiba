@@ -37,6 +37,17 @@ export function rateLimit(ip: string): { ok: boolean; resetAt: number } {
 export const LIVE_WORKSPACES_PER_USER = 3;
 
 /**
+ * Workspaces (practice ones included) the whole deployment may create per rolling hour. The
+ * per-IP limiter above is per server instance; this count comes from the database, so it holds
+ * across instances. Practice wallets cost nothing to make but each one can start payment checks.
+ */
+export const WORKSPACES_PER_DEPLOYMENT_PER_HOUR = 120;
+
+export function workspaceBudgetExceeded(createdLastHour: number): boolean {
+  return !(createdLastHour < WORKSPACES_PER_DEPLOYMENT_PER_HOUR);
+}
+
+/**
  * Settlement rail for a new workspace. Anonymous sign-ups get the simulated rail, so nobody
  * unauthenticated can make the shared treasury sign a transfer. A signed-in account gets Solana
  * devnet while it is under LIVE_WORKSPACES_PER_USER and the deployment is under its daily cap.

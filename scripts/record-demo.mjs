@@ -1,25 +1,38 @@
-// Demo recorder. Default mode (Faris's laptop): resets the ledger, runs e2e in the
-// background, drives the tour, writes the MP4 to Downloads.
+// Technical demo for Colosseum. Shot list: docs/DEMO_SCRIPT.md.
 //
-// Cloud / "tour only" mode (no reset, no e2e, Playwright's bundled Chromium, output
-// relative to the repo at recordings/tiba-demo.mp4):
-//   DEMO_TOUR_ONLY=1 DEMO_BASE_URL=https://tiba-omega.vercel.app node scripts/record-demo.mjs
-// Needs: npm ci, npx playwright install --with-deps chromium, ffmpeg (+ffprobe) on PATH.
-// The ledger must already have a RED + PAID row pair.
+//   node scripts/record-demo.mjs --check --paid <url> --wrong-job <url> --overcharge <url>
+//   node scripts/record-demo.mjs --record --paid <url> --wrong-job <url> --overcharge <url>
+//
+// --check only opens pages and reads source files. It does not record and it does not pay.
+// --record writes recordings/tiba-technical-demo.mp4. It does not reset data and it does not pay.
+// The old tour, which resets the ledger, is --legacy-tour only.
+// Needs, for --check and --record: npm ci, npx playwright install --with-deps chromium.
+// --record also needs ffmpeg and ffprobe.
 import { spawn } from "node:child_process";
 import { createWriteStream, existsSync, mkdirSync, readdirSync, renameSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import {
+  BEATS,
+  RECORD_END_MS,
+  assessShots,
+  demoShots,
+  explorerShot,
+  formatResult,
+  parseDemoArgs,
+  readSource,
+  solanaDevnetExplorerHref,
+  sourceCard,
+  sourceShots,
+  usage
+} from "./demo-shots.mjs";
 
-const tourOnly = Boolean(process.env.DEMO_TOUR_ONLY);
-const baseUrl = process.env.DEMO_BASE_URL ?? "https://tiba-omega.vercel.app";
+let tourOnly = false;
+let baseUrl = "https://tiba.rizqey.com";
 const recordingsDir = resolve("recordings");
-const webmPath = join(recordingsDir, "tiba-demo.webm");
-const mp4Dir = "C:/Users/diony/Downloads/Hackathons/MUBA";
-const mp4Path = tourOnly ? join(recordingsDir, "tiba-demo.mp4") : join(mp4Dir, "tiba-demo.mp4");
+let webmPath = join(recordingsDir, "tiba-demo.webm");
+let mp4Path = join(recordingsDir, "tiba-demo.mp4");
 const viewport = { width: 1280, height: 720 };
-
-mkdirSync(recordingsDir, { recursive: true });
-if (!tourOnly) mkdirSync(mp4Dir, { recursive: true });
 
 let start = Date.now();
 const missed = [];
@@ -166,14 +179,208 @@ function latestWebm() {
   return join(recordingsDir, files[0].file);
 }
 
-async function main() {
+async function loadChromium() {
   const { chromium } = await import("playwright").catch(async () => {
     console.log("playwright package not resolved; falling back to @playwright/test");
     return import("@playwright/test");
   });
+  return chromium;
+}
 
-  // NOTE: this wipes the live ledger. demo:reset AND the e2e run's seed() both deleteMany
-  // every table and recreate the demo data; the site ends with the fresh RED + PAID pair.
+function launchOptions() {
+  const executablePath = process.env.PW_CHROME || undefined;
+  return {
+    ...(executablePath ? { executablePath } : {}),
+    headless: true,
+    args: ["--disable-dev-shm-usage", "--disable-gpu", "--no-sandbox"]
+  };
+}
+
+async function readPage(page, shot) {
+  const response = await page.goto(shot.url, { waitUntil: "domcontentloaded", timeout: 30000 });
+  if (shot.id === "payer-record") {
+    await page.getByText("Payer's record").first().waitFor({ timeout: 15000 });
+  }
+  const text = await page.locator("body").innerText({ timeout: 15000 });
+  return { text, url: page.url(), status: response?.status() ?? 0, html: await page.content() };
+}
+
+async function checkTechnical(config) {
+  const chromium = await loadChromium();
+  const browser = await chromium.launch(launchOptions());
+  const page = await browser.newPage({ viewport });
+  activeBrowser = browser;
+  const { pages } = demoShots(config);
+  const results = [];
+  try {
+    for (const shot of pages) {
+      const load = async (item) => readPage(page, item);
+      const [result] = await assessShots([shot], load);
+      results.push(result);
+      if (shot.id === "paid" && result.ok) {
+        const href = solanaDevnetExplorerHref(await page.content(), page.url());
+        if (!href) {
+          results.push({
+            id: "explorer",
+            ok: false,
+            url: page.url(),
+            missing: [],
+            forbidden: [],
+            urlMissing: [],
+            error: "The paid receipt has no Solana devnet explorer link."
+          });
+        } else {
+          const [explorer] = await assessShots([explorerShot(href)], load);
+          results.push(explorer);
+        }
+      }
+    }
+    results.push(...await assessShots(sourceShots(), async (shot) => readSource(shot)));
+  } finally {
+    await browser.close();
+    activeBrowser = undefined;
+  }
+
+  for (const result of results) console.log(formatResult(result));
+  if (results.some((result) => !result.ok)) process.exitCode = 1;
+}
+
+async function injectBanner(context) {
+  await context.addInitScript(() => {
+    const paint = () => {
+      if (document.getElementById("__demo_banner")) return;
+      const bar = document.createElement("div");
+      bar.id = "__demo_banner";
+      bar.textContent = "Test network, no real money";
+      bar.style.cssText = "position:fixed;left:16px;bottom:16px;z-index:2147483646;background:#1c1917;color:#fafaf9;font:600 14px/1.2 system-ui,sans-serif;padding:8px 12px;border-radius:999px;pointer-events:none;";
+      document.documentElement.appendChild(bar);
+    };
+    if (document.readyState === "loading") window.addEventListener("DOMContentLoaded", paint);
+    else paint();
+  });
+}
+
+async function showSource(page, id) {
+  const shot = sourceShots().find((item) => item.id === id);
+  await page.setContent(sourceCard(shot), { waitUntil: "domcontentloaded" });
+  await page.locator(".hit").scrollIntoViewIfNeeded();
+}
+
+async function recordTechnical(config) {
+  mkdirSync(recordingsDir, { recursive: true });
+  webmPath = join(recordingsDir, "tiba-technical-demo.webm");
+  mp4Path = join(recordingsDir, "tiba-technical-demo.mp4");
+  const { pages } = demoShots(config);
+  const pageUrl = (id) => pages.find((shot) => shot.id === id).url;
+  const chromium = await loadChromium();
+  const browser = await chromium.launch(launchOptions());
+  const context = await browser.newContext({
+    viewport,
+    deviceScaleFactor: 1,
+    recordVideo: { dir: recordingsDir, size: viewport }
+  });
+  activeBrowser = browser;
+  activeContext = context;
+  await injectCursor(context);
+  await injectBanner(context);
+  const page = await context.newPage();
+  start = Date.now();
+
+  const runs = {
+    home: async () => {
+      await page.goto(pageUrl("home"), { waitUntil: "domcontentloaded" });
+      await page.getByText("test network").first().scrollIntoViewIfNeeded();
+    },
+    "payer-record": async () => {
+      await page.goto(pageUrl("payer-record"), { waitUntil: "domcontentloaded" });
+      await page.getByText("Payer's record").first().scrollIntoViewIfNeeded();
+    },
+    paid: async () => {
+      await page.goto(pageUrl("paid"), { waitUntil: "domcontentloaded" });
+      await page.getByText("your own records").first().scrollIntoViewIfNeeded();
+    },
+    explorer: async () => {
+      const href = solanaDevnetExplorerHref(await page.content(), page.url());
+      if (!href) throw new Error("The paid receipt has no Solana devnet explorer link.");
+      await page.goto(href, { waitUntil: "domcontentloaded", timeout: 30000 });
+    },
+    "wrong-job": async () => {
+      await page.goto(pageUrl("wrong-job"), { waitUntil: "domcontentloaded" });
+      await page.getByText("The bill").first().scrollIntoViewIfNeeded();
+    },
+    overcharge: async () => {
+      await page.goto(pageUrl("overcharge"), { waitUntil: "domcontentloaded" });
+      await page.getByText("The bill").first().scrollIntoViewIfNeeded();
+    },
+    prompt: async () => showSource(page, "prompt"),
+    models: async () => showSource(page, "models"),
+    rails: async () => {
+      await showSource(page, "rails");
+      await page.waitForTimeout(5000);
+      await page.goto(pageUrl("home"), { waitUntil: "domcontentloaded" });
+      await page.getByText("Built and tested, not live").first().scrollIntoViewIfNeeded();
+    },
+    close: async () => {
+      await page.goto(pageUrl("home"), { waitUntil: "domcontentloaded" });
+      await page.getByText("no real money").first().scrollIntoViewIfNeeded();
+    }
+  };
+
+  for (const beat of BEATS) {
+    await waitUntil(beat.atMs);
+    logBeat(beat.id);
+    try {
+      await runs[beat.id]();
+    } catch (error) {
+      missed.push(`${beat.id}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  await waitUntil(RECORD_END_MS);
+  const video = page.video();
+  await context.close();
+  await browser.close();
+  activeContext = undefined;
+  activeBrowser = undefined;
+  const recorded = await video.path();
+  if (existsSync(webmPath)) renameSync(webmPath, join(recordingsDir, `tiba-technical-demo-${Date.now()}.webm`));
+  renameSync(recorded, webmPath);
+  await run("ffmpeg", ["-y", "-i", webmPath, "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23", "-r", "30", "-pix_fmt", "yuv420p", mp4Path]);
+  console.log("MP4:", mp4Path);
+  const duration = await new Promise((resolveDuration, rejectDuration) => {
+    const child = spawn("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", mp4Path], { shell: false });
+    let out = "";
+    child.stdout.on("data", (chunk) => { out += chunk; });
+    child.on("error", rejectDuration);
+    child.on("exit", (code) => {
+      if (code === 0) resolveDuration(Number(out.trim()));
+      else rejectDuration(new Error(`ffprobe exited ${code}`));
+    });
+  });
+  if (!(duration < 180)) {
+    missed.push(`video is ${duration.toFixed(1)}s, which is not under 3:00`);
+  }
+  if (missed.length) {
+    console.log("Missed beats:");
+    for (const item of missed) console.log(`- ${item}`);
+    process.exitCode = 1;
+  }
+}
+
+async function legacyTour() {
+  // This wipes the ledger. demo:reset and the e2e seed both delete rows.
+  // DEMO_TOUR_ONLY skips both. Do not use this for the Colosseum technical demo.
+  tourOnly = Boolean(process.env.DEMO_TOUR_ONLY);
+  baseUrl = process.env.DEMO_BASE_URL ?? "https://tiba-omega.vercel.app";
+  webmPath = join(recordingsDir, "tiba-demo.webm");
+  const mp4Dir = "C:/Users/diony/Downloads/Hackathons/MUBA";
+  mp4Path = tourOnly ? join(recordingsDir, "tiba-demo.mp4") : join(mp4Dir, "tiba-demo.mp4");
+  mkdirSync(recordingsDir, { recursive: true });
+  if (!tourOnly) mkdirSync(mp4Dir, { recursive: true });
+
+  const chromium = await loadChromium();
+
+  // NOTE: this empties every table. For a non-local database, ALLOW_DB_WIPE must equal the
+  // database host before demo:reset or the e2e run's seed() will proceed.
   // DEMO_TOUR_ONLY skips both: the ledger already has rows.
   if (tourOnly) {
     console.log("DEMO_TOUR_ONLY set: skipping demo:reset and e2e");
@@ -304,9 +511,36 @@ async function main() {
   e2e?.kill();
 }
 
-main().catch(async (error) => {
-  console.error(error);
-  await activeContext?.close().catch(() => {});
-  await activeBrowser?.close().catch(() => {});
-  process.exit(1);
-});
+async function main() {
+  const config = parseDemoArgs(process.argv.slice(2), process.env);
+  if (config.mode === "help") {
+    console.log(usage());
+    return;
+  }
+  if (config.mode === "usage" || config.errors.length) {
+    console.log(usage());
+    for (const error of config.errors) console.error(error);
+    process.exitCode = 1;
+    return;
+  }
+  if (config.mode === "legacy-tour") {
+    await legacyTour();
+    return;
+  }
+  if (config.mode === "check") {
+    await checkTechnical(config);
+    return;
+  }
+  console.log("Recording the technical demo. No payment is created.");
+  await recordTechnical(config);
+}
+
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMain) {
+  main().catch(async (error) => {
+    console.error(error);
+    await activeContext?.close().catch(() => {});
+    await activeBrowser?.close().catch(() => {});
+    process.exit(1);
+  });
+}

@@ -1,19 +1,26 @@
 import { createHash } from "node:crypto";
 
-const API_URL = "https://api.gonkarouter.io/v1/chat/completions";
+const API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const TIMEOUT_MS = 60_000;
-// Measured 30 Aug 2026 on the live router with the real prompts:
-//   DeepSeek + json_schema: clean 47-token JSON; 18.8s cold, 0.4s on a
-//     cached identical request. The only reliably valid reader.
-//   Kimi + json_schema: sometimes clean, sometimes whitespace-padded; without
-//     the schema it reasons in prose and overruns max_tokens.
-//   MiniMax: emits <think>... before any JSON and overruns. Not usable here.
-// Per-request latency on Gonka nodes swings 10x for the same model, so each
-// channel HEDGES: both candidates are fired together and the first
-// schema-valid answer wins (see runGonka). Tokens are free for the event.
-const CANDIDATES: Record<GonkaChannel, [string, string]> = {
-  artifact: ["moonshotai/Kimi-K2.6", "deepseek-ai/DeepSeek-V4-Flash-0731"],
-  payer_record: ["deepseek-ai/DeepSeek-V4-Flash-0731", "moonshotai/Kimi-K2.6"]
+// Switched off Gonka's router 19 Sep 2026: live tested with a trivial one-word
+// prompt and it burned its whole token budget on repeated garbage, confirming
+// the reliability problems the old hedging/repair logic below was already
+// compensating for. Moved to Groq, verified live 19 Sep against the real
+// artifact_decision schema and system prompt: clean, correct JSON, right
+// USDC-to-micros conversion, no fabrication.
+//   openai/gpt-oss-120b + json_schema: clean, correct on the real schema. Note
+//     it reasons before answering (like a <think> model) - give it real
+//     max_tokens headroom or it truncates mid-reasoning with empty content.
+//   qwen/qwen3.8-27b + json_schema: clean, correct, no reasoning preamble.
+// Keeping the hedge-both-candidates pattern even though Groq is far more
+// reliable than Gonka was - cheap insurance, and it costs nothing extra since
+// Groq's free tier is uncapped for this account.
+// Each channel has its own primary maker. The second id is the fallback, used
+// only when the primary does not return schema-valid JSON. Artifact asks
+// OpenAI first; the payer's record asks Alibaba first.
+export const CANDIDATES: Record<GonkaChannel, [string, string]> = {
+  artifact: ["openai/gpt-oss-120b", "qwen/qwen3.8-27b"],
+  payer_record: ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"]
 };
 const PRIMARY: Record<GonkaChannel, string> = { artifact: CANDIDATES.artifact[0], payer_record: CANDIDATES.payer_record[0] };
 const SCHEMA_FREE = new Set<string>();
@@ -141,9 +148,10 @@ async function requestOnce(
     if (!response) throw lastError ?? new Error('router unreachable');
     const latencyMs = Date.now() - started;
     const requestId = response.headers.get("x-request-id") ?? undefined;
-    // Gonka substitutes a saturated model rather than failing the request, and says so
-    // only in this header. Isolation here is by evidence, not by model, so a substitution
-    // is not a refusal - but it must be recorded and shown, never silently absorbed.
+    // Groq serves the exact model requested and does not silently substitute a
+    // different one, unlike Gonka's router. This header will not fire on Groq;
+    // kept so the field stays populated (and shown on the receipt) if a future
+    // provider does substitute models, rather than silently dropping the check.
     const fallback = response.headers.get("x-gonka-fallback") ?? undefined;
     if (!response.ok) return { status: response.status, result: { ok: false, model, requestId, fallback, latencyMs, errorCode: "REQUEST_REJECTED" } };
     const body: unknown = await response.json();
@@ -173,14 +181,16 @@ export interface GonkaRequest {
 }
 
 /**
- * Hedged dispatch. Both candidate models for the channel are fired at once and
- * the first schema-valid result wins; the other call is left to finish (it only
- * updates `health`). If neither validates, one repair prompt is sent to the
- * primary; if that fails too, the channel is unavailable / schema-invalid and
- * the caller treats it as AMBER. 400/401 are never retried.
+ * Both candidate models for the channel are fired at once. The primary is kept
+ * whenever it returns schema-valid JSON, even if the fallback answered first,
+ * so the channel stays with its own maker. The fallback is the answer only when
+ * the primary does not validate. If neither validates, one repair prompt is
+ * sent to the primary. Per-call retry and schema checks are unchanged. 400/401
+ * are never retried. The call that does not win is left to finish (it only
+ * updates `health`).
  */
 export async function runGonka(request: GonkaRequest): Promise<GonkaResult> {
-  const apiKey = process.env.GONKA_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   const [primary, secondary] = CANDIDATES[request.channel];
   if (!apiKey) return { ok: false, model: primary, latencyMs: 0, errorCode: "INFERENCE_UNAVAILABLE" };
   const fetcher = request.fetcher ?? fetch;
@@ -198,7 +208,13 @@ export async function runGonka(request: GonkaRequest): Promise<GonkaResult> {
       }, () => { if (--pending === 0) resolve(null); });
     }
   });
-  if (firstValid?.result?.ok) return firstValid.result;
+  if (firstValid?.result?.ok) {
+    if (firstValid.model !== primary) {
+      const preferred = await attempts[0];
+      if (preferred.result?.ok) return preferred.result;
+    }
+    return firstValid.result;
+  }
 
   const settled = await Promise.all(attempts.map((a) => a.catch(() => null)));
   const hardStop = settled.find((r) => r && (r.status === 400 || r.status === 401));

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tiba-revocation-list-v0.1.schema.json",
+  "title": "Tiba Revocation List v0.1",
+  "description": "A signed list published by a mandate's configured revocation authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "version", "id", "issuer", "list_id", "issued_at", "revoked", "signature"],
+  "properties": {
+    "type": { "const": "tiba.revocation_list" },
+    "version": { "const": "0.1" },
+    "id": { "$ref": "#/$defs/id" },
+    "issuer": { "$ref": "#/$defs/did_key" },
+    "list_id": { "$ref": "#/$defs/id" },
+    "issued_at": { "$ref": "#/$defs/timestamp" },
+    "next_update": { "$ref": "#/$defs/timestamp" },
+    "revoked": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mandate_id", "revoked_at"],
+        "properties": {
+          "mandate_id": { "$ref": "#/$defs/id" },
+          "revoked_at": { "$ref": "#/$defs/timestamp" },
+          "reason": { "type": "string", "maxLength": 256 }
+        }
+      }
+    },
+    "signature": { "$ref": "#/$defs/signature" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "did_key": {
+      "type": "string",
+      "pattern": "^did:key:z[1-9A-HJ-NP-Za-km-z]+$",
+      "maxLength": 128
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$",
+      "maxLength": 24
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alg", "kid", "value"],
+      "properties": {
+        "alg": { "const": "Ed25519" },
+        "kid": { "$ref": "#/$defs/did_key" },
+        "value": { "type": "string", "pattern": "^[A-Za-z0-9_-]{86}$" }
+      }
+    }
+  }
+}

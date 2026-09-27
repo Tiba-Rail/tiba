@@ -178,7 +178,7 @@ export default async function LedgerPage({
                       {disagreement ?? statusSentence(intent)}
                     </p>
                   </Link>
-                  <p className="num shrink-0 font-medium">{formatDollars(intent.amountMicros)}</p>
+                  <p className="num shrink-0 font-medium">{intent.decisionClass !== "PAID" && intent.amountMicros === 0n ? "—" : formatDollars(intent.amountMicros)}</p>
                   <div className="flex shrink-0 items-center gap-3 text-sm">
                     <span className={`font-medium ${status.cls}`}>{status.word}</span>
                     <span className="text-muted" title={intent.createdAt.toISOString()}>

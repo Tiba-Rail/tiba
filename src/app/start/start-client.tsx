@@ -22,7 +22,7 @@ const CHAIN = chainName(defaultPublicChain);
 
 type Tab = "curl" | "mcp" | "telegram";
 
-export function StartClient() {
+export function StartClient({ signupRef = null }: { signupRef?: string | null }) {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,7 +40,7 @@ export function StartClient() {
       const response = await fetch("/api/v1/workspaces", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, [ADDRESS_KEY]: address.trim() || undefined })
+        body: JSON.stringify({ name, [ADDRESS_KEY]: address.trim() || undefined, ...(signupRef ? { ref: signupRef } : {}) })
       });
       const payload = await response.json().catch(() => ({ error: "UNKNOWN" })) as { error?: string } & Partial<WorkspaceResult>;
       if (!response.ok) {
@@ -69,11 +69,15 @@ export function StartClient() {
 
   const base = typeof window !== "undefined" ? window.location.origin : "";
 
-  const curlCommand = result
-    ? `curl -X POST "${base}/api/v1/intents" \\
+  // Per-workspace idempotency keys: the lookup is global, so a fixed key would hand
+  // every later team the first team's receipt.
+  const curlFor = (key: string, amount: string) => `curl -X POST "${base}/api/v1/intents" \\
   -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${result.agent_key}" \\
-  -d '{"idempotency_key":"onboarding-try-1","recipient_ref":"${result.recipient_ref}","artifact":"DELIVERY NOTE\\nWork order: ${result.work_order_ref}\\nDelivered: first invoice, accepted.\\nAmount due: 5.00 USDC\\nSigned: onboarding"}'`
+  -H "Authorization: Bearer ${result!.agent_key}" \\
+  -d '{"idempotency_key":"${key}","recipient_ref":"${result!.recipient_ref}","artifact":"DELIVERY NOTE\\nWork order: ${result!.work_order_ref}\\nDelivered: first invoice, accepted.\\nAmount due: ${amount} USDC\\nSigned: onboarding"}'`;
+
+  const curlCommand = result
+    ? `# 1. A bill whose amount doesn't match your record (4.00 vs 5.00). Tiba should refuse it.\n${curlFor(`onboarding-${result.workspace_id}-wrong`, "4.00")}\n\n# 2. The right bill (5.00). Tiba should pay it.\n${curlFor(`onboarding-${result.workspace_id}-right`, "5.00")}`
     : "";
 
   const mcpSnippet = result
@@ -83,7 +87,7 @@ export function StartClient() {
             { name: "list_work_orders", description: "List the invoices awaiting delivery that your software may pay against." },
             { name: "list_recipients", description: "List saved recipients." },
             { name: "get_budget", description: "Read the software's spending limits and current usage." },
-            { name: "submit_payment", description: "Attempt a payment. Two checks must agree on the invoice and amount." },
+            { name: "submit_payment", description: "Attempt a payment. Checked against the invoice and amount: one check under $50, two must agree $50-$250, a person decides above that." },
             { name: "get_last_decision", description: "Get the result of the most recent payment attempt." },
             { name: "list_ledger", description: "Get the payment history." }
           ],
@@ -140,7 +144,7 @@ export function StartClient() {
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder={typeof window !== "undefined" ? "Defaults to the deployment address" : ""}
+                placeholder="Defaults to the deployment address"
                 autoComplete="off"
                 spellCheck={false}
               />
@@ -230,7 +234,7 @@ export function StartClient() {
             <div className="mt-4 card p-5">
               {tab === "curl" && (
                 <div className="space-y-3">
-                  <p className="text-sm text-muted">A ready POST to <code className="text-xs">/api/v1/intents</code> with your key filled in.</p>
+                  <p className="text-sm text-muted">Two ready POSTs to <code className="text-xs">/api/v1/intents</code> with your key filled in. Run them in order: the wrong bill first (Tiba refuses it), then the right one (Tiba pays it). A refusal doesn't use up the invoice; a payment does.</p>
                   <pre className="overflow-x-auto rounded bg-background p-3 text-xs">{curlCommand}</pre>
                   <button type="button" className="btn btn-secondary" onClick={() => copy(curlCommand, "curl")}>
                     {copied === "curl" ? "Copied" : "Copy curl"}

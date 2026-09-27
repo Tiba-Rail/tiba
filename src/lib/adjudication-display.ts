@@ -1,4 +1,4 @@
-import { microsToUsdc } from "@/lib/money";
+import { microsToUsdc } from "./money.ts";
 
 export type ChannelTuple = { workOrderId: string; amount: string } | null;
 

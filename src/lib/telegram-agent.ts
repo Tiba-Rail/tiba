@@ -1,9 +1,10 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { Agent } from "@prisma/client";
 import { PublicKey } from "@solana/web3.js";
 import { prisma } from "@/lib/db";
 import { demoWorkspace } from "@/lib/operator-auth";
 import { processPayoutIntent } from "@/lib/payout-intent";
+import { requiredChannelsForAmount } from "@/lib/reconcile";
 
 // The Telegram agent used to run as a laptop process polling Telegram. It lives here now,
 // so it is up whenever Tiba is up. Every step the user sees is a separate message: this is
@@ -215,16 +216,23 @@ async function pay(chatId: string, agent: Agent, recipientRef: string, workOrder
     "Signed: site supervisor"
   ].join("\n");
 
+  const expectedAmount = amountUsdc > 0 ? amountUsdc : 5;
+  const requiredChannels = requiredChannelsForAmount(BigInt(Math.round(expectedAmount * 1_000_000)));
+  const firstCheckLine =
+    requiredChannels === "human"
+      ? "Over $250 — this needs a person to decide, not a check."
+      : requiredChannels === "both"
+        ? "Two checks run, each reading a different source. Neither sees the other's answer."
+        : "Under $50 — one check, against your own record.";
+
   let result = null as Awaited<ReturnType<typeof processPayoutIntent>> | null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     await send(
       chatId,
-      attempt === 1
-        ? "Two checks running through GonkaRouter. Neither sees the other's answer."
-        : `A check did not come back. Running them again (${attempt}/3).`
+      attempt === 1 ? firstCheckLine : `A check did not come back. Running them again (${attempt}/3).`
     );
     result = await processPayoutIntent(agent, {
-      idempotency_key: `tg-${Date.now()}-${attempt}`,
+      idempotency_key: `tg-${randomUUID()}`,
       artifact,
       recipient_ref: recipientRef
     });

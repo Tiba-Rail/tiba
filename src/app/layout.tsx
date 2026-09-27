@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
+import { SiteFooter } from "@/components/site-footer";
 import { SolanaProviders } from "@/components/solana-providers";
 import "./globals.css";
 
@@ -13,9 +14,24 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Tiba — a wallet for software",
+  metadataBase: new URL("https://tiba.rizqey.com"),
+  title: "Tiba — the check before an agent's payment goes out",
   description:
-    "Tiba is a wallet for software: it pays people on your behalf, within your limits, and only after two separate checks agree on the job and the amount. Disagreement is a refusal, not a guess."
+    "The check before an AI agent's payment goes out. It reads the bill against your own record, pays only when they match, and refuses — with a receipt — when they don't.",
+  openGraph: {
+    title: "Tiba — the check before an agent's payment goes out",
+    description:
+      "The check before an AI agent's payment goes out. It reads the bill against your own record, pays only when they match, and refuses — with a receipt — when they don't.",
+    url: "https://tiba.rizqey.com",
+    siteName: "Tiba",
+    type: "website"
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tiba — the check before an agent's payment goes out",
+    description:
+      "The check before an AI agent's payment goes out. It reads the bill against your own record, pays only when they match, and refuses — with a receipt — when they don't."
+  }
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -25,7 +41,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${inter.variable} ${jetbrains.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <SolanaProviders>{children}</SolanaProviders>
+        <SolanaProviders>
+          {children}
+          <SiteFooter />
+        </SolanaProviders>
       </body>
     </html>
   );

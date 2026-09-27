@@ -4,7 +4,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { setOwnerCookie } from "@/lib/operator-auth";
 import { isSolanaAddress } from "@/lib/rails/solana";
-import { clientIp, onboardingRail, rateLimit } from "@/lib/rate-limit";
+import { clientIp, onboardingRail, rateLimit, workspaceBudgetExceeded } from "@/lib/rate-limit";
+import { signupRefFrom } from "@/lib/signup-ref";
 export const runtime = "nodejs";
 const MICROS_PER_USDC = 1_000_000n;
 // Live (treasury-backed) workspaces the whole deployment may create per 24 hours. Sign-in accepts
@@ -26,11 +27,14 @@ export async function POST(request: NextRequest) {
   // ponytail: count-then-create is not atomic, so simultaneous sign-ups can pass a cap by a few
   // (they are still rate limited). Take a Postgres advisory lock if that ever matters.
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  // Deployment-wide, from the database: the per-IP limiter above only counts on one instance.
+  const createdLastHour = await prisma.agent.count({ where: { createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } } });
+  if (workspaceBudgetExceeded(createdLastHour)) return NextResponse.json({ error: "RATE_LIMITED", retry_after: 3600 }, { status: 429 });
   const [userLiveWorkspaces, liveWorkspacesToday] = userId ? await Promise.all([prisma.agent.count({ where: { userId, rail: "solana" } }), prisma.agent.count({ where: { rail: "solana", userId: { not: null }, createdAt: { gte: since } } })]) : [0, 0];
   const rail = onboardingRail({ signedIn: Boolean(userId), userLiveWorkspaces, liveWorkspacesToday, dailyCap: LIVE_ONBOARDING_DAILY_CAP });
-  const suffix = randomBytes(4).toString("hex"); const agentKey = makeKey("tiba_live_"); const ownerKey = makeKey("tiba_owner_"); const now = new Date(); const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const suffix = randomBytes(4).toString("hex"); const agentKey = makeKey("tiba_live_"); const ownerKey = makeKey("tiba_owner_"); const now = new Date(); const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); const signupRef = signupRefFrom(body.ref);
   const createWorkspace = () => prisma.$transaction(async (tx) => {
-    const agent = await tx.agent.create({ data: { name, apiKeyHash: agentKey.hash, apiKeyPrefix: agentKey.keyPrefix, ownerTokenHash: ownerKey.hash, ownerTokenPrefix: ownerKey.keyPrefix, ceilingMicros: 5n * MICROS_PER_USDC, hourCapMicros: 10n * MICROS_PER_USDC, dayCapMicros: 20n * MICROS_PER_USDC, hourCountCap: 5, dayCountCap: 20, killSwitch: false, requireRecipientKyc: false, rail, ...(userId ? { userId } : {}) } });
+    const agent = await tx.agent.create({ data: { name, apiKeyHash: agentKey.hash, apiKeyPrefix: agentKey.keyPrefix, ownerTokenHash: ownerKey.hash, ownerTokenPrefix: ownerKey.keyPrefix, ceilingMicros: 5n * MICROS_PER_USDC, hourCapMicros: 10n * MICROS_PER_USDC, dayCapMicros: 20n * MICROS_PER_USDC, hourCountCap: 5, dayCountCap: 20, killSwitch: false, requireRecipientKyc: false, rail, signupRef, ...(userId ? { userId } : {}) } });
     const recipient = await tx.recipient.create({ data: { id: `recipient-${suffix}`, ref: `owner-${suffix}`, displayName: "Example recipient", solanaAddress, active: true, kycStatus: "verified", kycProvider: "onboarding", kycVerifiedAt: now, agentId: agent.id } });
     await tx.workOrder.create({ data: { id: `work-order-${suffix}`, recipientId: recipient.id, ref: `WO-${suffix.toUpperCase()}`, ceilingMicros: 5n * MICROS_PER_USDC, briefText: "First invoice for your new wallet.", payerRecord: { approved_amount_micros: "5000000", delivery_status: "verified_complete", source: "onboarding" }, requiredChannels: "both", expiresAt, status: "open" } });
     return [agent, recipient] as const;

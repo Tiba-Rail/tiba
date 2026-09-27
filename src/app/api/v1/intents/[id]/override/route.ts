@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getGnkUsdRate } from "@/lib/gonka-pricing";
 import { resolveOperatorAgent } from "@/lib/operator-auth";
+import { committedPendingData, settleCommittedIntent } from "@/lib/payout-settlement";
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
-import { chainForRecipient, executionFailedCode, PayoutRailError, payoutRail, settledChain } from "@/lib/rails";
+import { chainForRecipient, payoutRail, recipientAddressReason, settledChain } from "@/lib/rails";
 
 export const runtime = "nodejs";
 
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!target) {
     const updated = await prisma.payoutIntent.update({
       where: { id: intent.id },
-      data: { status: "refused", decisionClass: "RED", reasonCode: "RECIPIENT_NEEDS_SOLANA_ADDRESS", ...pricing }
+      data: { status: "refused", decisionClass: "RED", reasonCode: recipientAddressReason(), ...pricing }
     });
     return NextResponse.json({ id: updated.id, decision_class: updated.decisionClass, reason_code: updated.reasonCode });
   }
@@ -102,9 +103,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     return NextResponse.json({ id: updated.id, decision_class: updated.decisionClass, reason_code: updated.reasonCode });
   }
 
-  let updated;
+  // Step 1, committed before any money moves: the debit, the discharge, the intent marked pending.
+  let committed;
   try {
-    updated = await prisma.$transaction(async (tx) => {
+    committed = await prisma.$transaction(async (tx) => {
       const debit = await debitAtomically(tx as unknown as SqlExecutor, intent.agent as AgentLimits, tuple.amountMicros, now);
       if (!debit.ok) {
         return tx.payoutIntent.update({
@@ -141,31 +143,15 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           }
         });
       }
-      const receipt = await payoutRail(intent.agent.rail, target.chain).send({
-        recipientAddress: target.address,
-        amountMicros: tuple.amountMicros,
-        intentId: intent.id
-      });
-      if (!receipt.digest || !receipt.explorerUrl) {
-        throw new PayoutRailError(executionFailedCode(target.chain), "Settlement did not return a digest.");
-      }
       return tx.payoutIntent.update({
         where: { id: intent.id },
-        data: {
-          status: "settled",
-          decisionClass: "PAID",
-          reasonCode: "OWNER_OVERRIDE",
-          amountMicros: tuple.amountMicros,
-          workOrderId: workOrder!.id,
-          digest: receipt.digest,
-          explorerUrl: receipt.explorerUrl,
-          chain,
-          ...pricing
-        }
+        data: committedPendingData({ workOrderId: workOrder!.id, amountMicros: tuple.amountMicros, chain, pricing })
       });
-    }, { timeout: 120_000 });
-  } catch {
-    updated = await prisma.payoutIntent.update({
+    });
+  } catch (error) {
+    // The database did not commit anything: no debit, no discharge, nothing sent.
+    console.error(`[override] commit before settlement failed for intent ${intent.id}`, error);
+    committed = await prisma.payoutIntent.update({
       where: { id: intent.id },
       data: {
         status: "refused",
@@ -180,6 +166,21 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       }
     });
   }
+
+  // Step 2, outside any database transaction. A timeout leaves the intent pending with its
+  // transaction id and the invoice closed; only a proven failure reopens it.
+  if (committed.status === "processing") {
+    await settleCommittedIntent(prisma, {
+      intentId: intent.id,
+      workOrderId: workOrder!.id,
+      amountMicros: tuple.amountMicros,
+      target,
+      rail: payoutRail(intent.agent.rail, target.chain),
+      paidReasonCode: "OWNER_OVERRIDE",
+      pricing
+    });
+  }
+  const updated = await prisma.payoutIntent.findUniqueOrThrow({ where: { id: intent.id } });
 
   return NextResponse.json({
     id: updated.id,

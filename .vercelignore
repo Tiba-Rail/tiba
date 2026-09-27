@@ -1,0 +1,11 @@
+# Local operator handoffs and QA artifacts are not part of the public deployment.
+AGENTS.md
+BRIEF_STANDARD.md
+CLAUDE.md
+PREVIEW_READY.txt
+STATUS_STANDARD.md
+QA_STANDARD.md
+err_standard.txt
+out_standard.md
+run_standard.bat
+shots/
