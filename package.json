@@ -64,7 +64,7 @@
     "postcss": "^8.5.26",
     "prisma": "^7.3.0",
     "tailwindcss": "^4.2.1",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   },
   "overrides": {
     "deepmerge-ts": "8.0.2",
