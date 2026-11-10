@@ -34,8 +34,8 @@ const WALL_SCOPE: Prisma.PayoutIntentWhereInput = {
   ]
 };
 
-async function loadRefusalWall(): Promise<RefusalWall> {
-  const [intents, groupedCounts, refusedAmounts] = await Promise.all([
+async function fetchWallRows() {
+  return Promise.all([
     prisma.payoutIntent.findMany({
       where: WALL_SCOPE,
       orderBy: { createdAt: "desc" },
@@ -58,6 +58,24 @@ async function loadRefusalWall(): Promise<RefusalWall> {
       _sum: { amountMicros: true }
     })
   ]);
+}
+
+async function loadRefusalWall(): Promise<RefusalWall> {
+  type WallQueryResult = Awaited<ReturnType<typeof fetchWallRows>>;
+  let intents: WallQueryResult[0] = [];
+  let groupedCounts: WallQueryResult[1] = [];
+  let refusedAmounts: WallQueryResult[2] = {
+    _count: { _all: 0 },
+    _sum: { amountMicros: null }
+  };
+  try {
+    [intents, groupedCounts, refusedAmounts] = await fetchWallRows();
+  } catch (err) {
+    // Datastore briefly unreachable (e.g. during a build with no DB reachable):
+    // render the existing empty-wall state rather than failing the page. On a
+    // live database this branch is never taken and the real figures are shown.
+    console.error("refusal wall: data unavailable, rendering empty wall", err);
+  }
 
   const totals: RefusalWallTotals = {
     checksRun: groupedCounts.reduce((sum, row) => sum + row._count._all, 0),

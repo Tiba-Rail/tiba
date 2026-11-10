@@ -14,8 +14,11 @@ function requestIdFor(adjudications: Array<{ channel: string; requestId: string 
   return adjudications.find((row) => row.channel === channel)?.requestId ?? "missing";
 }
 
-export default async function Home() {
-  const [paidIntent, refusedIntent] = await Promise.all([
+// Read the pinned demo payment and a matching refusal. These are read-only
+// marketing examples; if the datastore is briefly unreachable we degrade to the
+// existing empty-state card rather than failing the whole page with a 500.
+async function loadDemoIntents() {
+  return Promise.all([
     prisma.payoutIntent.findUnique({
       where: { id: EXAMPLE_PAID_INTENT_ID },
       include: { adjudications: { orderBy: { createdAt: "asc" } } }
@@ -28,6 +31,16 @@ export default async function Home() {
       orderBy: { createdAt: "desc" }
     })
   ]);
+}
+
+export default async function Home() {
+  let paidIntent: Awaited<ReturnType<typeof loadDemoIntents>>[0] = null;
+  let refusedIntent: Awaited<ReturnType<typeof loadDemoIntents>>[1] = null;
+  try {
+    [paidIntent, refusedIntent] = await loadDemoIntents();
+  } catch (err) {
+    console.error("home: demo intents unavailable, rendering empty state", err);
+  }
 
   const refusedCard = homepageRefusedCard(refusedIntent);
 
@@ -71,8 +84,8 @@ export default async function Home() {
           </div>
         </header>
 
-        <section className="border-t border-line pt-12">
-          <p className="eyebrow">A real example</p>
+        <section className="border-t border-line pt-12" aria-labelledby="sec-example">
+          <h2 id="sec-example" className="eyebrow">A real example</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             {refusedCard ? (
               <div className="card p-5">
@@ -120,8 +133,8 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="border-t border-line pt-12">
-          <p className="eyebrow">Eval of an earlier build, 29 Aug 2026, on a mock settlement rail. Not live figures.</p>
+        <section className="border-t border-line pt-12" aria-labelledby="sec-eval">
+          <h2 id="sec-eval" className="eyebrow">Eval of an earlier build, 29 Aug 2026, on a mock settlement rail. Not live figures.</h2>
           <div className="mt-6 grid grid-cols-2 gap-8 md:grid-cols-4">
             <div>
               <p className="num display-l">20 / 20</p>
@@ -148,8 +161,8 @@ export default async function Home() {
           </p>
         </section>
 
-        <section className="border-t border-line pt-12">
-          <p className="eyebrow">Your control, made explicit</p>
+        <section className="border-t border-line pt-12" aria-labelledby="sec-control">
+          <h2 id="sec-control" className="eyebrow">Your control, made explicit</h2>
           <div className="mt-6 grid grid-cols-2 gap-8 md:grid-cols-4">
             <div>
               <p className="num display-l">01</p>
@@ -170,8 +183,8 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="border-t border-line pt-12">
-          <p className="eyebrow">How it works</p>
+        <section className="border-t border-line pt-12" aria-labelledby="sec-how">
+          <h2 id="sec-how" className="eyebrow">How it works</h2>
           <ol className="mt-8 grid gap-8 md:grid-cols-3">
             <li>
               <p className="num text-sm text-muted">01</p>
@@ -208,8 +221,8 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="border-t border-line pt-12">
-          <p className="eyebrow">Signed outcomes</p>
+        <section className="border-t border-line pt-12" aria-labelledby="sec-outcomes">
+          <h2 id="sec-outcomes" className="eyebrow">Signed outcomes</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <div className="card p-5">
               <span className="pill pill-paid">Recorded</span>
@@ -232,14 +245,14 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="border-t border-line pt-12">
-          <p className="eyebrow">Who this is for</p>
+        <section className="border-t border-line pt-12" aria-labelledby="sec-who">
+          <h2 id="sec-who" className="eyebrow">Who this is for</h2>
           <p className="lede mt-4 max-w-[60ch]">
             Communities and grant programs on Solana that pay contributors and bounties. An agent
             pays a contributor; Tiba reads the claim against the bounty and the record, pays or
             refuses, leaves a receipt either way.
           </p>
-          <p className="eyebrow mt-10">One check, any rail</p>
+          <h3 className="eyebrow mt-10">One check, any rail</h3>
           <div className="mt-6 grid gap-6 md:grid-cols-3">
             <div>
               <p className="lede">

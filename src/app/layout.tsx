@@ -41,6 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${inter.variable} ${jetbrains.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <body className="min-h-full">
+        <a href="#main" className="skip-link">Skip to content</a>
         <SolanaProviders>
           {children}
           <SiteFooter />

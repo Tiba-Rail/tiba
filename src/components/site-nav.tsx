@@ -33,7 +33,15 @@ export async function SiteNav({ current }: SiteNavProps) {
 }
 
 async function KillSwitchBanner() {
-  const agent = await prisma.agent.findFirst({ orderBy: { createdAt: "asc" } });
+  let agent = null;
+  try {
+    agent = await prisma.agent.findFirst({ orderBy: { createdAt: "asc" } });
+  } catch {
+    // Datastore briefly unreachable: this is a display-only banner, and payment
+    // refusal is enforced in the payout path, not here. Render nothing rather
+    // than failing the surrounding page.
+    agent = null;
+  }
   if (!agent?.killSwitch) return null;
   return (
     <div className="bg-refused py-2 text-center text-sm font-medium text-surface">
