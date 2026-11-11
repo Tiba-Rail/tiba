@@ -254,6 +254,11 @@ async function pay(chatId: string, agent: Agent, recipientRef: string, workOrder
       chatId,
       `Both agree. Limits passed.\nPaid ${paid} USDC to ${recipientRef}.${result.digest ? `\nSolana: ${result.digest}` : ""}${receipt}`
     );
+  } else if (result.status === "pending_confirmation") {
+    await send(
+      chatId,
+      `Both agree. Limits passed. Transfer sent, waiting for a second RPC to confirm.${result.digest ? `\nSolana: ${result.digest}` : ""}${receipt}`
+    );
   } else if (String(result.reasonCode ?? "").startsWith("QUORUM_SPLIT")) {
     await send(chatId, `The two checks disagree. Nothing moved.${receipt}`);
   } else {

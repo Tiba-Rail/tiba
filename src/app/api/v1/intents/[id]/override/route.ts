@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getGnkUsdRate } from "@/lib/gonka-pricing";
 import { resolveOperatorAgent } from "@/lib/operator-auth";
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
-import { chainForRecipient, executionFailedCode, PayoutRailError, payoutRail, settledChain } from "@/lib/rails";
+import { chainForRecipient, executionFailedCode, PayoutRailError, payoutRail, settledChain, settlementFromReceipt } from "@/lib/rails";
 
 export const runtime = "nodejs";
 
@@ -149,16 +149,17 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       if (!receipt.digest || !receipt.explorerUrl) {
         throw new PayoutRailError(executionFailedCode(target.chain), "Settlement did not return a digest.");
       }
+      const settlement = settlementFromReceipt(receipt);
       return tx.payoutIntent.update({
         where: { id: intent.id },
         data: {
-          status: "settled",
-          decisionClass: "PAID",
-          reasonCode: "OWNER_OVERRIDE",
+          status: settlement.status,
+          decisionClass: settlement.decisionClass,
+          reasonCode: settlement.status === "settled" ? "OWNER_OVERRIDE" : settlement.reasonCode,
           amountMicros: tuple.amountMicros,
           workOrderId: workOrder!.id,
-          digest: receipt.digest,
-          explorerUrl: receipt.explorerUrl,
+          digest: settlement.digest,
+          explorerUrl: settlement.explorerUrl,
           chain,
           ...pricing
         }

@@ -103,8 +103,11 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
       : `Identity ${intent.recipient.kycStatus}`;
 
   // Determine settlement status
-  function getSettlementStatus(decisionClass: string, reasonCode: string | null): string {
+  function getSettlementStatus(decisionClass: string, reasonCode: string | null, status: string): string {
     if (decisionClass === "PAID") return "Yes";
+    if (status === "pending_confirmation" || reasonCode === "PENDING_RPC_QUORUM") {
+      return "Sent, waiting for a second confirmation";
+    }
     if (
       reasonCode === "SETTLEMENT_FAILED" ||
       reasonCode === "SOLANA_EXECUTION_FAILED"
@@ -123,7 +126,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
           <div>
             <p className="eyebrow">Receipt — anyone with this link can read it</p>
             <h1 className="display-l mt-2">
-              {decisionSentence(intent.decisionClass)}
+              {decisionSentence(intent.decisionClass, intent.status)}
             </h1>
           </div>
           <div className="card p-4 md:min-w-72">
@@ -253,7 +256,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
               </tr>
               <tr className="border-b border-line">
                 <td className="py-3 px-3">Payment</td>
-                <td className="py-3 px-3">{getSettlementStatus(intent.decisionClass, intent.reasonCode)}</td>
+                <td className="py-3 px-3">{getSettlementStatus(intent.decisionClass, intent.reasonCode, intent.status)}</td>
                 <td className="py-3 px-3">
                   {intent.explorerUrl ? (
                     <a href={intent.explorerUrl} className="link num break-all text-xs" target="_blank" rel="noopener noreferrer">

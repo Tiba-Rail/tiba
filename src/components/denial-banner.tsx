@@ -8,6 +8,7 @@ export function DenialBanner({
   reasonCode: string | null;
 }) {
   const isHeld = decisionClass === "AMBER";
+  const pending = reasonCode === "PENDING_RPC_QUORUM";
   if (decisionClass === "PAID") return null;
 
   return (
@@ -20,7 +21,7 @@ export function DenialBanner({
       ].join(" ")}
     >
       <p className="eyebrow" style={{ color: "inherit" }}>
-        {isHeld ? "Needs approval" : "Refused — Tiba decided not to pay"}
+        {pending ? "Pending confirmation" : isHeld ? "Needs approval" : "Refused — Tiba decided not to pay"}
       </p>
       <p className="display-m mt-2" style={{ color: "var(--foreground)" }}>
         {explainDecision(decisionClass, reasonCode)}

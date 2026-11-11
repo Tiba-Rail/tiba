@@ -11,10 +11,15 @@ Required settlement configuration:
 ```env
 SOLANA_NETWORK=devnet
 SOLANA_ADDRESS=<treasury public key>
+TREASURY_ADDRESS=<same public key; optional alias, must match SOLANA_ADDRESS>
 SOLANA_PRIVATE_KEY=<Solana CLI keypair JSON byte array>
+SOLANA_RPC_URL=<optional single RPC; default https://api.devnet.solana.com>
+SOLANA_RPC_URLS=<optional comma-separated RPCs; first is primary>
 ```
 
-The app refuses a non-devnet rail, invalid recipient address, missing treasury key, or failed transaction. Public receipts link to Solana Explorer.
+`SOLANA_RPC_URLS` wins when set. Sending uses the first URL and falls back to the next on network or HTTP 5xx errors. A record is marked paid only after **two different endpoints** confirm the signature (`getSignatureStatuses`). One confirmation stores the intent as `pending_confirmation`; re-check later with `node scripts/reconcile.mjs`. A single configured RPC cannot mark a payout paid.
+
+The app refuses a non-devnet rail, a treasury address that does not match the signing key, an invalid recipient address, a missing treasury key, or a failed transaction. Public receipts link to Solana Explorer. Key rotation: [docs/KEY_ROTATION.md](docs/KEY_ROTATION.md).
 
 ## Local development
 
