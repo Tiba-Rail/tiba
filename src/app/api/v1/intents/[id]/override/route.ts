@@ -5,6 +5,7 @@ import { resolveOperatorAgent } from "@/lib/operator-auth";
 import { committedPendingData, settleCommittedIntent } from "@/lib/payout-settlement";
 import { debitAtomically, evaluateBeforeDebit, type AgentLimits, type PolicyReason, type SqlExecutor } from "@/lib/policy";
 import { chainForRecipient, payoutRail, recipientAddressReason, settledChain } from "@/lib/rails";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,7 @@ async function pricingData() {
   };
 }
 
-export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+async function postHandler(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const operator = await resolveOperatorAgent(request);
   if (!operator) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   const { id } = await context.params;
@@ -193,3 +194,5 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     explorer_url: updated.explorerUrl
   });
 }
+
+export const POST = withDbRoute(postHandler);

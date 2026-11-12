@@ -4,6 +4,7 @@ import { parseUsdcToMicros } from "@/lib/money";
 import { submitBountyClaim } from "@/lib/bounty-claim";
 import { claimTextWithinLimits } from "@/lib/bounty-claim-gate";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,7 @@ async function findBounty(id: string) {
 
 /** A bounty's own claims and their outcome, for the public claim page. No operator auth: this is
  *  what anyone considering a claim, or checking one they already made, is meant to see. */
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function getHandler(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const bounty = await findBounty(id);
   if (!bounty) return NextResponse.json({ error: "BOUNTY_NOT_FOUND" }, { status: 404 });
@@ -48,7 +49,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 /** Submit a claim: no sign-in, no owner key -- anyone with a Solana address and a link to their
  *  work can claim an open bounty. Every claim runs through the same check as an invoice payout
  *  and gets a real receipt, paid or refused. */
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function postHandler(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const bounty = await findBounty(id);
   if (!bounty) return NextResponse.json({ error: "BOUNTY_NOT_FOUND" }, { status: 404 });
@@ -107,3 +108,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     public_token: intent.publicToken
   }, { status: 201 });
 }
+
+export const GET = withDbRoute(getHandler);
+export const POST = withDbRoute(postHandler);

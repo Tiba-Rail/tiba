@@ -98,7 +98,7 @@ export type BrowserSigner = {
 };
 
 export async function createBrowserSigner(): Promise<BrowserSigner> {
-  if (!globalThis.crypto?.subtle) throw new BrowserTibaError("This browser cannot create a signed permission slip.");
+  if (!globalThis.crypto?.subtle) throw new BrowserTibaError("This browser cannot sign this boundary.");
   const pair = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]) as CryptoKeyPair;
   const rawPublicKey = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
   const did = didFromRawEd25519Key(rawPublicKey);

@@ -3,7 +3,7 @@ import type { Agent } from "@prisma/client";
 import type { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
 import { OWNER_COOKIE, pickWorkspace, type WorkspaceView } from "@/lib/workspace-access";
 
 export function operatorTokenFrom(request: NextRequest): string | null {
@@ -56,19 +56,27 @@ export function setOwnerCookie(response: NextResponse, ownerKey: string): void {
  * screen, never somebody else's data.
  */
 export async function viewerWorkspace(requestedId?: string): Promise<WorkspaceView<Agent> | null> {
-  const cookieHash = (await cookies()).get(OWNER_COOKIE)?.value;
-  const fromCookie = cookieHash ? await agentForOwnerHash(cookieHash) : null;
-
-  let userId: string | undefined;
   try {
-    userId = (await auth())?.user?.id;
-  } catch {
-    userId = undefined; // Sign-in is optional; the owner key alone is enough.
-  }
-  const owned = userId
-    ? await prisma.agent.findMany({ where: { userId }, orderBy: { createdAt: "desc" } })
-    : [];
+    const cookieHash = (await cookies()).get(OWNER_COOKIE)?.value;
+    const fromCookie = cookieHash ? await agentForOwnerHash(cookieHash) : null;
 
-  const accessible = fromCookie ? [fromCookie, ...owned.filter((agent) => agent.id !== fromCookie.id)] : owned;
-  return pickWorkspace(accessible, requestedId, await demoWorkspace());
+    let userId: string | undefined;
+    try {
+      userId = (await auth())?.user?.id;
+    } catch {
+      userId = undefined; // Sign-in is optional; the owner key alone is enough.
+    }
+    const owned = userId
+      ? await prisma.agent.findMany({ where: { userId }, orderBy: { createdAt: "desc" } })
+      : [];
+
+    const accessible = fromCookie ? [fromCookie, ...owned.filter((agent) => agent.id !== fromCookie.id)] : owned;
+    return pickWorkspace(accessible, requestedId, await demoWorkspace());
+  } catch (err) {
+    if (isDatabaseError(err)) {
+      console.error("[tiba] database unavailable:", err instanceof Error ? err.message : err);
+      return null;
+    }
+    throw err;
+  }
 }

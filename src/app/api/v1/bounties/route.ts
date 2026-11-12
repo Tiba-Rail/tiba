@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { resolveOperatorAgent } from "@/lib/operator-auth";
 import { parseUsdcToMicros } from "@/lib/money";
 import { uniqueShareCode } from "@/lib/bounty-claim";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 
@@ -11,7 +12,7 @@ function unauthorized() {
 }
 
 /** The program owner's own bounties, newest first. Owner-only, like the other workspace lists. */
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const agent = await resolveOperatorAgent(request);
   if (!agent) return unauthorized();
   const bounties = await prisma.bounty.findMany({
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
 
 /** Post a bounty: title, reward and what counts as done, and an optional Solana-address
  *  allowlist. Empty/omitted allowlist means open to anyone. */
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const agent = await resolveOperatorAgent(request);
   if (!agent) return unauthorized();
   let body: Record<string, unknown>;
@@ -77,3 +78,6 @@ export async function POST(request: NextRequest) {
     status: bounty.status
   }, { status: 201 });
 }
+
+export const GET = withDbRoute(getHandler);
+export const POST = withDbRoute(postHandler);

@@ -30,7 +30,7 @@ export function OperatorTokenField({ className }: OperatorTokenFieldProps) {
         spellCheck={false}
       />
       <span className="mt-1 block text-xs font-normal text-muted">
-        Set by whoever owns this wallet. Kept in this tab only.
+        Set by whoever owns this workspace. Kept in this tab only.
       </span>
     </label>
   );

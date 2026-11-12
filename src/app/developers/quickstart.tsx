@@ -46,13 +46,13 @@ export function Quickstart() {
         <li className="card p-5">
           <h3 className="title">1. Sign in, then create a workspace</h3>
           <p className="mt-3 text-sm leading-6 text-muted">
-            <Link className="link" href="/signin">Sign in</Link>. A Solana wallet can sign in. Google and GitHub appear when this deployment has them configured. Then open <Link className="link" href="/start">Start</Link> in that same browser. Name the workspace, paste a Solana devnet address you control (or leave it blank to use the settlement address), and create the wallet.
+            <Link className="link" href="/signin">Sign in</Link>. A Solana wallet can sign in. Google and GitHub appear when this deployment has them configured. Then open <Link className="link" href="/start">Start</Link> in that same browser. Name the workspace, paste a Solana devnet address you control (or leave it blank to use the settlement address), and create the workspace.
           </p>
           <p className="mt-3 text-sm leading-6 text-muted">
             Copy the agent key and the owner key. They are shown once. The cURL tab has your <span className="num">recipient_ref</span> and work order ref. Keep those. Do not commit the keys.
           </p>
           <p className="mt-3 text-sm leading-6 text-muted">
-            The wallet has to come back on the Solana devnet rail. If the page says payments from this wallet are simulated, no devnet USDC will move. That happens when you are signed out, when this account already has 3 devnet workspaces, or when the site has hit its daily cap on new devnet workspaces (20, unless <span className="num">LIVE_ONBOARDING_DAILY_CAP</span> is set).
+            The workspace has to come back on the Solana devnet rail. If the page says payments from this workspace are simulated, no devnet USDC will move. That happens when you are signed out, when this account already has 3 devnet workspaces, or when the site has hit its daily cap on new devnet workspaces (20, unless <span className="num">LIVE_ONBOARDING_DAILY_CAP</span> is set).
           </p>
           <p className="mt-3 text-sm leading-6 text-muted">
             The server accepts this create request. A terminal call has no sign-in cookie, so that workspace is simulated. Use Start while you are signed in.

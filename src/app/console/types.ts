@@ -101,7 +101,7 @@ export function explainDecision(
     case "RECIPIENT_NOT_FOUND": return "This recipient is not saved.";
     case "RECIPIENT_INACTIVE": return "This recipient is saved but blocked.";
     case "RECIPIENT_UNVERIFIED": return "This recipient's identity is not verified, and your limits require it.";
-    case "KILL_SWITCH": return "The wallet is frozen.";
+    case "KILL_SWITCH": return "Payments are frozen.";
     case "INVALID_AMOUNT": return "The amount in this request was not valid.";
     case "INVALID_TIMESTAMP": return "A date in this request was not valid.";
     case "RECIPIENT_NEEDS_SOLANA_ADDRESS": return "Recipient needs a Solana address.";
@@ -212,7 +212,7 @@ export function refusalNextStepLink(reasonCode: string | null): { label: string;
     case "RECIPIENT_NEEDS_TEMPO_ADDRESS":
       return { label: "Add a wallet address", href: "/recipients" };
     case "KILL_SWITCH":
-      return { label: "Unfreeze the wallet", href: "/policies" };
+      return { label: "Unfreeze payments", href: "/policies" };
     default:
       return null;
   }
@@ -243,7 +243,7 @@ export function refusalNextStep(reasonCode: string | null): string {
     case "RECIPIENT_NEEDS_TEMPO_ADDRESS":
       return "What next: save an Ethereum address for this recipient under Recipients.";
     case "KILL_SWITCH":
-      return "What next: unfreeze the wallet under Limits.";
+      return "What next: unfreeze payments under Limits.";
     case "SETTLEMENT_FAILED":
     case "SOLANA_EXECUTION_FAILED":
     case "TEMPO_EXECUTION_FAILED":

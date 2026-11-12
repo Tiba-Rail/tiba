@@ -49,7 +49,7 @@ export function UnlockForm() {
       </label>
       {error ? <p className="text-sm text-red-ink">{error}</p> : null}
       <button type="submit" className="btn btn-primary" disabled={busy || !ownerKey.trim()}>
-        {busy ? "Checking…" : "Open wallet"}
+        {busy ? "Checking…" : "Open workspace"}
       </button>
     </form>
   );

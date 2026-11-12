@@ -218,7 +218,7 @@ export function ConsoleClient({
             spellCheck={false}
           />
           <span className="mt-1 block text-xs font-normal text-muted">
-            Set by whoever owns this wallet. Kept in this tab only.
+            Set by whoever owns this workspace. Kept in this tab only.
           </span>
         </label>
       </header>
@@ -533,7 +533,7 @@ export function ConsoleClient({
             aria-busy={busy === "kill"}
             onClick={() => post("/api/v1/kill", { enabled: !budget.killSwitch }, "kill")}
           >
-            {budget.killSwitch ? "Unfreeze" : "Freeze wallet"}
+            {budget.killSwitch ? "Unfreeze" : "Freeze payments"}
           </button>
           {budget.killSwitch ? (
             <p className="mt-3 text-sm text-muted">Frozen: all payments refused.</p>

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
+import { ServiceUnavailable } from "@/components/service-unavailable";
 import { SiteNav } from "@/components/site-nav";
 
 export const dynamic = "force-dynamic";
@@ -20,11 +21,17 @@ export default async function WorkspacesPage() {
     redirect("/signin?callbackUrl=/workspaces");
   }
 
-  const workspaces = await prisma.agent.findMany({
-    where: { userId: session.user.id },
-    select: { id: true, name: true, rail: true, createdAt: true },
-    orderBy: { createdAt: "desc" }
-  });
+  let workspaces;
+  try {
+    workspaces = await prisma.agent.findMany({
+      where: { userId: session.user.id },
+      select: { id: true, name: true, rail: true, createdAt: true },
+      orderBy: { createdAt: "desc" }
+    });
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    return <ServiceUnavailable title="This page is not available right now" />;
+  }
   const liveLabel = "Solana devnet";
 
   return (
@@ -38,7 +45,7 @@ export default async function WorkspacesPage() {
           <section className="card mt-8 p-6">
             <h2 className="title">No workspaces yet</h2>
             <p className="mt-2 max-w-prose text-sm text-muted">
-              Create a workspace to give your software a wallet and limits.
+              Create a workspace so an agent can ask Tiba to pay, inside the limits you set.
             </p>
             <Link
               href="/start"

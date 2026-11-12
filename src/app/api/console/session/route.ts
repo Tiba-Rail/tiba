@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { agentForOwnerKey, setOwnerCookie } from "@/lib/operator-auth";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 
 // Unlocks the workspace pages (/app, /console, /ledger, ...) in this browser for the owner of a
 // wallet. The cookie holds only the owner key's hash: it opens the pages, not the owner APIs.
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   let body: { owner_key?: unknown };
   try {
     body = await request.json() as typeof body;
@@ -20,3 +21,5 @@ export async function POST(request: NextRequest) {
   setOwnerCookie(response, ownerKey);
   return response;
 }
+
+export const POST = withDbRoute(postHandler);

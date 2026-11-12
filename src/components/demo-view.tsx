@@ -12,12 +12,12 @@ export function DemoView({ readOnly, children }: { readOnly: boolean; children: 
       <div className="mx-auto max-w-3xl px-4 pt-6 md:px-6 lg:px-8">
         <div className="rounded-md border border-line bg-surface px-4 py-3 text-sm text-muted">
           <p>
-            This is the shared demo wallet: read-only, test network only.{" "}
-            <Link className="link" href="/start">Create your own</Link> or{" "}
+            This shared demo is read-only. Solana devnet only — no real money.{" "}
+            <Link className="link" href="/try">Try a check</Link> or{" "}
             <Link className="link" href="/signin">sign in</Link>.
           </p>
           <details className="mt-2">
-            <summary className="cursor-pointer">Open your own wallet with its owner key</summary>
+            <summary className="cursor-pointer">Open a workspace with its owner key</summary>
             <UnlockForm />
           </details>
         </div>

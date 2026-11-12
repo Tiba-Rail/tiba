@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOperatorAgent } from "@/lib/operator-auth";
 import { processPayoutIntent } from "@/lib/payout-intent";
+import { withDbRoute } from "@/lib/with-db-route";
+import { isDatabaseError } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const agent = await resolveOperatorAgent(request);
   if (!agent) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
@@ -48,6 +50,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "RECIPIENT_NOT_FOUND" }, { status: 404 });
     }
     console.error("[console/test-intent] processing failed:", error);
+    if (isDatabaseError(error)) throw error;
     return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
   }
 }
+
+export const POST = withDbRoute(postHandler);

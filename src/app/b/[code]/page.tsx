@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
+import { ServiceUnavailable } from "@/components/service-unavailable";
 import { microsToUsdc } from "@/lib/money";
 import { SiteNav } from "@/components/site-nav";
 import { BountyPublicView, type BountyPublicClaim } from "@/components/bounty-public-view";
@@ -8,7 +9,12 @@ import { BountyPublicView, type BountyPublicClaim } from "@/components/bounty-pu
 export const dynamic = "force-dynamic";
 
 async function findBounty(code: string) {
-  return prisma.bounty.findUnique({ where: { shareCode: code } });
+  try {
+    return await prisma.bounty.findUnique({ where: { shareCode: code } });
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    return "unavailable" as const;
+  }
 }
 
 // A dedicated page (not a redirect to /bounties/[id]) so Discord/Superteam Earn's link-unfurl
@@ -17,6 +23,7 @@ async function findBounty(code: string) {
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
   const { code } = await params;
   const bounty = await findBounty(code);
+  if (bounty === "unavailable") return { title: "Receipt not available right now - Tiba" };
   if (!bounty) return { title: "Bounty not found - Tiba" };
   const description = `${microsToUsdc(bounty.amountMicros)} · ${bounty.doneCriteria}`.slice(0, 200);
   return {
@@ -38,13 +45,20 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 export default async function ShareBountyPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const bounty = await findBounty(code);
+  if (bounty === "unavailable") return <ServiceUnavailable title="Receipt not available right now" current="bounties" />;
   if (!bounty) notFound();
 
-  const claims = await prisma.bountyClaim.findMany({
-    where: { bountyId: bounty.id },
-    include: { payoutIntent: true },
-    orderBy: { createdAt: "desc" }
-  });
+  let claims;
+  try {
+    claims = await prisma.bountyClaim.findMany({
+      where: { bountyId: bounty.id },
+      include: { payoutIntent: true },
+      orderBy: { createdAt: "desc" }
+    });
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    return <ServiceUnavailable title="Receipt not available right now" current="bounties" />;
+  }
 
   return (
     <main className="min-h-screen bg-background text-foreground">

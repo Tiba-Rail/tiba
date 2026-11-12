@@ -3,11 +3,12 @@ import { clientIp } from "@/lib/rate-limit";
 import { foolItResponseBody, foolItStatus, runFoolItAttempt } from "@/lib/fool-it";
 import { readSandboxChannels } from "@/lib/fool-it-read";
 import { saveSandboxRefusal } from "@/lib/fool-it-store";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   let body: { work_order_id?: unknown; amount?: unknown };
   try {
     body = await request.json();
@@ -35,3 +36,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withDbRoute(postHandler);

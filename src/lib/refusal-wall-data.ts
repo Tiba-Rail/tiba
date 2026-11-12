@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
+import { amountAskedMicros } from "@/lib/asked-amount";
 import {
   buildRefusalWall,
   isSimulatedSettlement,
@@ -34,8 +35,19 @@ const WALL_SCOPE: Prisma.PayoutIntentWhereInput = {
   ]
 };
 
+const EMPTY_WALL: RefusalWall = {
+  checksRun: 0,
+  paid: 0,
+  simulatedPaid: 0,
+  refused: 0,
+  refusedWithAmount: 0,
+  refusedAmount: null,
+  rows: []
+};
+
 async function loadRefusalWall(): Promise<RefusalWall> {
-  const [intents, groupedCounts, refusedAmounts] = await Promise.all([
+  try {
+  const [intents, groupedCounts, refusedForAmount] = await Promise.all([
     prisma.payoutIntent.findMany({
       where: WALL_SCOPE,
       orderBy: { createdAt: "desc" },
@@ -47,17 +59,29 @@ async function loadRefusalWall(): Promise<RefusalWall> {
       where: WALL_SCOPE,
       _count: { _all: true }
     }),
-    prisma.payoutIntent.aggregate({
-      where: {
-        AND: [
-          WALL_SCOPE,
-          { decisionClass: "RED", amountMicros: { gt: 0n } }
-        ]
-      },
-      _count: { _all: true },
-      _sum: { amountMicros: true }
+    // Stored amountMicros is 0 on a refusal that never reached a debit. The amount
+    // asked for is on the bill (Check 1), so the total has to read that reading.
+    prisma.payoutIntent.findMany({
+      where: { AND: [WALL_SCOPE, { decisionClass: "RED" }] },
+      select: {
+        amountMicros: true,
+        adjudications: {
+          where: { channel: "artifact" },
+          select: { channel: true, tupleJson: true }
+        }
+      }
     })
   ]);
+
+  let refusedWithAmount = 0;
+  let refusedAmountMicros = 0n;
+  for (const intent of refusedForAmount) {
+    const asked = amountAskedMicros(intent.amountMicros, intent.adjudications);
+    if (asked !== null && asked > 0n) {
+      refusedWithAmount += 1;
+      refusedAmountMicros += asked;
+    }
+  }
 
   const totals: RefusalWallTotals = {
     checksRun: groupedCounts.reduce((sum, row) => sum + row._count._all, 0),
@@ -70,8 +94,8 @@ async function loadRefusalWall(): Promise<RefusalWall> {
     refused: groupedCounts
       .filter((row) => row.decisionClass === "RED")
       .reduce((sum, row) => sum + row._count._all, 0),
-    refusedWithAmount: refusedAmounts._count._all,
-    refusedAmountMicros: refusedAmounts._sum.amountMicros
+    refusedWithAmount,
+    refusedAmountMicros: refusedWithAmount > 0 ? refusedAmountMicros : null
   };
 
   return buildRefusalWall(
@@ -89,6 +113,11 @@ async function loadRefusalWall(): Promise<RefusalWall> {
     })),
     totals
   );
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    console.error("[tiba] refusal wall database lookup failed:", err instanceof Error ? err.message : err);
+    return EMPTY_WALL;
+  }
 }
 
 // Server-rendered page data, reused for 60 seconds. The page itself sets the same window.

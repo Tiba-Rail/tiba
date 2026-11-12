@@ -115,10 +115,10 @@ export function TryClient() {
       <FoolIt />
       <div className="mt-16 border-t border-line pt-14">
       <header className="max-w-xl">
-        <p className="eyebrow">Practice · no wallet needed</p>
+        <p className="eyebrow">Practice · nothing is sent</p>
         <h2 className="display-l mt-2">Authorize a demo payout.</h2>
         <p className="mt-4 max-w-[58ch] text-sm leading-6 text-muted md:text-base">
-          Pick a scope, a budget, and an expiry. Tiba shows the receipt your agent would leave. Nothing is signed and no money moves.
+          Walk through a sample payment and see the receipt it would leave. Nothing is signed and no money moves.
         </p>
       </header>
 
@@ -315,16 +315,13 @@ function DemoReceipt({
       </article>
 
       <div className="mt-8 border-t border-line pt-8">
-        <h2 className="display-m">Now try it on the test network.</h2>
+        <h2 className="display-m">See a check that already ran.</h2>
         <p className="mt-3 max-w-[52ch] text-sm leading-6 text-muted">
-          That was a practice run. Connect a wallet to authorize a test payout from your own Tiba wallet on Solana's test network, with a signed permission and a checkable receipt. No real money moves.
+          That was a practice receipt. The public wall lists checks that already ran, paid or refused, on Solana devnet. No real money.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link className="btn btn-primary" href="/signin?callbackUrl=/start">
-            Connect a wallet
-          </Link>
-          <Link className="btn btn-secondary" href="/start">
-            Create a wallet
+          <Link className="btn btn-primary" href="/wall">
+            Every check
           </Link>
           <button type="button" className="btn btn-ghost" onClick={onAgain}>
             Try again

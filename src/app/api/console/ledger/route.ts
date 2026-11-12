@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveOperatorAgent } from "@/lib/operator-auth";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   // 1. Authorise with the operator token
   const agent = await resolveOperatorAgent(request);
   if (!agent) {
@@ -61,6 +62,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ intents });
   } catch (error) {
     console.error("Error fetching ledger data:", error);
+    if (isDatabaseError(error)) throw error;
     return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
   }
 }
+
+export const GET = withDbRoute(getHandler);

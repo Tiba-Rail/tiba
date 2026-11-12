@@ -33,13 +33,18 @@ export async function SiteNav({ current }: SiteNavProps) {
 }
 
 async function KillSwitchBanner() {
-  const agent = await prisma.agent.findFirst({ orderBy: { createdAt: "asc" } });
-  if (!agent?.killSwitch) return null;
-  return (
-    <div className="bg-refused py-2 text-center text-sm font-medium text-surface">
-      This wallet is frozen. Every payment is refused.
-    </div>
-  );
+  try {
+    const agent = await prisma.agent.findFirst({ orderBy: { createdAt: "asc" } });
+    if (!agent?.killSwitch) return null;
+    return (
+      <div className="bg-refused py-2 text-center text-sm font-medium text-surface">
+        Payments are frozen. Every payment is refused.
+      </div>
+    );
+  } catch {
+    // Public pages still render when the database is down.
+    return null;
+  }
 }
 
 function MarketingLinks({ current }: { current: string }) {
@@ -123,8 +128,8 @@ async function AuthLinks() {
         <Link href="/signin" className="text-muted transition-colors duration-150 hover:text-foreground">
           Sign in
         </Link>
-        <Link href="/start" className="btn btn-primary btn-nav">
-          Create wallet
+        <Link href="/wall" className="btn btn-primary btn-nav">
+          Every check
         </Link>
       </span>
     );
@@ -133,7 +138,7 @@ async function AuthLinks() {
   return (
     <span className="ml-auto flex shrink-0 items-center gap-4 md:ml-4">
       <Link href="/workspaces" className="text-muted transition-colors duration-150 hover:text-foreground">
-        My wallets
+        Workspaces
       </Link>
       <span className="hidden max-w-[16ch] truncate text-muted md:inline" title={label}>{label}</span>
       <form

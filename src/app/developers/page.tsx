@@ -31,7 +31,7 @@ export default function DevelopersPage() {
           <p className="eyebrow">Developers</p>
           <h1 className="display-l mt-2">A portable permission and proof layer for agents.</h1>
           <p className="mt-4 max-w-[62ch] text-sm leading-6 text-muted md:text-base">
-            Tiba adds a signed permission slip before an agent acts and a signed receipt after it does. It works beside the protocols that already carry the action.
+            Tiba checks every payment an AI agent wants to make. Two separate checks read the bill and the payer&apos;s own record. If they don&apos;t match, the payment is refused, and the decision leaves a public receipt. It works beside the protocols that already carry the payment.
           </p>
         </header>
 

@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 
-export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+async function getHandler(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const authorization = request.headers.get("authorization") ?? "";
   const secret = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   const agent = secret ? await prisma.agent.findUnique({ where: { apiKeyHash: createHash("sha256").update(secret).digest("hex") } }) : null;
@@ -27,3 +28,5 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     }))
   });
 }
+
+export const GET = withDbRoute(getHandler);

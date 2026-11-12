@@ -20,7 +20,7 @@ test("a requested workspace is shown only to its owner", () => {
 });
 
 test("the shared demo wallet is public, read-only", () => {
-  assert.deepEqual(pickWorkspace([], undefined, demo), { workspace: demo, readOnly: true }, "what 'See the demo wallet' opens");
+  assert.deepEqual(pickWorkspace([], undefined, demo), { workspace: demo, readOnly: true }, "the shared demo opens read-only");
   assert.deepEqual(pickWorkspace(mine, "ws-demo", demo), { workspace: demo, readOnly: true }, "asked for by id");
   assert.deepEqual(pickWorkspace([demo], undefined, demo), { workspace: demo, readOnly: false }, "its owner can still act on it");
 });
