@@ -33,13 +33,18 @@ export async function SiteNav({ current }: SiteNavProps) {
 }
 
 async function KillSwitchBanner() {
-  const agent = await prisma.agent.findFirst({ orderBy: { createdAt: "asc" } });
-  if (!agent?.killSwitch) return null;
-  return (
-    <div className="bg-refused py-2 text-center text-sm font-medium text-surface">
-      Payments are frozen. Every payment is refused.
-    </div>
-  );
+  try {
+    const agent = await prisma.agent.findFirst({ orderBy: { createdAt: "asc" } });
+    if (!agent?.killSwitch) return null;
+    return (
+      <div className="bg-refused py-2 text-center text-sm font-medium text-surface">
+        Payments are frozen. Every payment is refused.
+      </div>
+    );
+  } catch {
+    // Public pages still render when the database is down.
+    return null;
+  }
 }
 
 function MarketingLinks({ current }: { current: string }) {

@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
 import { receiptComparisonFromStored, receiptShareLines } from "@/lib/receipt-comparison";
 import { receiptAmountLines } from "@/lib/asked-amount";
 import { microsToCoin, receiptNetwork } from "@/lib/receipt-network";
@@ -49,10 +49,19 @@ function card(lines: { outcome: string; amount: string; network: string; mismatc
 
 export default async function Image({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const intent = await prisma.payoutIntent.findUnique({
-    where: { publicToken: token },
-    include: { adjudications: true }
-  });
+  let intent = null;
+  try {
+    intent = await prisma.payoutIntent.findUnique({
+      where: { publicToken: token },
+      include: { adjudications: true }
+    });
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    return new ImageResponse(
+      card({ outcome: "Receipt not available right now", amount: "", network: "Test network", mismatch: null }),
+      { ...size }
+    );
+  }
 
   if (!intent) {
     return new ImageResponse(

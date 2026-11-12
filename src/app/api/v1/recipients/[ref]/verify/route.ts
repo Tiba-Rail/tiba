@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getIdentityProvider } from "@/lib/identity";
 import { resolveOperatorAgent } from "@/lib/operator-auth";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 
-export async function POST(request: NextRequest, context: { params: Promise<{ ref: string }> }) {
+async function postHandler(request: NextRequest, context: { params: Promise<{ ref: string }> }) {
   const agent = await resolveOperatorAgent(request);
   if (!agent) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   const { ref } = await context.params;
@@ -43,3 +44,5 @@ export async function POST(request: NextRequest, context: { params: Promise<{ re
     kyc_expires_at: updated.kycExpiresAt
   });
 }
+
+export const POST = withDbRoute(postHandler);

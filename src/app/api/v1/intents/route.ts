@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
 import { ARTIFACT_TOO_LARGE, IDEMPOTENCY_KEY_IN_USE, INTENT_RATE_LIMITED, MAX_ARTIFACT_BYTES } from "@/lib/payout-guards";
 import { processPayoutIntent, type PublicIntent } from "@/lib/payout-intent";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 
@@ -30,7 +31,7 @@ function response(intent: PublicIntent) {
   });
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const secret = apiKey(request);
   if (!secret) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
@@ -76,6 +77,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: INTENT_RATE_LIMITED }, { status: 429 });
     }
     console.error("[intents] processing failed:", error);
+    if (isDatabaseError(error)) throw error;
     return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
   }
 }
+
+export const POST = withDbRoute(postHandler);

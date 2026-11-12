@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { RotatingWord } from "@/components/rotating-word";
 import { SiteNav } from "@/components/site-nav";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 import { BillRecordMismatch } from "@/components/bill-record-mismatch";
 import { homepageRefusedCard } from "@/lib/receipt-comparison";
-import { EXAMPLE_PAID_INTENT_ID } from "@/lib/public-demo";
+import { EXAMPLE_PAID_INTENT_ID, STATIC_PAID_EXAMPLE } from "@/lib/public-demo";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tiba — the check before an agent's payment goes out" };
@@ -15,19 +15,28 @@ function requestIdFor(adjudications: Array<{ channel: string; requestId: string 
 }
 
 export default async function Home() {
-  const [paidIntent, refusedIntent] = await Promise.all([
-    prisma.payoutIntent.findUnique({
-      where: { id: EXAMPLE_PAID_INTENT_ID },
-      include: { adjudications: { orderBy: { createdAt: "asc" } } }
-    }),
-    prisma.payoutIntent.findFirst({
-      // Only a refusal from the same demo workspace as the pinned payment. Other workspaces'
-      // receipts are public by link, never advertised here.
-      where: { decisionClass: "RED", agent: { intents: { some: { id: EXAMPLE_PAID_INTENT_ID } } } },
-      include: { adjudications: { orderBy: { createdAt: "asc" } } },
-      orderBy: { createdAt: "desc" }
-    })
-  ]);
+  let paidIntent = null;
+  let refusedIntent = null;
+  let databaseUnavailable = false;
+  try {
+    [paidIntent, refusedIntent] = await Promise.all([
+      prisma.payoutIntent.findUnique({
+        where: { id: EXAMPLE_PAID_INTENT_ID },
+        include: { adjudications: { orderBy: { createdAt: "asc" } } }
+      }),
+      prisma.payoutIntent.findFirst({
+        // Only a refusal from the same demo workspace as the pinned payment. Other workspaces'
+        // receipts are public by link, never advertised here.
+        where: { decisionClass: "RED", agent: { intents: { some: { id: EXAMPLE_PAID_INTENT_ID } } } },
+        include: { adjudications: { orderBy: { createdAt: "asc" } } },
+        orderBy: { createdAt: "desc" }
+      })
+    ]);
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    console.error("[tiba] homepage database lookup failed:", err instanceof Error ? err.message : err);
+    databaseUnavailable = true;
+  }
 
   const refusedCard = homepageRefusedCard(refusedIntent);
 
@@ -106,6 +115,17 @@ export default async function Home() {
                     Open receipt →
                   </Link>
                 </div>
+              </div>
+            ) : databaseUnavailable ? (
+              <div className="card p-5">
+                <span className="pill pill-paid">Paid</span>
+                <p className="mt-3 text-sm">
+                  <span className="num">{STATIC_PAID_EXAMPLE.amountLabel}</span> sent on Solana
+                  devnet on {STATIC_PAID_EXAMPLE.dateLabel}. No real money moved.
+                </p>
+                <p className="mt-3 text-sm text-muted">
+                  The live receipt cannot be opened while the database is unavailable.
+                </p>
               </div>
             ) : (
               <div className="card p-5">

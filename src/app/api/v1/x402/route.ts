@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
 import { IDEMPOTENCY_KEY_IN_USE, INTENT_RATE_LIMITED } from "@/lib/payout-guards";
 import { finalizeX402Settlement, processPayoutIntent, type PublicIntent } from "@/lib/payout-intent";
 import { payX402Resource } from "@/lib/x402/buyer";
@@ -11,6 +11,7 @@ import { treasurySignatureOf } from "@/lib/x402/settlement-proof";
 import { X402_SIGNING_CLAIMED, x402SigningReasonCode } from "@/lib/x402/signing-recovery";
 import { signExactSvmPayment } from "@/lib/x402/svm";
 import { solanaPayerKeypair } from "@/lib/rails/solana";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 
@@ -38,7 +39,7 @@ function intentBody(intent: PublicIntent) {
   };
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const secret = apiKey(request);
   if (!secret) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
@@ -152,6 +153,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: INTENT_RATE_LIMITED }, { status: 429 });
     }
     console.error("[x402] buyer failed:", error);
+    if (isDatabaseError(error)) throw error;
     return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
   }
 }
+
+export const POST = withDbRoute(postHandler);

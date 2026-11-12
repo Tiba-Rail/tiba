@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DenialBanner } from "@/components/denial-banner";
 import { formatLatency } from "@/lib/money";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
+import { ServiceUnavailable } from "@/components/service-unavailable";
 import { channelTuple, type ChannelTuple } from "@/lib/adjudication-display";
 import { GROWTH_LINE, growthHref, receiptComparisonFromStored, receiptShareLines } from "@/lib/receipt-comparison";
 import { BillRecordMismatch } from "@/components/bill-record-mismatch";
@@ -21,10 +22,16 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
   const { token } = await params;
-  const intent = await prisma.payoutIntent.findUnique({
-    where: { publicToken: token },
-    include: { adjudications: true }
-  });
+  let intent = null;
+  try {
+    intent = await prisma.payoutIntent.findUnique({
+      where: { publicToken: token },
+      include: { adjudications: true }
+    });
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    return { title: "Receipt not available right now - Tiba" };
+  }
   if (!intent) return { title: "Receipt - Tiba" };
 
   const asked = receiptAmountLines({
@@ -54,21 +61,35 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
 
 export default async function ReceiptPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const intent = await prisma.payoutIntent.findUnique({
-    where: { publicToken: token },
-    include: {
-      agent: true,
-      recipient: true,
-      adjudications: { orderBy: { createdAt: "asc" } }
-    }
-  });
+  let intent = null;
+  try {
+    intent = await prisma.payoutIntent.findUnique({
+      where: { publicToken: token },
+      include: {
+        agent: true,
+        recipient: true,
+        adjudications: { orderBy: { createdAt: "asc" } }
+      }
+    });
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    console.error("[tiba] receipt lookup failed:", err instanceof Error ? err.message : err);
+    return <ServiceUnavailable />;
+  }
 
   if (!intent) notFound();
 
-  const bountyClaim = await prisma.bountyClaim.findUnique({
-    where: { payoutIntentId: intent.id },
-    include: { bounty: true }
-  });
+  let bountyClaim = null;
+  try {
+    bountyClaim = await prisma.bountyClaim.findUnique({
+      where: { payoutIntentId: intent.id },
+      include: { bounty: true }
+    });
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    console.error("[tiba] receipt lookup failed:", err instanceof Error ? err.message : err);
+    return <ServiceUnavailable />;
+  }
 
   const adjudicationsByChannel = new Map(intent.adjudications.map((row) => [row.channel, row]));
   const paid = intent.decisionClass === "PAID";

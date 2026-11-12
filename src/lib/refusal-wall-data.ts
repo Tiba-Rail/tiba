@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
 import { amountAskedMicros } from "@/lib/asked-amount";
 import {
   buildRefusalWall,
@@ -35,7 +35,18 @@ const WALL_SCOPE: Prisma.PayoutIntentWhereInput = {
   ]
 };
 
+const EMPTY_WALL: RefusalWall = {
+  checksRun: 0,
+  paid: 0,
+  simulatedPaid: 0,
+  refused: 0,
+  refusedWithAmount: 0,
+  refusedAmount: null,
+  rows: []
+};
+
 async function loadRefusalWall(): Promise<RefusalWall> {
+  try {
   const [intents, groupedCounts, refusedForAmount] = await Promise.all([
     prisma.payoutIntent.findMany({
       where: WALL_SCOPE,
@@ -102,6 +113,11 @@ async function loadRefusalWall(): Promise<RefusalWall> {
     })),
     totals
   );
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    console.error("[tiba] refusal wall database lookup failed:", err instanceof Error ? err.message : err);
+    return EMPTY_WALL;
+  }
 }
 
 // Server-rendered page data, reused for 60 seconds. The page itself sets the same window.

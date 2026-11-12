@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
+import { ServiceUnavailable } from "@/components/service-unavailable";
 import { SiteNav } from "@/components/site-nav";
 import { BountyPublicView, type BountyPublicClaim } from "@/components/bounty-public-view";
 
@@ -7,21 +8,38 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const bounty = await prisma.bounty.findUnique({ where: { id } });
-  if (!bounty) return { title: "Bounty not found - Tiba" };
-  return { title: `${bounty.title} - Tiba bounty` };
+  try {
+    const bounty = await prisma.bounty.findUnique({ where: { id } });
+    if (!bounty) return { title: "Bounty not found - Tiba" };
+    return { title: `${bounty.title} - Tiba bounty` };
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    return { title: "Receipt not available right now - Tiba" };
+  }
 }
 
 export default async function BountyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const bounty = await prisma.bounty.findUnique({ where: { id } });
+  let bounty;
+  try {
+    bounty = await prisma.bounty.findUnique({ where: { id } });
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    return <ServiceUnavailable title="Receipt not available right now" current="bounties" />;
+  }
   if (!bounty) notFound();
 
-  const claims = await prisma.bountyClaim.findMany({
-    where: { bountyId: bounty.id },
-    include: { payoutIntent: true },
-    orderBy: { createdAt: "desc" }
-  });
+  let claims;
+  try {
+    claims = await prisma.bountyClaim.findMany({
+      where: { bountyId: bounty.id },
+      include: { payoutIntent: true },
+      orderBy: { createdAt: "desc" }
+    });
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    return <ServiceUnavailable title="Receipt not available right now" current="bounties" />;
+  }
 
   return (
     <main className="min-h-screen bg-background text-foreground">

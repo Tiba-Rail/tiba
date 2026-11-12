@@ -6,6 +6,7 @@ import { setOwnerCookie } from "@/lib/operator-auth";
 import { isSolanaAddress } from "@/lib/rails/solana";
 import { clientIp, onboardingRail, rateLimit, workspaceBudgetExceeded } from "@/lib/rate-limit";
 import { signupRefFrom } from "@/lib/signup-ref";
+import { withDbRoute } from "@/lib/with-db-route";
 export const runtime = "nodejs";
 const MICROS_PER_USDC = 1_000_000n;
 // Live (treasury-backed) workspaces the whole deployment may create per 24 hours. Sign-in accepts
@@ -15,7 +16,7 @@ const LIVE_ONBOARDING_DAILY_CAP = Number(process.env.LIVE_ONBOARDING_DAILY_CAP ?
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 function makeKey(prefix: string) { const secret = randomBytes(32).toString("base64url"); const key = `${prefix}${secret}`; return { key, hash: hash(key), keyPrefix: key.slice(0, 12) }; }
 const optionalAddress = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : undefined;
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   let userId: string | undefined; try { userId = (await auth())?.user?.id; } catch { /* Anonymous onboarding is supported. */ }
   const limit = rateLimit(clientIp(request.headers)); if (!limit.ok) return NextResponse.json({ error: "RATE_LIMITED", retry_after: Math.ceil((limit.resetAt - Date.now()) / 1000) }, { status: 429 });
   let body: Record<string, unknown>; try { body = await request.json() as Record<string, unknown>; } catch { return NextResponse.json({ error: "INVALID_JSON" }, { status: 400 }); }
@@ -45,3 +46,5 @@ export async function POST(request: NextRequest) {
   setOwnerCookie(response, ownerKey.key); // The creator can open the new wallet's pages right away.
   return response;
 }
+
+export const POST = withDbRoute(postHandler);

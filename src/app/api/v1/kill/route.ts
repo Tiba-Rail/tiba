@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { resolveOperatorAgent } from "@/lib/operator-auth";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const agent = await resolveOperatorAgent(request);
   if (!agent) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   let body: Record<string, unknown>;
@@ -22,3 +23,5 @@ export async function POST(request: NextRequest) {
   });
   return NextResponse.json({ agent_id: updated.id, kill_switch: updated.killSwitch });
 }
+
+export const POST = withDbRoute(postHandler);

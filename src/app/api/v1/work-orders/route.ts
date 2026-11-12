@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { resolveOperatorAgent } from "@/lib/operator-auth";
 import { parseUsdcToMicros } from "@/lib/money";
+import { withDbRoute } from "@/lib/with-db-route";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ function unauthorized() {
   return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 }
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const agent = await resolveOperatorAgent(request);
   if (!agent) return unauthorized();
   const workOrders = await prisma.workOrder.findMany({
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const agent = await resolveOperatorAgent(request);
   if (!agent) return unauthorized();
   let body: Record<string, unknown>;
@@ -94,3 +95,6 @@ export async function POST(request: NextRequest) {
     status: workOrder.status
   }, { status: 201 });
 }
+
+export const GET = withDbRoute(getHandler);
+export const POST = withDbRoute(postHandler);

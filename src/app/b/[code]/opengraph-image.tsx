@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { prisma } from "@/lib/db";
+import { isDatabaseError, prisma } from "@/lib/db";
 import { microsToUsdc } from "@/lib/money";
 
 export const runtime = "nodejs";
@@ -9,7 +9,13 @@ export const contentType = "image/png";
 
 export default async function Image({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const bounty = await prisma.bounty.findUnique({ where: { shareCode: code } });
+  let bounty = null;
+  try {
+    bounty = await prisma.bounty.findUnique({ where: { shareCode: code } });
+  } catch (err) {
+    if (!isDatabaseError(err)) throw err;
+    bounty = null;
+  }
 
   const title = bounty?.title ?? "Bounty not found";
   const amount = bounty ? microsToUsdc(bounty.amountMicros) : "";
