@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DenialBanner } from "@/components/denial-banner";
-import { formatLatency, microsToUsdc } from "@/lib/money";
+import { formatLatency } from "@/lib/money";
 import { prisma } from "@/lib/db";
 import { channelTuple, type ChannelTuple } from "@/lib/adjudication-display";
 import { GROWTH_LINE, growthHref, receiptComparisonFromStored, receiptShareLines } from "@/lib/receipt-comparison";
@@ -11,9 +11,11 @@ import { SiteNav } from "@/components/site-nav";
 import { decisionSentence, disagreementLine, explainDecision } from "@/app/console/types";
 import { recipientIdentityOk } from "@/lib/identity";
 import { LiveRefresh } from "@/components/live-refresh";
+import { receiptAmountLines } from "@/lib/asked-amount";
 import { coinSymbol, microsToCoin, receiptNetwork, receiptViewingKeyNote } from "@/lib/receipt-network";
 import { receiptMakerSentences, receiptSameModelNote } from "@/lib/channel-makers";
 import { limitsStatus } from "@/lib/receipt-status";
+import { PayerRecordCheckDetail } from "@/lib/payer-record-receipt";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +27,14 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
   });
   if (!intent) return { title: "Receipt - Tiba" };
 
+  const asked = receiptAmountLines({
+    paid: intent.decisionClass === "PAID",
+    amountMicros: intent.amountMicros,
+    adjudications: intent.adjudications
+  });
   const share = receiptShareLines({
     decisionClass: intent.decisionClass,
-    amount: microsToCoin(intent.amountMicros, intent.chain),
+    amount: asked.unread || asked.micros === null ? "Not read" : microsToCoin(asked.micros, intent.chain),
     chain: intent.chain,
     comparison: receiptComparisonFromStored({
       artifact: intent.adjudications.find((row) => row.channel === "artifact") ?? null,
@@ -154,11 +161,13 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
 
   // A refusal before the limits never stores the amount (it stays 0), so show what the
   // bill asked for when Check 1 read it, instead of a false 0.00.
-  const unreadAmount = !paid && intent.amountMicros === 0n;
-  const amountLabel = paid ? "Amount" : unreadAmount ? (channelATuple ? "Bill asked for" : "Amount") : "Amount asked for";
-  const amountValue = unreadAmount
-    ? (channelATuple ? channelATuple.amount.replace(/ USDC$/, "") : "Not read")
-    : microsToUsdc(intent.amountMicros).replace(/ USDC$/, "");
+  const askedAmount = receiptAmountLines({
+    paid,
+    amountMicros: intent.amountMicros,
+    adjudications: intent.adjudications
+  });
+  const amountLabel = askedAmount.label;
+  const amountValue = askedAmount.digits;
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -181,7 +190,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
             <p className="text-sm text-muted">{amountLabel}</p>
             <p className="num mt-1 text-2xl">
               {amountValue}
-              {amountValue !== "Not read" ? (
+              {!askedAmount.unread ? (
                 <>
                   {" "}
                   <span className="text-sm text-muted">{coinSymbol(intent.chain)}</span>
@@ -262,23 +271,13 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
                 <td className="py-3 px-3">Check 2 — read your own records</td>
                 <td className="py-3 px-3">{getChannelMatchStatus(channelBTuple, channelATuple)}</td>
                 <td className="py-3 px-3">
-                  {adjudicationsByChannel.get("payer_record") ? (
-                    <div className="text-sm">
-                      <div className="break-all">Model used: {adjudicationsByChannel.get("payer_record")?.model}</div>
-                      {adjudicationsByChannel.get("payer_record")?.fallback ? (
-                        <div style={{ color: "var(--held)" }}>
-                          The reading service swapped in a different model for this reader:{" "}
-                          <span className="num break-all text-xs">{adjudicationsByChannel.get("payer_record")?.fallback}</span>
-                        </div>
-                      ) : null}
-                      <div>
-                        Reference (request ID):{" "}
-                        <span className="num break-all text-xs">
-                          {adjudicationsByChannel.get("payer_record")?.requestId ?? "missing"}
-                        </span>
-                      </div>
-                      <div>Took: <span className="num">{formatLatency(adjudicationsByChannel.get("payer_record")?.latencyMs)}</span></div>
-                    </div>
+                  {payerRow ? (
+                    <PayerRecordCheckDetail
+                      model={payerRow.model}
+                      fallback={payerRow.fallback}
+                      requestId={payerRow.requestId}
+                      latencyMs={payerRow.latencyMs}
+                    />
                   ) : (
                     "This check was not run."
                   )}

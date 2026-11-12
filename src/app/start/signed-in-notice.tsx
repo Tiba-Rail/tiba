@@ -16,7 +16,7 @@ export async function SignedInNotice({ signupRef = null }: { signupRef?: string 
     return (
       <div className="mx-auto max-w-2xl px-4 pt-8 md:px-6 lg:px-8">
         <p className="rounded-md border border-line bg-surface px-4 py-3 text-sm text-muted">
-          Signed in as {label}. This wallet will be saved to your account.
+          Signed in as {label}. This workspace will be saved to your account.
         </p>
       </div>
     );
@@ -27,7 +27,7 @@ export async function SignedInNotice({ signupRef = null }: { signupRef?: string 
       <div className="rounded-md border border-line bg-surface px-4 py-4">
         <p className="text-sm font-medium">Sign in to pay on Solana's test network.</p>
         <p className="mt-1 text-sm text-muted">
-          Without sign-in, payments are simulated and nothing moves on chain. Signed-in wallets are limited per account and per day.
+          Without sign-in, payments are simulated and nothing moves on chain. Signed-in workspaces are limited per account and per day.
         </p>
         <Link
           className="btn btn-primary mt-3"

@@ -38,7 +38,7 @@ export default async function WorkspacesPage() {
           <section className="card mt-8 p-6">
             <h2 className="title">No workspaces yet</h2>
             <p className="mt-2 max-w-prose text-sm text-muted">
-              Create a workspace to give your software a wallet and limits.
+              Create a workspace so an agent can ask Tiba to pay, inside the limits you set.
             </p>
             <Link
               href="/start"

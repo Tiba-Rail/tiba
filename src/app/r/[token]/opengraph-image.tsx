@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/db";
 import { receiptComparisonFromStored, receiptShareLines } from "@/lib/receipt-comparison";
+import { receiptAmountLines } from "@/lib/asked-amount";
 import { microsToCoin, receiptNetwork } from "@/lib/receipt-network";
 
 export const alt = "Tiba receipt";
@@ -62,9 +63,14 @@ export default async function Image({ params }: { params: Promise<{ token: strin
 
   const artifact = intent.adjudications.find((row) => row.channel === "artifact") ?? null;
   const payerRecord = intent.adjudications.find((row) => row.channel === "payer_record") ?? null;
+  const asked = receiptAmountLines({
+    paid: intent.decisionClass === "PAID",
+    amountMicros: intent.amountMicros,
+    adjudications: intent.adjudications
+  });
   const share = receiptShareLines({
     decisionClass: intent.decisionClass,
-    amount: microsToCoin(intent.amountMicros, intent.chain),
+    amount: asked.unread || asked.micros === null ? "Not read" : microsToCoin(asked.micros, intent.chain),
     chain: intent.chain,
     comparison: receiptComparisonFromStored({
       artifact: artifact ? { tupleJson: artifact.tupleJson } : null,

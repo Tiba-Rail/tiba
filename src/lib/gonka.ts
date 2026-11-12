@@ -190,6 +190,14 @@ export interface GonkaRequest {
  * updates `health`).
  */
 export async function runGonka(request: GonkaRequest): Promise<GonkaResult> {
+  // Check 2 reads structured payer records with rules. It does not call a model.
+  // processPayoutIntent still stores this result as the payer_record adjudication,
+  // and modelAnsweredWith copies model "rules" onto that row. The bill check below
+  // is unchanged.
+  if (request.channel === "payer_record") {
+    const { readPayerRecordByRules } = await import("./payer-record-rules.ts");
+    return readPayerRecordByRules(request.messages);
+  }
   const apiKey = process.env.GROQ_API_KEY;
   const [primary, secondary] = CANDIDATES[request.channel];
   if (!apiKey) return { ok: false, model: primary, latencyMs: 0, errorCode: "INFERENCE_UNAVAILABLE" };

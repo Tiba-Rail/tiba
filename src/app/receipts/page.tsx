@@ -17,12 +17,12 @@ function formatWhen(value: string): string {
 
 function receiptStatus(receipt: Receipt): { label: string; className: string; explanation: string } {
   if (receipt.result === "success") {
-    return { label: "Recorded", className: "pill-paid", explanation: "The signed action stayed inside the permission slip." };
+    return { label: "Recorded", className: "pill-paid", explanation: "The signed action stayed inside the boundary." };
   }
   if (receipt.reason === "TIBA_REVOKED") {
     return { label: "Refused after revoke", className: "pill-refused", explanation: "The permission had already been revoked, so nothing was done." };
   }
-  return { label: "Refused", className: "pill-refused", explanation: "The action was outside the signed permission, so nothing was done." };
+  return { label: "Refused", className: "pill-refused", explanation: "The action was outside what was allowed, so nothing was done." };
 }
 
 function actionLabel(receipt: Receipt): string {
@@ -64,7 +64,7 @@ function ReceiptCard({ receipt }: { receipt: Receipt }) {
             <p className="num mt-1 break-all text-xs">{receipt.action.counterparty}</p>
           </div>
           <div>
-            <p className="text-muted">Permission slip</p>
+            <p className="text-muted">Signed boundary</p>
             <p className="num mt-1 break-all text-xs">{receipt.mandate_id}</p>
           </div>
           <div>
@@ -104,13 +104,13 @@ export default function ReceiptsPage() {
           <p className="eyebrow">Receipts</p>
           <h1 className="display-l mt-2">A signed record of every action.</h1>
           <p className="mt-4 max-w-[58ch] text-sm leading-6 text-muted md:text-base">
-            The demo wallet records payments and refusals alike. Anyone can inspect the signed receipt and check what happened.
+            Every check, paid or refused, leaves a receipt anyone can open and inspect.
           </p>
         </header>
         <section className="mt-10" aria-labelledby="receipt-list-title">
           <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line pb-3">
             <div>
-              <p className="eyebrow">Demo wallet</p>
+              <p className="eyebrow">Public record</p>
               <h2 id="receipt-list-title" className="title mt-2">Signed actions</h2>
             </div>
             <span className="num text-sm text-muted">{demoReceipts.length} receipts</span>

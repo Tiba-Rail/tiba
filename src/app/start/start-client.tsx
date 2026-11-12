@@ -118,7 +118,7 @@ export function StartClient({ signupRef = null }: { signupRef?: string | null })
               Your workspaces
             </Link>
           </div>
-          <h1 className="display-l mt-3">Create your wallet</h1>
+          <h1 className="display-l mt-3">Set up a workspace</h1>
           <p className="lede mt-3">
             No password, no email. One workspace, two keys, and a test payment ready to try.
           </p>
@@ -162,7 +162,7 @@ export function StartClient({ signupRef = null }: { signupRef?: string | null })
               className="btn btn-primary w-full"
               disabled={busy || !name.trim()}
             >
-              {busy ? "Creating…" : "Create wallet"}
+              {busy ? "Creating…" : "Create workspace"}
             </button>
           </form>
         </>
@@ -176,7 +176,7 @@ export function StartClient({ signupRef = null }: { signupRef?: string | null })
             </p>
             {result.rail === "mock" ? (
               <p className="mt-3 text-sm text-muted">
-                Payments from this wallet are simulated: nothing moves on chain. Live {CHAIN} devnet wallets
+                Payments from this workspace are simulated: nothing moves on chain. Live {CHAIN} devnet workspaces
                 need sign-in first and are limited per account and per day.
               </p>
             ) : null}

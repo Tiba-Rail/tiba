@@ -10,12 +10,12 @@ export function WorkspaceGate({ current, path }: { current: string; path: string
       <SiteNav current={current} />
       <div className="mx-auto max-w-md px-4 py-12">
         <p className="eyebrow">Private</p>
-        <h1 className="display-l mt-2">Open your wallet</h1>
-        <p className="lede mt-3">Payments, recipients and invoices are shown only to the wallet&apos;s owner.</p>
+        <h1 className="display-l mt-2">Open your workspace</h1>
+        <p className="lede mt-3">Payments, recipients and invoices are shown only to the person who owns this workspace.</p>
         <UnlockForm />
         <p className="mt-6 text-sm text-muted">
-          <Link className="link" href={`/signin?callbackUrl=${encodeURIComponent(path)}`}>Sign in</Link> if the wallet
-          is saved to your account, or <Link className="link" href="/start">create a wallet</Link>.
+          <Link className="link" href={`/signin?callbackUrl=${encodeURIComponent(path)}`}>Sign in</Link> if the workspace
+          is saved to your account, or <Link className="link" href="/start">set one up</Link>.
         </p>
       </div>
     </main>

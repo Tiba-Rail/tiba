@@ -149,7 +149,7 @@ export function PermissionSlips() {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as LocalPermissionSlip[];
       if (Array.isArray(saved)) setSlips(saved);
     } catch {
-      setNotice("Tiba could not read saved permission slips from this browser.");
+      setNotice("Tiba could not read saved boundaries from this browser.");
     }
   }, []);
 
@@ -295,7 +295,7 @@ export function PermissionSlips() {
                 checked={reviewed}
                 onChange={(event) => setReviewed(event.target.checked)}
               />
-              <span>I have reviewed the scope, budget, and expiry. I want to sign this permission slip.</span>
+              <span>I have reviewed the scope, budget, and expiry. I want to sign this boundary.</span>
             </label>
             <button type="button" className="btn btn-primary mt-5" disabled={!reviewed || signing || needsNamedCounterparty} onClick={signPermission}>
               {signing ? "Signing permission…" : "Confirm and sign"}
@@ -321,7 +321,7 @@ export function PermissionSlips() {
             slips.map((slip) => <SlipCard key={slip.mandate.id} slip={slip} onRevoke={revokePermission} />)
           ) : (
             <p className="py-8 text-sm leading-6 text-muted">
-              No signed permission slips yet. Create one only after you have reviewed its exact boundary.
+              No signed boundaries yet. Create one only after you have reviewed its exact limit.
             </p>
           )}
         </div>

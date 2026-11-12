@@ -168,7 +168,7 @@ test("a refusal that is not a field mismatch shows the public reason, not a made
   assert.equal(wall.refused, 1);
   assert.equal(wall.refusedAmount, "0.01 USDC");
   assert.equal(wall.rows[0].mismatch, null);
-  assert.equal(wall.rows[0].reason, "The wallet is frozen.");
+  assert.equal(wall.rows[0].reason, "Payments are frozen.");
   assert.equal(visibleWallText(wall).includes(SECRET), false);
 });
 
@@ -203,9 +203,11 @@ test("a delivery-date refusal shows both times and no other tuple field", () => 
   assert.match(row.mismatch.bill, /Sep 01, 2026, 00:00:00 UTC/);
   assert.match(row.mismatch.record, /Sep 03, 2026, 15:04:05 UTC/);
   const visible = visibleWallText(wall);
+  assert.equal(row.amount, "4.00 USDC");
+  assert.equal(wall.refusedAmount, "4.00 USDC");
   assert.equal(visible.includes(SECRET), false);
-  assert.equal(visible.includes("4.00 USDC"), false);
   assert.equal(visible.includes("WO-OK"), false);
+  assert.match(row.mismatch.bill, /Sep 01, 2026, 00:00:00 UTC/);
 });
 
 test("the wall page and its query do not name private workspace fields", () => {
@@ -306,16 +308,97 @@ test("the wall query is demo-only, excludes sandbox rows, caps rows, and totals 
   assert.match(source, /EXAMPLE_PAID_INTENT_ID/);
   assert.match(source, /take: 200/);
   assert.match(source, /payoutIntent\.groupBy/);
-  assert.match(source, /payoutIntent\.aggregate/);
+  assert.match(source, /decisionClass: "RED"/);
+  assert.match(source, /amountAskedMicros/);
 });
 
-test("the only new site link to the wall is the footer", () => {
+test("the wall is linked from the footer, the homepage, and the signed-out nav", () => {
   const footer = fs.readFileSync("src/components/site-footer.tsx", "utf8");
   const layout = fs.readFileSync("src/app/layout.tsx", "utf8");
   const header = fs.readFileSync("src/components/site-nav.tsx", "utf8");
   const home = fs.readFileSync("src/app/page.tsx", "utf8");
   assert.match(footer, /href="\/wall"/);
   assert.match(layout, /SiteFooter/);
-  assert.equal(header.includes("/wall"), false);
-  assert.equal(home.includes("/wall"), false);
+  assert.match(header, /href="\/wall"/);
+  assert.match(home, /href="\/wall"/);
+});
+
+test("a refusal stored as 0 shows the amount the bill asked for, not 0.00", () => {
+  const wall = buildRefusalWall([
+    receipt({
+      decisionClass: "RED",
+      reasonCode: "QUORUM_SPLIT:amount_micros",
+      amountMicros: "0",
+      chain: null,
+      adjudications: [
+        {
+          channel: "artifact",
+          tupleJson: {
+            work_order_id: "WO-SOL-2",
+            amount_micros: "999999999",
+            delivery_timestamp: "2026-09-11T00:00:00.000Z"
+          }
+        },
+        {
+          channel: "payer_record",
+          tupleJson: {
+            work_order_id: "WO-SOL-2",
+            amount_micros: "10000",
+            delivery_timestamp: "2026-09-11T00:00:00.000Z"
+          }
+        }
+      ]
+    })
+  ]);
+  assert.equal(wall.rows[0].amount, "999.999999 USDC");
+  assert.equal(wall.rows[0].chain, "No transfer attempted");
+  assert.equal(wall.refusedAmount, "999.999999 USDC");
+  assert.equal(wall.refusedWithAmount, 1);
+  assert.equal(wall.rows[0].amount.includes("0.00"), false);
+});
+
+test("a refusal with no bill amount does not pretend the ask was 0.00", () => {
+  const wall = buildRefusalWall([
+    receipt({
+      decisionClass: "RED",
+      reasonCode: "NO_OPEN_OBLIGATION",
+      amountMicros: "0",
+      adjudications: []
+    })
+  ]);
+  assert.equal(wall.rows[0].amount, "Not read");
+  assert.equal(wall.refusedAmount, null);
+  assert.equal(wall.refusedWithAmount, 0);
+});
+
+test("the network label follows the stored chain: Sui stays Sui, Solana stays Solana devnet", () => {
+  const wall = buildRefusalWall([
+    receipt({
+      chain: "sui",
+      decisionClass: "PAID",
+      amountMicros: "10000",
+      publicToken: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab",
+      createdAt: "2026-09-11T09:07:54.000Z"
+    }),
+    receipt({
+      chain: "solana",
+      decisionClass: "PAID",
+      publicToken: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc",
+      createdAt: "2026-09-11T09:09:43.000Z"
+    })
+  ]);
+  const byHref = Object.fromEntries(wall.rows.map((row) => [row.href, row.chain]));
+  assert.equal(byHref["/r/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab"], "Earlier test network, retired");
+  assert.equal(byHref["/r/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc"], "Solana devnet");
+});
+
+test("legacy Sui rows stay on the wall but the wall never says Sui", () => {
+  const wall = buildRefusalWall([
+    receipt({ chain: "sui", publicToken: "22222222-2222-4222-8222-222222222222" }),
+    receipt({ chain: "solana", publicToken: "33333333-3333-4333-8333-333333333333", createdAt: "2026-09-26T09:00:00.000Z" })
+  ]);
+  assert.equal(wall.checksRun, 2);
+  assert.equal(wall.rows[0].chain, "Earlier test network, retired");
+  assert.equal(wall.rows[1].chain, "Solana devnet");
+  assert.equal(/sui/i.test(visibleWallText(wall)), false);
 });

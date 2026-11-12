@@ -1,3 +1,4 @@
+import { amountAskedMicros } from "./asked-amount.ts";
 import { microsToUsdc } from "./money.ts";
 import { receiptNetwork } from "./receipt-network.ts";
 
@@ -66,7 +67,7 @@ function publicRefusalReason(reasonCode: string | null): string {
     case "RECIPIENT_NOT_FOUND": return "This recipient is not saved.";
     case "RECIPIENT_INACTIVE": return "This recipient is saved but blocked.";
     case "RECIPIENT_UNVERIFIED": return "This recipient's identity is not verified, and your limits require it.";
-    case "KILL_SWITCH": return "The wallet is frozen.";
+    case "KILL_SWITCH": return "Payments are frozen.";
     case "INVALID_AMOUNT": return "The amount in this request was not valid.";
     case "INVALID_TIMESTAMP": return "A date in this request was not valid.";
     case "RECIPIENT_NEEDS_SOLANA_ADDRESS": return "Recipient needs a Solana address.";
@@ -198,6 +199,11 @@ export function isSimulatedSettlement(chain: string | null): boolean {
   return chain === "mock" || chain === "sandbox" || chain === null;
 }
 
+// The Sui rail was retired on 11 Sep 2026: its old rows stay on the wall without naming it.
+function wallNetwork(rawChain: string | null): string {
+  return rawChain === "sui" ? "Earlier test network, retired" : receiptNetwork(rawChain);
+}
+
 function prepare(input: unknown): Prepared | null {
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
   const row = input as Record<string, unknown>;
@@ -206,7 +212,12 @@ function prepare(input: unknown): Prepared | null {
   const at = asDate(row.createdAt);
   if (!token || !outcome || !at) return null;
 
-  const micros = parseMicros(row.amountMicros) ?? 0n;
+  const storedMicros = parseMicros(row.amountMicros) ?? 0n;
+  // A refusal often stores 0 because it never reached a debit. The amount asked for
+  // is what the bill said. Showing 0.00 would hide that ask.
+  const asked = outcome.outcome === "REFUSED"
+    ? amountAskedMicros(row.amountMicros, row.adjudications)
+    : storedMicros;
   const reasonCode = typeof row.reasonCode === "string" ? row.reasonCode : null;
   const mismatch = outcome.outcome === "REFUSED" ? mismatchFor(reasonCode, row.adjudications) : null;
   const reason = outcome.outcome === "REFUSED" && !mismatch
@@ -217,15 +228,15 @@ function prepare(input: unknown): Prepared | null {
   return {
     outcome: outcome.outcome,
     outcomeLabel: outcome.outcomeLabel,
-    amount: microsToUsdc(micros),
-    chain: receiptNetwork(rawChain),
+    amount: outcome.outcome === "REFUSED" && asked === null ? "Not read" : microsToUsdc(asked ?? 0n),
+    chain: wallNetwork(rawChain),
     time: formatWallTime(at),
     timeIso: at.toISOString(),
     href: `/r/${token}`,
     mismatch,
     reason,
     at: at.getTime(),
-    refusedMicros: outcome.outcome === "REFUSED" ? micros : 0n,
+    refusedMicros: outcome.outcome === "REFUSED" ? (asked ?? 0n) : 0n,
     simulated: isSimulatedSettlement(rawChain)
   };
 }

@@ -178,17 +178,19 @@ test("a channel keeps its primary when that model also answers", async () => {
     assert.equal(artifact.ok, true);
     assert.equal(artifact.model, OPENAI);
 
+    const payerCalls = [];
     const payer = await runGonka({
       channel: "payer_record",
       messages: [{ role: "user", content: "record" }],
       schema,
-      fetcher: async (_url, init) => {
-        const model = JSON.parse(init.body).model;
-        return jsonResponse(valid, model === ALIBABA ? 40 : 0);
+      fetcher: async () => {
+        payerCalls.push("called");
+        return jsonResponse(valid, 0);
       }
     });
-    assert.equal(payer.ok, true);
-    assert.equal(payer.model, ALIBABA);
+    assert.equal(payer.model, "rules");
+    assert.equal(payer.ok, false);
+    assert.equal(payerCalls.length, 0);
   } finally {
     if (previous === undefined) delete process.env.GROQ_API_KEY;
     else process.env.GROQ_API_KEY = previous;
@@ -214,8 +216,8 @@ test("a channel records the fallback model when the primary does not validate", 
 
     const calls = [];
     const repaired = await runGonka({
-      channel: "payer_record",
-      messages: [{ role: "user", content: "record" }],
+      channel: "artifact",
+      messages: [{ role: "user", content: "bill" }],
       schema,
       fetcher: async (_url, init) => {
         const body = JSON.parse(init.body);
@@ -225,9 +227,9 @@ test("a channel records the fallback model when the primary does not validate", 
       }
     });
     assert.equal(repaired.ok, true);
-    assert.equal(repaired.model, ALIBABA);
-    assert.ok(calls.includes(ALIBABA));
+    assert.equal(repaired.model, OPENAI);
     assert.ok(calls.includes(OPENAI));
+    assert.ok(calls.includes(ALIBABA));
   } finally {
     if (previous === undefined) delete process.env.GROQ_API_KEY;
     else process.env.GROQ_API_KEY = previous;
